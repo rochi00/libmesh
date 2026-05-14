@@ -31,10 +31,16 @@
 #include "libmesh/parallel_object.h"
 #include "libmesh/simple_range.h"
 
+#ifdef LIBMESH_HAVE_KOKKOS
+#include "libmesh/kokkos_storage_policy.h"
+#endif
+
 // C++ Includes
 #include <cstddef>
 #include <string>
 #include <memory>
+#include <unordered_map>
+#include <vector>
 
 #include "libmesh/vector_value.h"
 
@@ -183,6 +189,48 @@ public:
    */
   virtual void clear ();
 
+#ifdef LIBMESH_HAVE_KOKKOS
+  struct KokkosGeometryCache
+  {
+    using node_id_view = ::Kokkos::View<dof_id_type *>;
+    using elem_id_view = ::Kokkos::View<dof_id_type *>;
+    using node_coord_view = ::Kokkos::View<Real **>;
+    using elem_node_id_view = ::Kokkos::View<unsigned int **>;
+    using elem_type_view = ::Kokkos::View<ElemType *>;
+    using elem_mapping_type_view = ::Kokkos::View<ElemMappingType *>;
+    using elem_n_nodes_view = ::Kokkos::View<unsigned int *>;
+    using elem_p_level_view = ::Kokkos::View<unsigned int *>;
+    using elem_subdomain_view = ::Kokkos::View<subdomain_id_type *>;
+
+    node_id_view node_ids;
+    elem_id_view element_ids;
+    node_coord_view node_coordinates;
+    elem_node_id_view element_node_ids;
+    elem_type_view element_types;
+    elem_mapping_type_view element_mapping_types;
+    elem_n_nodes_view element_n_nodes;
+    elem_p_level_view element_p_levels;
+    elem_subdomain_view element_subdomains;
+    std::vector<dof_id_type> host_node_ids;
+    std::vector<dof_id_type> host_element_ids;
+    std::unordered_map<dof_id_type, unsigned int> node_lookup;
+    std::unordered_map<dof_id_type, unsigned int> element_lookup;
+    unsigned int max_nodes = 0;
+  };
+
+  const KokkosGeometryCache & get_kokkos_geometry_cache() const;
+  unsigned int get_kokkos_elem_index(const Elem & elem) const;
+  void prepare_kokkos_geometry_cache() const;
+#else
+  void prepare_kokkos_geometry_cache() const {}
+#endif
+  void clear_kokkos_geometry_cache() const
+  {
+#ifdef LIBMESH_HAVE_KOKKOS
+    _kokkos_geometry_cache.reset();
+#endif
+  }
+
   /**
    * Deletes all the element data that is currently stored.
    *
@@ -244,7 +292,10 @@ public:
    * them too or call this method.
    */
   void unset_is_partitioned()
-  { _preparation.is_partitioned = false; }
+  {
+    _preparation.is_partitioned = false;
+    this->clear_kokkos_geometry_cache();
+  }
 
   /**
    * Tells this we have done some operation (e.g. adding objects to a
@@ -2190,6 +2241,10 @@ protected:
    * and it operates on a constant reference to the mesh, this is OK.
    */
   mutable std::unique_ptr<PointLocatorBase> _point_locator;
+
+#ifdef LIBMESH_HAVE_KOKKOS
+  mutable std::unique_ptr<KokkosGeometryCache> _kokkos_geometry_cache;
+#endif
 
   /**
    * Do we count lower dimensional elements in point locator refinement?
