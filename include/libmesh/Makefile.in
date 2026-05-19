@@ -727,8 +727,9 @@ BUILT_SOURCES = dirichlet_boundaries.h dof_map.h dof_map_base.h \
 	point_locator_tree.h pointer_to_pointer_iter.h \
 	pool_allocator.h restore_warnings.h simple_range.h \
 	statistics.h string_to_enum.h thread_buffered_syncbuf.h \
-	timestamp.h topology_map.h tree.h tree_base.h tree_node.h \
-	utility.h vectormap.h win_gettimeofday.h xdr_cxx.h \
+	threads_spin_mutex_forward.h timestamp.h topology_map.h tree.h \
+	tree_base.h tree_node.h utility.h vectormap.h \
+	win_gettimeofday.h xdr_cxx.h \
 	parallel_communicator_specializations $(am__append_1) \
 	$(am__append_3) $(am__append_5) $(am__append_7) \
 	$(am__append_9) $(am__append_11) $(am__append_13) \
@@ -2546,6 +2547,9 @@ string_to_enum.h: $(top_srcdir)/include/utils/string_to_enum.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 thread_buffered_syncbuf.h: $(top_srcdir)/include/utils/thread_buffered_syncbuf.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+threads_spin_mutex_forward.h: $(top_srcdir)/include/parallel/threads_spin_mutex_forward.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 timestamp.h: $(top_srcdir)/include/utils/timestamp.h
