@@ -43,6 +43,10 @@ AC_DEFUN([CONFIGURE_KOKKOS],
   dnl We use AC_SUBST (not AC_ARG_VAR) so these flags stay scoped to .K
   dnl compilation rules and don't leak into the main CPPFLAGS/CXXFLAGS.
 
+  LIBMESH_KOKKOS_BUILD_CPPFLAGS=""
+  LIBMESH_KOKKOS_BUILD_CXXFLAGS=""
+  LIBMESH_KOKKOS_BUILD_LDFLAGS=""
+
   AS_IF([test "x$KOKKOS_INCLUDE_DIR" != "xno/include" -a "x$KOKKOS_LIB_DIR" != "xno/lib"],
     [
       AC_CHECK_FILE([$KOKKOS_INCLUDE_DIR/Kokkos_Core.hpp],
@@ -268,6 +272,10 @@ AC_DEFUN([CONFIGURE_KOKKOS],
             [AC_MSG_RESULT([no])
              AC_MSG_ERROR([Kokkos compiler/flags failed to compile and link a minimal test program])])
 
+          LIBMESH_KOKKOS_BUILD_CPPFLAGS="$KOKKOS_MPI_CPPFLAGS $KOKKOS_CPPFLAGS"
+          LIBMESH_KOKKOS_BUILD_CXXFLAGS="$KOKKOS_CXXFLAGS"
+          LIBMESH_KOKKOS_BUILD_LDFLAGS="$KOKKOS_LDFLAGS"
+
           AC_DEFINE([HAVE_KOKKOS], [1],
                     [Define if Kokkos support is enabled in libMesh])
           AC_MSG_RESULT(<<< Configuring library with Kokkos support >>>)
@@ -293,5 +301,8 @@ AC_DEFUN([CONFIGURE_KOKKOS],
   AC_SUBST([KOKKOS_LDFLAGS])
   AC_SUBST([KOKKOS_LIBS])
   AC_SUBST([KOKKOS_MPI_CPPFLAGS])
+  AC_SUBST([LIBMESH_KOKKOS_BUILD_CPPFLAGS])
+  AC_SUBST([LIBMESH_KOKKOS_BUILD_CXXFLAGS])
+  AC_SUBST([LIBMESH_KOKKOS_BUILD_LDFLAGS])
   AM_CONDITIONAL(LIBMESH_ENABLE_KOKKOS, test x$enablekokkos = xyes)
 ])
