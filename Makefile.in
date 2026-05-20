@@ -279,11 +279,15 @@ am__uninstall_files_from_dir = { \
        $(am__cd) "$$dir" && echo $$files | $(am__xargs_n) 40 $(am__rm_f); }; \
   }
 LTLIBRARIES = $(lib_LTLIBRARIES)
-am__DEPENDENCIES_1 =
-am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__DEPENDENCIES_1 =  \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/base/dof_map_kokkos_dbg.lo \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/mesh/mesh_base_kokkos_dbg.lo
+am__DEPENDENCIES_2 =
+am__DEPENDENCIES_3 = $(am__DEPENDENCIES_2) $(am__DEPENDENCIES_2)
 @LIBMESH_DBG_MODE_TRUE@libmesh_dbg_la_DEPENDENCIES =  \
 @LIBMESH_DBG_MODE_TRUE@	contrib/libcontrib_dbg.la \
-@LIBMESH_DBG_MODE_TRUE@	$(am__DEPENDENCIES_2)
+@LIBMESH_DBG_MODE_TRUE@	$(am__DEPENDENCIES_1) \
+@LIBMESH_DBG_MODE_TRUE@	$(am__DEPENDENCIES_3)
 am__libmesh_dbg_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/base/dof_map.C src/base/dof_map_base.C \
 	src/base/dof_map_constraints.C src/base/dof_object.C \
@@ -1098,9 +1102,13 @@ libmesh_dbg_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(libmesh_dbg_la_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 @LIBMESH_DBG_MODE_TRUE@am_libmesh_dbg_la_rpath = -rpath $(libdir)
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__DEPENDENCIES_4 =  \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/base/dof_map_kokkos_devel.lo \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/mesh/mesh_base_kokkos_devel.lo
 @LIBMESH_DEVEL_MODE_TRUE@libmesh_devel_la_DEPENDENCIES =  \
 @LIBMESH_DEVEL_MODE_TRUE@	contrib/libcontrib_devel.la \
-@LIBMESH_DEVEL_MODE_TRUE@	$(am__DEPENDENCIES_2)
+@LIBMESH_DEVEL_MODE_TRUE@	$(am__DEPENDENCIES_4) \
+@LIBMESH_DEVEL_MODE_TRUE@	$(am__DEPENDENCIES_3)
 am__libmesh_devel_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/base/dof_map.C src/base/dof_map_base.C \
 	src/base/dof_map_constraints.C src/base/dof_object.C \
@@ -1911,9 +1919,13 @@ libmesh_devel_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(libmesh_devel_la_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 @LIBMESH_DEVEL_MODE_TRUE@am_libmesh_devel_la_rpath = -rpath $(libdir)
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__DEPENDENCIES_5 =  \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/base/dof_map_kokkos_oprof.lo \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/mesh/mesh_base_kokkos_oprof.lo
 @LIBMESH_OPROF_MODE_TRUE@libmesh_oprof_la_DEPENDENCIES =  \
 @LIBMESH_OPROF_MODE_TRUE@	contrib/libcontrib_oprof.la \
-@LIBMESH_OPROF_MODE_TRUE@	$(am__DEPENDENCIES_2)
+@LIBMESH_OPROF_MODE_TRUE@	$(am__DEPENDENCIES_5) \
+@LIBMESH_OPROF_MODE_TRUE@	$(am__DEPENDENCIES_3)
 am__libmesh_oprof_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/base/dof_map.C src/base/dof_map_base.C \
 	src/base/dof_map_constraints.C src/base/dof_object.C \
@@ -2724,9 +2736,13 @@ libmesh_oprof_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(libmesh_oprof_la_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 @LIBMESH_OPROF_MODE_TRUE@am_libmesh_oprof_la_rpath = -rpath $(libdir)
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__DEPENDENCIES_6 =  \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/base/dof_map_kokkos_opt.lo \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/mesh/mesh_base_kokkos_opt.lo
 @LIBMESH_OPT_MODE_TRUE@libmesh_opt_la_DEPENDENCIES =  \
 @LIBMESH_OPT_MODE_TRUE@	contrib/libcontrib_opt.la \
-@LIBMESH_OPT_MODE_TRUE@	$(am__DEPENDENCIES_2)
+@LIBMESH_OPT_MODE_TRUE@	$(am__DEPENDENCIES_6) \
+@LIBMESH_OPT_MODE_TRUE@	$(am__DEPENDENCIES_3)
 am__libmesh_opt_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/base/dof_map.C src/base/dof_map_base.C \
 	src/base/dof_map_constraints.C src/base/dof_object.C \
@@ -3536,9 +3552,13 @@ libmesh_opt_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(libmesh_opt_la_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
 @LIBMESH_OPT_MODE_TRUE@am_libmesh_opt_la_rpath = -rpath $(libdir)
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__DEPENDENCIES_7 =  \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/base/dof_map_kokkos_prof.lo \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/mesh/mesh_base_kokkos_prof.lo
 @LIBMESH_PROF_MODE_TRUE@libmesh_prof_la_DEPENDENCIES =  \
 @LIBMESH_PROF_MODE_TRUE@	contrib/libcontrib_prof.la \
-@LIBMESH_PROF_MODE_TRUE@	$(am__DEPENDENCIES_2)
+@LIBMESH_PROF_MODE_TRUE@	$(am__DEPENDENCIES_7) \
+@LIBMESH_PROF_MODE_TRUE@	$(am__DEPENDENCIES_3)
 am__libmesh_prof_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/base/dof_map.C src/base/dof_map_base.C \
 	src/base/dof_map_constraints.C src/base/dof_object.C \
@@ -4376,7 +4396,9 @@ am_calculator_dbg_OBJECTS =  \
 	src/apps/calculator_dbg-calculator.$(OBJEXT) \
 	src/apps/calculator_dbg-L2system.$(OBJEXT)
 calculator_dbg_OBJECTS = $(am_calculator_dbg_OBJECTS)
-calculator_dbg_DEPENDENCIES = libmesh_dbg.la
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__DEPENDENCIES_8 =  \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system_kokkos_dbg.o
+calculator_dbg_DEPENDENCIES = libmesh_dbg.la $(am__DEPENDENCIES_8)
 calculator_dbg_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(calculator_dbg_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
@@ -4385,7 +4407,9 @@ am_calculator_devel_OBJECTS =  \
 	src/apps/calculator_devel-calculator.$(OBJEXT) \
 	src/apps/calculator_devel-L2system.$(OBJEXT)
 calculator_devel_OBJECTS = $(am_calculator_devel_OBJECTS)
-calculator_devel_DEPENDENCIES = libmesh_devel.la
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__DEPENDENCIES_9 =  \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system_kokkos_devel.o
+calculator_devel_DEPENDENCIES = libmesh_devel.la $(am__DEPENDENCIES_9)
 calculator_devel_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(calculator_devel_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
@@ -4403,7 +4427,9 @@ am_calculator_opt_OBJECTS =  \
 	src/apps/calculator_opt-calculator.$(OBJEXT) \
 	src/apps/calculator_opt-L2system.$(OBJEXT)
 calculator_opt_OBJECTS = $(am_calculator_opt_OBJECTS)
-calculator_opt_DEPENDENCIES = libmesh_opt.la
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__DEPENDENCIES_10 =  \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system_kokkos_opt.o
+calculator_opt_DEPENDENCIES = libmesh_opt.la $(am__DEPENDENCIES_10)
 calculator_opt_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(calculator_opt_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
@@ -4532,7 +4558,8 @@ am_hilbert_kokkos_benchmark_dbg_OBJECTS = src/apps/hilbert_kokkos_benchmark_dbg-
 	src/apps/hilbert_kokkos_benchmark_dbg-L2system.$(OBJEXT)
 hilbert_kokkos_benchmark_dbg_OBJECTS =  \
 	$(am_hilbert_kokkos_benchmark_dbg_OBJECTS)
-hilbert_kokkos_benchmark_dbg_DEPENDENCIES = libmesh_dbg.la
+hilbert_kokkos_benchmark_dbg_DEPENDENCIES = libmesh_dbg.la \
+	$(am__DEPENDENCIES_8)
 hilbert_kokkos_benchmark_dbg_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(hilbert_kokkos_benchmark_dbg_CXXFLAGS) $(CXXFLAGS) \
@@ -4541,7 +4568,8 @@ am_hilbert_kokkos_benchmark_devel_OBJECTS = src/apps/hilbert_kokkos_benchmark_de
 	src/apps/hilbert_kokkos_benchmark_devel-L2system.$(OBJEXT)
 hilbert_kokkos_benchmark_devel_OBJECTS =  \
 	$(am_hilbert_kokkos_benchmark_devel_OBJECTS)
-hilbert_kokkos_benchmark_devel_DEPENDENCIES = libmesh_devel.la
+hilbert_kokkos_benchmark_devel_DEPENDENCIES = libmesh_devel.la \
+	$(am__DEPENDENCIES_9)
 hilbert_kokkos_benchmark_devel_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(hilbert_kokkos_benchmark_devel_CXXFLAGS) $(CXXFLAGS) \
@@ -4550,7 +4578,8 @@ am_hilbert_kokkos_benchmark_opt_OBJECTS = src/apps/hilbert_kokkos_benchmark_opt-
 	src/apps/hilbert_kokkos_benchmark_opt-L2system.$(OBJEXT)
 hilbert_kokkos_benchmark_opt_OBJECTS =  \
 	$(am_hilbert_kokkos_benchmark_opt_OBJECTS)
-hilbert_kokkos_benchmark_opt_DEPENDENCIES = libmesh_opt.la
+hilbert_kokkos_benchmark_opt_DEPENDENCIES = libmesh_opt.la \
+	$(am__DEPENDENCIES_10)
 hilbert_kokkos_benchmark_opt_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(hilbert_kokkos_benchmark_opt_CXXFLAGS) $(CXXFLAGS) \
@@ -8060,6 +8089,22 @@ AM_CPPFLAGS = -DLIBMESH_IS_COMPILING_ITSELF \
                    $(libmesh_optional_INCLUDES) \
                    -I$(top_builddir)/include # required for libmesh_version.h
 
+@LIBMESH_ENABLE_KOKKOS_TRUE@KOKKOS_LIBMESH_DBG_OBJECTS = src/base/dof_map_kokkos_dbg.lo src/mesh/mesh_base_kokkos_dbg.lo
+KOKKOS_LIBMESH_DBG_OBJECTS =
+@LIBMESH_ENABLE_KOKKOS_TRUE@KOKKOS_LIBMESH_DEVEL_OBJECTS = src/base/dof_map_kokkos_devel.lo src/mesh/mesh_base_kokkos_devel.lo
+KOKKOS_LIBMESH_DEVEL_OBJECTS =
+@LIBMESH_ENABLE_KOKKOS_TRUE@KOKKOS_LIBMESH_OPT_OBJECTS = src/base/dof_map_kokkos_opt.lo src/mesh/mesh_base_kokkos_opt.lo
+KOKKOS_LIBMESH_OPT_OBJECTS =
+@LIBMESH_ENABLE_KOKKOS_TRUE@KOKKOS_LIBMESH_PROF_OBJECTS = src/base/dof_map_kokkos_prof.lo src/mesh/mesh_base_kokkos_prof.lo
+KOKKOS_LIBMESH_PROF_OBJECTS =
+@LIBMESH_ENABLE_KOKKOS_TRUE@KOKKOS_LIBMESH_OPROF_OBJECTS = src/base/dof_map_kokkos_oprof.lo src/mesh/mesh_base_kokkos_oprof.lo
+KOKKOS_LIBMESH_OPROF_OBJECTS =
+@LIBMESH_ENABLE_KOKKOS_TRUE@KOKKOS_L2SYSTEM_DBG_OBJECTS = src/apps/L2system_kokkos_dbg.o
+KOKKOS_L2SYSTEM_DBG_OBJECTS =
+@LIBMESH_ENABLE_KOKKOS_TRUE@KOKKOS_L2SYSTEM_DEVEL_OBJECTS = src/apps/L2system_kokkos_devel.o
+KOKKOS_L2SYSTEM_DEVEL_OBJECTS =
+@LIBMESH_ENABLE_KOKKOS_TRUE@KOKKOS_L2SYSTEM_OPT_OBJECTS = src/apps/L2system_kokkos_opt.o
+KOKKOS_L2SYSTEM_OPT_OBJECTS =
 
 # additional files which must be included in 'make dist'
 EXTRA_DIST = reference_elements \
@@ -8622,27 +8667,27 @@ lib_LTLIBRARIES = $(am__append_11) $(am__append_12) $(am__append_13) \
 @LIBMESH_DBG_MODE_TRUE@libmesh_dbg_la_CPPFLAGS = $(CPPFLAGS_DBG) $(AM_CPPFLAGS)
 @LIBMESH_DBG_MODE_TRUE@libmesh_dbg_la_CXXFLAGS = $(CXXFLAGS_DBG)
 @LIBMESH_DBG_MODE_TRUE@libmesh_dbg_la_CFLAGS = $(CFLAGS_DBG)
-@LIBMESH_DBG_MODE_TRUE@libmesh_dbg_la_LIBADD = contrib/libcontrib_dbg.la $(LIBS)
+@LIBMESH_DBG_MODE_TRUE@libmesh_dbg_la_LIBADD = contrib/libcontrib_dbg.la $(KOKKOS_LIBMESH_DBG_OBJECTS) $(LIBS)
 @LIBMESH_DEVEL_MODE_TRUE@libmesh_devel_la_SOURCES = $(libmesh_SOURCES)
 @LIBMESH_DEVEL_MODE_TRUE@libmesh_devel_la_CPPFLAGS = $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS)
 @LIBMESH_DEVEL_MODE_TRUE@libmesh_devel_la_CXXFLAGS = $(CXXFLAGS_DEVEL)
 @LIBMESH_DEVEL_MODE_TRUE@libmesh_devel_la_CFLAGS = $(CFLAGS_DEVEL)
-@LIBMESH_DEVEL_MODE_TRUE@libmesh_devel_la_LIBADD = contrib/libcontrib_devel.la $(LIBS)
+@LIBMESH_DEVEL_MODE_TRUE@libmesh_devel_la_LIBADD = contrib/libcontrib_devel.la $(KOKKOS_LIBMESH_DEVEL_OBJECTS) $(LIBS)
 @LIBMESH_OPT_MODE_TRUE@libmesh_opt_la_SOURCES = $(libmesh_SOURCES)
 @LIBMESH_OPT_MODE_TRUE@libmesh_opt_la_CPPFLAGS = $(CPPFLAGS_OPT) $(AM_CPPFLAGS)
 @LIBMESH_OPT_MODE_TRUE@libmesh_opt_la_CXXFLAGS = $(CXXFLAGS_OPT)
 @LIBMESH_OPT_MODE_TRUE@libmesh_opt_la_CFLAGS = $(CFLAGS_OPT)
-@LIBMESH_OPT_MODE_TRUE@libmesh_opt_la_LIBADD = contrib/libcontrib_opt.la $(LIBS)
+@LIBMESH_OPT_MODE_TRUE@libmesh_opt_la_LIBADD = contrib/libcontrib_opt.la $(KOKKOS_LIBMESH_OPT_OBJECTS) $(LIBS)
 @LIBMESH_PROF_MODE_TRUE@libmesh_prof_la_SOURCES = $(libmesh_SOURCES)
 @LIBMESH_PROF_MODE_TRUE@libmesh_prof_la_CPPFLAGS = $(CPPFLAGS_PROF) $(AM_CPPFLAGS)
 @LIBMESH_PROF_MODE_TRUE@libmesh_prof_la_CXXFLAGS = $(CXXFLAGS_PROF)
 @LIBMESH_PROF_MODE_TRUE@libmesh_prof_la_CFLAGS = $(CFLAGS_PROF)
-@LIBMESH_PROF_MODE_TRUE@libmesh_prof_la_LIBADD = contrib/libcontrib_prof.la $(LIBS)
+@LIBMESH_PROF_MODE_TRUE@libmesh_prof_la_LIBADD = contrib/libcontrib_prof.la $(KOKKOS_LIBMESH_PROF_OBJECTS) $(LIBS)
 @LIBMESH_OPROF_MODE_TRUE@libmesh_oprof_la_SOURCES = $(libmesh_SOURCES)
 @LIBMESH_OPROF_MODE_TRUE@libmesh_oprof_la_CPPFLAGS = $(CPPFLAGS_OPROF) $(AM_CPPFLAGS)
 @LIBMESH_OPROF_MODE_TRUE@libmesh_oprof_la_CXXFLAGS = $(CXXFLAGS_OPROF)
 @LIBMESH_OPROF_MODE_TRUE@libmesh_oprof_la_CFLAGS = $(CFLAGS_OPROF)
-@LIBMESH_OPROF_MODE_TRUE@libmesh_oprof_la_LIBADD = contrib/libcontrib_oprof.la $(LIBS)
+@LIBMESH_OPROF_MODE_TRUE@libmesh_oprof_la_LIBADD = contrib/libcontrib_oprof.la $(KOKKOS_LIBMESH_OPROF_OBJECTS) $(LIBS)
 bin_SCRIPTS = # empty, append below
 CLEANFILES = $(am__append_22)
 
@@ -8814,17 +8859,17 @@ calculator_opt_SOURCES = src/apps/calculator.C src/apps/L2system.C \
 	src/apps/L2system.h
 calculator_opt_CPPFLAGS = $(CPPFLAGS_OPT) $(AM_CPPFLAGS)
 calculator_opt_CXXFLAGS = $(CXXFLAGS_OPT)
-calculator_opt_LDADD = libmesh_opt.la
+calculator_opt_LDADD = libmesh_opt.la $(KOKKOS_L2SYSTEM_OPT_OBJECTS)
 calculator_devel_SOURCES = src/apps/calculator.C src/apps/L2system.C \
 	src/apps/L2system.h
 calculator_devel_CPPFLAGS = $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS)
 calculator_devel_CXXFLAGS = $(CXXFLAGS_DEVEL)
-calculator_devel_LDADD = libmesh_devel.la
+calculator_devel_LDADD = libmesh_devel.la $(KOKKOS_L2SYSTEM_DEVEL_OBJECTS)
 calculator_dbg_SOURCES = src/apps/calculator.C src/apps/L2system.C \
 	src/apps/L2system.h
 calculator_dbg_CPPFLAGS = $(CPPFLAGS_DBG) $(AM_CPPFLAGS)
 calculator_dbg_CXXFLAGS = $(CXXFLAGS_DBG)
-calculator_dbg_LDADD = libmesh_dbg.la
+calculator_dbg_LDADD = libmesh_dbg.la $(KOKKOS_L2SYSTEM_DBG_OBJECTS)
 calculator_oprof_SOURCES = src/apps/calculator.C src/apps/L2system.C \
 	src/apps/L2system.h
 calculator_oprof_CPPFLAGS = $(CPPFLAGS_OPROF) $(AM_CPPFLAGS)
@@ -8835,19 +8880,19 @@ hilbert_kokkos_benchmark_opt_SOURCES =  \
 	src/apps/L2system.h
 hilbert_kokkos_benchmark_opt_CPPFLAGS = $(CPPFLAGS_OPT) $(AM_CPPFLAGS)
 hilbert_kokkos_benchmark_opt_CXXFLAGS = $(CXXFLAGS_OPT)
-hilbert_kokkos_benchmark_opt_LDADD = libmesh_opt.la
+hilbert_kokkos_benchmark_opt_LDADD = libmesh_opt.la $(KOKKOS_L2SYSTEM_OPT_OBJECTS)
 hilbert_kokkos_benchmark_devel_SOURCES =  \
 	src/apps/hilbert_kokkos_benchmark.C src/apps/L2system.C \
 	src/apps/L2system.h
 hilbert_kokkos_benchmark_devel_CPPFLAGS = $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS)
 hilbert_kokkos_benchmark_devel_CXXFLAGS = $(CXXFLAGS_DEVEL)
-hilbert_kokkos_benchmark_devel_LDADD = libmesh_devel.la
+hilbert_kokkos_benchmark_devel_LDADD = libmesh_devel.la $(KOKKOS_L2SYSTEM_DEVEL_OBJECTS)
 hilbert_kokkos_benchmark_dbg_SOURCES =  \
 	src/apps/hilbert_kokkos_benchmark.C src/apps/L2system.C \
 	src/apps/L2system.h
 hilbert_kokkos_benchmark_dbg_CPPFLAGS = $(CPPFLAGS_DBG) $(AM_CPPFLAGS)
 hilbert_kokkos_benchmark_dbg_CXXFLAGS = $(CXXFLAGS_DBG)
-hilbert_kokkos_benchmark_dbg_LDADD = libmesh_dbg.la
+hilbert_kokkos_benchmark_dbg_LDADD = libmesh_dbg.la $(KOKKOS_L2SYSTEM_DBG_OBJECTS)
 compare_opt_SOURCES = src/apps/compare.C
 compare_opt_CPPFLAGS = $(CPPFLAGS_OPT) $(AM_CPPFLAGS)
 compare_opt_CXXFLAGS = $(CXXFLAGS_OPT)
@@ -41725,6 +41770,94 @@ uninstall-am: uninstall-binPROGRAMS uninstall-binSCRIPTS \
 .PRECIOUS: Makefile
 
 export TAR_OPTIONS
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/base/dof_map_kokkos_dbg.lo: src/base/dof_map_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_DBG) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CXXFLAGS_DBG) $(AM_CXXFLAGS) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/base/dof_map_kokkos_devel.lo: src/base/dof_map_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CXXFLAGS_DEVEL) $(AM_CXXFLAGS) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/base/dof_map_kokkos_opt.lo: src/base/dof_map_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_OPT) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CXXFLAGS_OPT) $(AM_CXXFLAGS) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/base/dof_map_kokkos_prof.lo: src/base/dof_map_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_PROF) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CXXFLAGS_PROF) $(AM_CXXFLAGS) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/base/dof_map_kokkos_oprof.lo: src/base/dof_map_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_OPROF) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CXXFLAGS_OPROF) $(AM_CXXFLAGS) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/mesh/mesh_base_kokkos_dbg.lo: src/mesh/mesh_base_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_DBG) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CXXFLAGS_DBG) $(AM_CXXFLAGS) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/mesh/mesh_base_kokkos_devel.lo: src/mesh/mesh_base_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CXXFLAGS_DEVEL) $(AM_CXXFLAGS) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/mesh/mesh_base_kokkos_opt.lo: src/mesh/mesh_base_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_OPT) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CXXFLAGS_OPT) $(AM_CXXFLAGS) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/mesh/mesh_base_kokkos_prof.lo: src/mesh/mesh_base_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_PROF) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CXXFLAGS_PROF) $(AM_CXXFLAGS) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/mesh/mesh_base_kokkos_oprof.lo: src/mesh/mesh_base_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_OPROF) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CXXFLAGS_OPROF) $(AM_CXXFLAGS) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/apps/L2system_kokkos_dbg.o: src/apps/L2system_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(KOKKOS_CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_DBG) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CXXFLAGS_DBG) $(AM_CXXFLAGS) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/apps/L2system_kokkos_devel.o: src/apps/L2system_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(KOKKOS_CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CXXFLAGS_DEVEL) $(AM_CXXFLAGS) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/apps/L2system_kokkos_opt.o: src/apps/L2system_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(KOKKOS_CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_OPT) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CXXFLAGS_OPT) $(AM_CXXFLAGS) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
 
 # If our submodules have not all been initialized, throw an
 # error during "make dist". We need the submodules (and their

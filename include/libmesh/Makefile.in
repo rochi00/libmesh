@@ -541,13 +541,13 @@ vtkversion = @vtkversion@
 # include the magic script!
 EXTRA_DIST = rebuild_makefile.sh
 BUILT_SOURCES = dirichlet_boundaries.h dof_map.h dof_map_base.h \
-	dof_object.h factory.h float128_shims.h getpot.h id_types.h \
-	libmesh.h libmesh_abort.h libmesh_augment_std_namespace.h \
-	libmesh_base.h libmesh_common.h libmesh_device.h \
-	libmesh_documentation.h libmesh_exceptions.h libmesh_logging.h \
-	libmesh_singleton.h libmesh_version.h multi_predicates.h \
-	periodic_boundaries.h periodic_boundary.h \
-	periodic_boundary_base.h print_trace.h \
+	dof_map_kokkos.h dof_object.h factory.h float128_shims.h \
+	getpot.h id_types.h libmesh.h libmesh_abort.h \
+	libmesh_augment_std_namespace.h libmesh_base.h \
+	libmesh_common.h libmesh_device.h libmesh_documentation.h \
+	libmesh_exceptions.h libmesh_logging.h libmesh_singleton.h \
+	libmesh_version.h multi_predicates.h periodic_boundaries.h \
+	periodic_boundary.h periodic_boundary_base.h print_trace.h \
 	reference_counted_object.h reference_counter.h \
 	single_predicates.h sparsity_pattern.h variable.h \
 	variant_filter_iterator.h enum_convergence_flags.h \
@@ -601,18 +601,20 @@ BUILT_SOURCES = dirichlet_boundaries.h dof_map.h dof_map_base.h \
 	kokkos_fe_evaluator.h kokkos_fe_face_map.h \
 	kokkos_fe_lagrange_1d.h kokkos_fe_lagrange_2d.h \
 	kokkos_fe_lagrange_3d.h kokkos_fe_map.h kokkos_fe_monomial.h \
-	kokkos_parsed_function.h kokkos_fe_shape_dispatch.h \
-	kokkos_fe_types.h kokkos_linalg_base.h kokkos_quadrature.h \
-	kokkos_storage.h kokkos_storage_policy.h kokkos_tensor_ops.h \
+	kokkos_fe_shape_dispatch.h kokkos_fe_types.h \
+	kokkos_hilbert_assembly.h kokkos_hilbert_system.h \
+	kokkos_linalg_base.h kokkos_parsed_function.h \
+	kokkos_quadrature.h kokkos_scalar_types.h kokkos_storage.h \
+	kokkos_storage_policy.h kokkos_tensor_ops.h \
 	kokkos_vector_ops.h abaqus_io.h boundary_info.h \
 	boundary_mesh.h checkpoint_io.h distributed_mesh.h dyna_io.h \
 	ensight_io.h exodusII_io.h exodusII_io_helper.h \
 	exodus_header_info.h fro_io.h gmsh_io.h gmv_io.h gnuplot_io.h \
 	inf_elem_builder.h matlab_io.h medit_io.h mesh.h mesh_base.h \
-	mesh_communication.h mesh_function.h mesh_generation.h \
-	mesh_input.h mesh_modification.h mesh_netgen_interface.h \
-	mesh_output.h mesh_refinement.h mesh_serializer.h \
-	mesh_smoother.h mesh_smoother_laplace.h \
+	mesh_base_kokkos.h mesh_communication.h mesh_function.h \
+	mesh_generation.h mesh_input.h mesh_modification.h \
+	mesh_netgen_interface.h mesh_output.h mesh_refinement.h \
+	mesh_serializer.h mesh_smoother.h mesh_smoother_laplace.h \
 	mesh_smoother_vsmoother.h mesh_subdivision_support.h \
 	mesh_tet_interface.h mesh_tetgen_interface.h \
 	mesh_tetgen_wrapper.h mesh_tools.h mesh_triangle_holes.h \
@@ -634,7 +636,7 @@ BUILT_SOURCES = dirichlet_boundaries.h dof_map.h dof_map_base.h \
 	function_base.h laspack_matrix.h laspack_vector.h \
 	lumped_mass_matrix.h numeric_vector.h parsed_fem_function.h \
 	parsed_fem_function_parameter.h parsed_function.h \
-	parsed_function_program.h parsed_function_parameter.h \
+	parsed_function_parameter.h parsed_function_program.h \
 	petsc_macro.h petsc_matrix.h petsc_matrix_base.h \
 	petsc_matrix_shell_matrix.h petsc_mffd_matrix.h \
 	petsc_preconditioner.h petsc_shell_matrix.h \
@@ -701,15 +703,16 @@ BUILT_SOURCES = dirichlet_boundaries.h dof_map.h dof_map_base.h \
 	dg_fem_context.h diff_context.h diff_system.h eigen_system.h \
 	elem_assembly.h equation_systems.h explicit_system.h \
 	fem_context.h fem_system.h frequency_system.h \
-	generic_projector.h implicit_system.h inter_mesh_projection.h \
-	linear_implicit_system.h newmark_system.h \
-	nonlinear_implicit_system.h optimization_system.h \
-	parameter_accessor.h parameter_multiaccessor.h \
-	parameter_multipointer.h parameter_pointer.h \
-	parameter_vector.h qoi_set.h sensitivity_data.h \
-	steady_system.h system.h system_norm.h system_subset.h \
-	system_subset_by_subdomain.h transient_system.h \
-	variational_smoother_constraint.h \
+	generic_projector.h hilbert_assembly.h \
+	hilbert_assembly_kernel.h implicit_system.h \
+	inter_mesh_projection.h linear_implicit_system.h \
+	newmark_system.h nonlinear_implicit_system.h \
+	optimization_system.h parameter_accessor.h \
+	parameter_multiaccessor.h parameter_multipointer.h \
+	parameter_pointer.h parameter_vector.h qoi_set.h \
+	sensitivity_data.h steady_system.h system.h system_norm.h \
+	system_subset.h system_subset_by_subdomain.h \
+	transient_system.h variational_smoother_constraint.h \
 	variational_smoother_system.h attributes.h communicator.h \
 	data_type.h message_tag.h op_function.h packing.h \
 	parallel_implementation.h parallel_sync.h \
@@ -727,9 +730,8 @@ BUILT_SOURCES = dirichlet_boundaries.h dof_map.h dof_map_base.h \
 	point_locator_tree.h pointer_to_pointer_iter.h \
 	pool_allocator.h restore_warnings.h simple_range.h \
 	statistics.h string_to_enum.h thread_buffered_syncbuf.h \
-	threads_spin_mutex_forward.h timestamp.h topology_map.h tree.h \
-	tree_base.h tree_node.h utility.h vectormap.h \
-	win_gettimeofday.h xdr_cxx.h \
+	timestamp.h topology_map.h tree.h tree_base.h tree_node.h \
+	utility.h vectormap.h win_gettimeofday.h xdr_cxx.h \
 	parallel_communicator_specializations $(am__append_1) \
 	$(am__append_3) $(am__append_5) $(am__append_7) \
 	$(am__append_9) $(am__append_11) $(am__append_13) \
@@ -987,6 +989,9 @@ dof_map.h: $(top_srcdir)/include/base/dof_map.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 dof_map_base.h: $(top_srcdir)/include/base/dof_map_base.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+dof_map_kokkos.h: $(top_srcdir)/include/base/dof_map_kokkos.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 dof_object.h: $(top_srcdir)/include/base/dof_object.h
@@ -1520,9 +1525,6 @@ kokkos_fe_lagrange_3d.h: $(top_srcdir)/include/gpu/kokkos_fe_lagrange_3d.h
 kokkos_fe_map.h: $(top_srcdir)/include/gpu/kokkos_fe_map.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
-kokkos_parsed_function.h: $(top_srcdir)/include/gpu/kokkos_parsed_function.h
-	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
-
 kokkos_fe_monomial.h: $(top_srcdir)/include/gpu/kokkos_fe_monomial.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
@@ -1532,10 +1534,22 @@ kokkos_fe_shape_dispatch.h: $(top_srcdir)/include/gpu/kokkos_fe_shape_dispatch.h
 kokkos_fe_types.h: $(top_srcdir)/include/gpu/kokkos_fe_types.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
+kokkos_hilbert_assembly.h: $(top_srcdir)/include/gpu/kokkos_hilbert_assembly.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+kokkos_hilbert_system.h: $(top_srcdir)/include/gpu/kokkos_hilbert_system.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
 kokkos_linalg_base.h: $(top_srcdir)/include/gpu/kokkos_linalg_base.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
+kokkos_parsed_function.h: $(top_srcdir)/include/gpu/kokkos_parsed_function.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
 kokkos_quadrature.h: $(top_srcdir)/include/gpu/kokkos_quadrature.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+kokkos_scalar_types.h: $(top_srcdir)/include/gpu/kokkos_scalar_types.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 kokkos_storage.h: $(top_srcdir)/include/gpu/kokkos_storage.h
@@ -1605,6 +1619,9 @@ mesh.h: $(top_srcdir)/include/mesh/mesh.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 mesh_base.h: $(top_srcdir)/include/mesh/mesh_base.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+mesh_base_kokkos.h: $(top_srcdir)/include/mesh/mesh_base_kokkos.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 mesh_communication.h: $(top_srcdir)/include/mesh/mesh_communication.h
@@ -1823,10 +1840,10 @@ parsed_fem_function_parameter.h: $(top_srcdir)/include/numerics/parsed_fem_funct
 parsed_function.h: $(top_srcdir)/include/numerics/parsed_function.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
-parsed_function_program.h: $(top_srcdir)/include/numerics/parsed_function_program.h
+parsed_function_parameter.h: $(top_srcdir)/include/numerics/parsed_function_parameter.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
-parsed_function_parameter.h: $(top_srcdir)/include/numerics/parsed_function_parameter.h
+parsed_function_program.h: $(top_srcdir)/include/numerics/parsed_function_program.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 petsc_macro.h: $(top_srcdir)/include/numerics/petsc_macro.h
@@ -2339,6 +2356,12 @@ frequency_system.h: $(top_srcdir)/include/systems/frequency_system.h
 generic_projector.h: $(top_srcdir)/include/systems/generic_projector.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
+hilbert_assembly.h: $(top_srcdir)/include/systems/hilbert_assembly.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+hilbert_assembly_kernel.h: $(top_srcdir)/include/systems/hilbert_assembly_kernel.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
 implicit_system.h: $(top_srcdir)/include/systems/implicit_system.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
@@ -2547,9 +2570,6 @@ string_to_enum.h: $(top_srcdir)/include/utils/string_to_enum.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 thread_buffered_syncbuf.h: $(top_srcdir)/include/utils/thread_buffered_syncbuf.h
-	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
-
-threads_spin_mutex_forward.h: $(top_srcdir)/include/parallel/threads_spin_mutex_forward.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 timestamp.h: $(top_srcdir)/include/utils/timestamp.h

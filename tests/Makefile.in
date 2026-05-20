@@ -98,45 +98,46 @@ check_PROGRAMS = $(am__EXEEXT_1) $(am__EXEEXT_2) $(am__EXEEXT_3) \
 	$(am__EXEEXT_4) $(am__EXEEXT_5) $(am__EXEEXT_6) \
 	$(am__EXEEXT_7) $(am__EXEEXT_8) $(am__EXEEXT_9)
 TESTS = $(am__EXEEXT_1) $(am__EXEEXT_2) $(am__EXEEXT_3) \
-	$(am__append_15)
-@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_2 = -I$(top_srcdir)/include $(KOKKOS_CPPFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_3 = kokkos_fe_types_oracle_unit kokkos_fe_shape_oracle_unit \
+	$(am__append_16)
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_2 = -I$(top_srcdir)/include
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_3 = ../src/apps/L2system_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_4 = kokkos_fe_types_oracle_unit kokkos_fe_shape_oracle_unit \
 @LIBMESH_ENABLE_KOKKOS_TRUE@                    kokkos_fe_map_oracle_unit kokkos_fe_invariant_unit \
 @LIBMESH_ENABLE_KOKKOS_TRUE@                    kokkos_fe_contract_unit kokkos_fe_permuted_map_oracle_unit \
 @LIBMESH_ENABLE_KOKKOS_TRUE@                    kokkos_fe_reconstruction_oracle_unit \
 @LIBMESH_ENABLE_KOKKOS_TRUE@                    kokkos_fe_side_trace_oracle_unit \
 @LIBMESH_ENABLE_KOKKOS_TRUE@                    kokkos_quadrature_oracle_unit
 
-@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_4 = kokkos_fe_types_oracle_unit kokkos_fe_shape_oracle_unit \
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_5 = kokkos_fe_types_oracle_unit kokkos_fe_shape_oracle_unit \
 @LIBMESH_ENABLE_KOKKOS_TRUE@           kokkos_fe_map_oracle_unit kokkos_fe_invariant_unit \
 @LIBMESH_ENABLE_KOKKOS_TRUE@           kokkos_fe_contract_unit kokkos_fe_permuted_map_oracle_unit \
 @LIBMESH_ENABLE_KOKKOS_TRUE@           kokkos_fe_reconstruction_oracle_unit \
 @LIBMESH_ENABLE_KOKKOS_TRUE@           kokkos_fe_side_trace_oracle_unit \
 @LIBMESH_ENABLE_KOKKOS_TRUE@           kokkos_quadrature_oracle_unit
 
-@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_5 = unit_tests-kokkos-dbg
 @LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_6 = unit_tests-kokkos-dbg
-@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@am__append_7 = unit_tests-kokkos-opt
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_7 = unit_tests-kokkos-dbg
 @LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@am__append_8 = unit_tests-kokkos-opt
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@am__append_9 = unit_tests-kokkos-opt
 
 # our GLIBC debugging preprocessor flags seem to potentially conflict
 # with libcppunit binaries.  Some cppunit versions work fine for us,
 # others segfault and/or hang.  By default we will not run
 # GLIBCXX-debugging builds with cppunit unless specifically
 # configured to.
-@ACSM_ENABLE_GLIBCXX_DEBUGGING_CPPUNIT_TRUE@@ACSM_ENABLE_GLIBCXX_DEBUGGING_TRUE@@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@am__append_9 = unit_tests-dbg
-@ACSM_ENABLE_GLIBCXX_DEBUGGING_FALSE@@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@am__append_10 = unit_tests-dbg
-@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@am__append_11 = unit_tests-devel
-@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_PROF_MODE_TRUE@am__append_12 = unit_tests-prof
-@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPROF_MODE_TRUE@am__append_13 = unit_tests-oprof
-@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPT_MODE_TRUE@am__append_14 = unit_tests-opt
-@LIBMESH_ENABLE_CPPUNIT_TRUE@am__append_15 = run_unit_tests.sh
-@LIBMESH_VPATH_BUILD_TRUE@am__append_16 = .linkstamp
+@ACSM_ENABLE_GLIBCXX_DEBUGGING_CPPUNIT_TRUE@@ACSM_ENABLE_GLIBCXX_DEBUGGING_TRUE@@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@am__append_10 = unit_tests-dbg
+@ACSM_ENABLE_GLIBCXX_DEBUGGING_FALSE@@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@am__append_11 = unit_tests-dbg
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@am__append_12 = unit_tests-devel
+@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_PROF_MODE_TRUE@am__append_13 = unit_tests-prof
+@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPROF_MODE_TRUE@am__append_14 = unit_tests-oprof
+@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPT_MODE_TRUE@am__append_15 = unit_tests-opt
+@LIBMESH_ENABLE_CPPUNIT_TRUE@am__append_16 = run_unit_tests.sh
+@LIBMESH_VPATH_BUILD_TRUE@am__append_17 = .linkstamp
 
 ######################################################################
 #
 # Don't leave code coverage outputs lying around
-@CODE_COVERAGE_ENABLED_TRUE@am__append_17 = */*.gcda */*.gcno
+@CODE_COVERAGE_ENABLED_TRUE@am__append_18 = */*.gcda */*.gcno
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \
@@ -228,83 +229,64 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @LIBMESH_ENABLE_KOKKOS_TRUE@am_kokkos_fe_contract_unit_OBJECTS = fe/kokkos_fe_contract_test.$(OBJEXT)
 kokkos_fe_contract_unit_OBJECTS =  \
 	$(am_kokkos_fe_contract_unit_OBJECTS)
-am__DEPENDENCIES_1 =
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_contract_unit_DEPENDENCIES =  \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_opt.la \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_opt.la
 am__kokkos_fe_invariant_unit_SOURCES_DIST =  \
 	fe/kokkos_fe_invariant_test.K
 @LIBMESH_ENABLE_KOKKOS_TRUE@am_kokkos_fe_invariant_unit_OBJECTS = fe/kokkos_fe_invariant_test.$(OBJEXT)
 kokkos_fe_invariant_unit_OBJECTS =  \
 	$(am_kokkos_fe_invariant_unit_OBJECTS)
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_invariant_unit_DEPENDENCIES =  \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_opt.la \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_opt.la
 am__kokkos_fe_map_oracle_unit_SOURCES_DIST =  \
 	fe/kokkos_fe_map_oracle_test.K
 @LIBMESH_ENABLE_KOKKOS_TRUE@am_kokkos_fe_map_oracle_unit_OBJECTS = fe/kokkos_fe_map_oracle_test.$(OBJEXT)
 kokkos_fe_map_oracle_unit_OBJECTS =  \
 	$(am_kokkos_fe_map_oracle_unit_OBJECTS)
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_map_oracle_unit_DEPENDENCIES =  \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_opt.la \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_opt.la
 am__kokkos_fe_permuted_map_oracle_unit_SOURCES_DIST =  \
 	fe/kokkos_fe_permuted_map_oracle_test.K
 @LIBMESH_ENABLE_KOKKOS_TRUE@am_kokkos_fe_permuted_map_oracle_unit_OBJECTS = fe/kokkos_fe_permuted_map_oracle_test.$(OBJEXT)
 kokkos_fe_permuted_map_oracle_unit_OBJECTS =  \
 	$(am_kokkos_fe_permuted_map_oracle_unit_OBJECTS)
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_permuted_map_oracle_unit_DEPENDENCIES =  \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_opt.la \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_opt.la
 am__kokkos_fe_reconstruction_oracle_unit_SOURCES_DIST =  \
 	fe/kokkos_fe_reconstruction_oracle_test.K
 @LIBMESH_ENABLE_KOKKOS_TRUE@am_kokkos_fe_reconstruction_oracle_unit_OBJECTS = fe/kokkos_fe_reconstruction_oracle_test.$(OBJEXT)
 kokkos_fe_reconstruction_oracle_unit_OBJECTS =  \
 	$(am_kokkos_fe_reconstruction_oracle_unit_OBJECTS)
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_reconstruction_oracle_unit_DEPENDENCIES =  \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_opt.la \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_opt.la
 am__kokkos_fe_shape_oracle_unit_SOURCES_DIST =  \
 	fe/kokkos_fe_shape_oracle_test.K
 @LIBMESH_ENABLE_KOKKOS_TRUE@am_kokkos_fe_shape_oracle_unit_OBJECTS = fe/kokkos_fe_shape_oracle_test.$(OBJEXT)
 kokkos_fe_shape_oracle_unit_OBJECTS =  \
 	$(am_kokkos_fe_shape_oracle_unit_OBJECTS)
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_shape_oracle_unit_DEPENDENCIES =  \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_opt.la \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_opt.la
 am__kokkos_fe_side_trace_oracle_unit_SOURCES_DIST =  \
 	fe/kokkos_fe_side_trace_oracle_test.K
 @LIBMESH_ENABLE_KOKKOS_TRUE@am_kokkos_fe_side_trace_oracle_unit_OBJECTS = fe/kokkos_fe_side_trace_oracle_test.$(OBJEXT)
 kokkos_fe_side_trace_oracle_unit_OBJECTS =  \
 	$(am_kokkos_fe_side_trace_oracle_unit_OBJECTS)
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_side_trace_oracle_unit_DEPENDENCIES =  \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_opt.la \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_opt.la
 am__kokkos_fe_types_oracle_unit_SOURCES_DIST =  \
 	fe/kokkos_fe_types_oracle_test.K
 @LIBMESH_ENABLE_KOKKOS_TRUE@am_kokkos_fe_types_oracle_unit_OBJECTS = fe/kokkos_fe_types_oracle_test.$(OBJEXT)
 kokkos_fe_types_oracle_unit_OBJECTS =  \
 	$(am_kokkos_fe_types_oracle_unit_OBJECTS)
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_types_oracle_unit_DEPENDENCIES =  \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_opt.la \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_opt.la
 am__kokkos_quadrature_oracle_unit_SOURCES_DIST =  \
 	fe/kokkos_quadrature_oracle_test.K
 @LIBMESH_ENABLE_KOKKOS_TRUE@am_kokkos_quadrature_oracle_unit_OBJECTS = fe/kokkos_quadrature_oracle_test.$(OBJEXT)
 kokkos_quadrature_oracle_unit_OBJECTS =  \
 	$(am_kokkos_quadrature_oracle_unit_OBJECTS)
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_quadrature_oracle_unit_DEPENDENCIES =  \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_opt.la \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_opt.la
 am__unit_tests_dbg_SOURCES_DIST = driver.C libmesh_cppunit.h \
 	stream_redirector.h test_comm.h base/dof_object_test.h \
 	base/dof_map_test.C base/default_coupling_test.C \
@@ -382,9 +364,11 @@ am__unit_tests_dbg_SOURCES_DIST = driver.C libmesh_cppunit.h \
 	systems/systems_test.C utils/parameters_test.C \
 	utils/point_locator_test.C utils/rb_parameters_test.C \
 	utils/transparent_comparator.C utils/vectormap_test.C \
-	utils/xdr_test.C fparser/autodiff.C
+	utils/xdr_test.C fparser/autodiff.C \
+	../src/apps/L2system_kokkos.K kokkos_scope.K kokkos_scope.h
 @LIBMESH_ENABLE_FPARSER_TRUE@am__objects_1 = fparser/unit_tests_dbg-autodiff.$(OBJEXT)
-am__objects_2 = unit_tests_dbg-driver.$(OBJEXT) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__objects_2 = ../src/apps/L2system_kokkos.$(OBJEXT)
+am__objects_3 = unit_tests_dbg-driver.$(OBJEXT) \
 	base/unit_tests_dbg-dof_map_test.$(OBJEXT) \
 	base/unit_tests_dbg-default_coupling_test.$(OBJEXT) \
 	base/unit_tests_dbg-getpot_test.$(OBJEXT) \
@@ -505,18 +489,13 @@ am__objects_2 = unit_tests_dbg-driver.$(OBJEXT) \
 	utils/unit_tests_dbg-rb_parameters_test.$(OBJEXT) \
 	utils/unit_tests_dbg-transparent_comparator.$(OBJEXT) \
 	utils/unit_tests_dbg-vectormap_test.$(OBJEXT) \
-	utils/unit_tests_dbg-xdr_test.$(OBJEXT) $(am__objects_1)
-@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@am_unit_tests_dbg_OBJECTS = $(am__objects_2)
+	utils/unit_tests_dbg-xdr_test.$(OBJEXT) $(am__objects_1) \
+	$(am__objects_2)
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__objects_4 = kokkos_scope.$(OBJEXT)
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@am_unit_tests_dbg_OBJECTS = $(am__objects_3) \
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@	$(am__objects_4)
 unit_tests_dbg_OBJECTS = $(am_unit_tests_dbg_OBJECTS)
 @LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@unit_tests_dbg_DEPENDENCIES = $(top_builddir)/libmesh_dbg.la
-AM_V_lt = $(am__v_lt_@AM_V@)
-am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
-am__v_lt_0 = --silent
-am__v_lt_1 =
-unit_tests_dbg_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
-	$(unit_tests_dbg_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
-	$(LDFLAGS) -o $@
 am__unit_tests_devel_SOURCES_DIST = driver.C libmesh_cppunit.h \
 	stream_redirector.h test_comm.h base/dof_object_test.h \
 	base/dof_map_test.C base/default_coupling_test.C \
@@ -594,9 +573,10 @@ am__unit_tests_devel_SOURCES_DIST = driver.C libmesh_cppunit.h \
 	systems/systems_test.C utils/parameters_test.C \
 	utils/point_locator_test.C utils/rb_parameters_test.C \
 	utils/transparent_comparator.C utils/vectormap_test.C \
-	utils/xdr_test.C fparser/autodiff.C
-@LIBMESH_ENABLE_FPARSER_TRUE@am__objects_3 = fparser/unit_tests_devel-autodiff.$(OBJEXT)
-am__objects_4 = unit_tests_devel-driver.$(OBJEXT) \
+	utils/xdr_test.C fparser/autodiff.C \
+	../src/apps/L2system_kokkos.K kokkos_scope.K kokkos_scope.h
+@LIBMESH_ENABLE_FPARSER_TRUE@am__objects_5 = fparser/unit_tests_devel-autodiff.$(OBJEXT)
+am__objects_6 = unit_tests_devel-driver.$(OBJEXT) \
 	base/unit_tests_devel-dof_map_test.$(OBJEXT) \
 	base/unit_tests_devel-default_coupling_test.$(OBJEXT) \
 	base/unit_tests_devel-getpot_test.$(OBJEXT) \
@@ -717,18 +697,20 @@ am__objects_4 = unit_tests_devel-driver.$(OBJEXT) \
 	utils/unit_tests_devel-rb_parameters_test.$(OBJEXT) \
 	utils/unit_tests_devel-transparent_comparator.$(OBJEXT) \
 	utils/unit_tests_devel-vectormap_test.$(OBJEXT) \
-	utils/unit_tests_devel-xdr_test.$(OBJEXT) $(am__objects_3)
-@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@am_unit_tests_devel_OBJECTS = $(am__objects_4)
+	utils/unit_tests_devel-xdr_test.$(OBJEXT) $(am__objects_5) \
+	$(am__objects_2)
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@am_unit_tests_devel_OBJECTS = $(am__objects_6) \
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@	$(am__objects_4)
 unit_tests_devel_OBJECTS = $(am_unit_tests_devel_OBJECTS)
 @LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@unit_tests_devel_DEPENDENCIES = $(top_builddir)/libmesh_devel.la
-unit_tests_devel_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
-	$(unit_tests_devel_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
-	$(LDFLAGS) -o $@
 am_unit_tests_kokkos_dbg_OBJECTS =
 am__EXTRA_unit_tests_kokkos_dbg_SOURCES_DIST = driver_kokkos.K
 unit_tests_kokkos_dbg_OBJECTS = $(am_unit_tests_kokkos_dbg_OBJECTS)
 unit_tests_kokkos_dbg_LDADD = $(LDADD)
+AM_V_lt = $(am__v_lt_@AM_V@)
+am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
+am__v_lt_0 = --silent
+am__v_lt_1 =
 am_unit_tests_kokkos_opt_OBJECTS =
 am__EXTRA_unit_tests_kokkos_opt_SOURCES_DIST = driver_kokkos.K
 unit_tests_kokkos_opt_OBJECTS = $(am_unit_tests_kokkos_opt_OBJECTS)
@@ -810,9 +792,10 @@ am__unit_tests_oprof_SOURCES_DIST = driver.C libmesh_cppunit.h \
 	systems/systems_test.C utils/parameters_test.C \
 	utils/point_locator_test.C utils/rb_parameters_test.C \
 	utils/transparent_comparator.C utils/vectormap_test.C \
-	utils/xdr_test.C fparser/autodiff.C
-@LIBMESH_ENABLE_FPARSER_TRUE@am__objects_5 = fparser/unit_tests_oprof-autodiff.$(OBJEXT)
-am__objects_6 = unit_tests_oprof-driver.$(OBJEXT) \
+	utils/xdr_test.C fparser/autodiff.C \
+	../src/apps/L2system_kokkos.K kokkos_scope.K kokkos_scope.h
+@LIBMESH_ENABLE_FPARSER_TRUE@am__objects_7 = fparser/unit_tests_oprof-autodiff.$(OBJEXT)
+am__objects_8 = unit_tests_oprof-driver.$(OBJEXT) \
 	base/unit_tests_oprof-dof_map_test.$(OBJEXT) \
 	base/unit_tests_oprof-default_coupling_test.$(OBJEXT) \
 	base/unit_tests_oprof-getpot_test.$(OBJEXT) \
@@ -933,14 +916,12 @@ am__objects_6 = unit_tests_oprof-driver.$(OBJEXT) \
 	utils/unit_tests_oprof-rb_parameters_test.$(OBJEXT) \
 	utils/unit_tests_oprof-transparent_comparator.$(OBJEXT) \
 	utils/unit_tests_oprof-vectormap_test.$(OBJEXT) \
-	utils/unit_tests_oprof-xdr_test.$(OBJEXT) $(am__objects_5)
-@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPROF_MODE_TRUE@am_unit_tests_oprof_OBJECTS = $(am__objects_6)
+	utils/unit_tests_oprof-xdr_test.$(OBJEXT) $(am__objects_7) \
+	$(am__objects_2)
+@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPROF_MODE_TRUE@am_unit_tests_oprof_OBJECTS = $(am__objects_8) \
+@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPROF_MODE_TRUE@	$(am__objects_4)
 unit_tests_oprof_OBJECTS = $(am_unit_tests_oprof_OBJECTS)
 @LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPROF_MODE_TRUE@unit_tests_oprof_DEPENDENCIES = $(top_builddir)/libmesh_oprof.la
-unit_tests_oprof_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
-	$(unit_tests_oprof_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
-	$(LDFLAGS) -o $@
 am__unit_tests_opt_SOURCES_DIST = driver.C libmesh_cppunit.h \
 	stream_redirector.h test_comm.h base/dof_object_test.h \
 	base/dof_map_test.C base/default_coupling_test.C \
@@ -1018,9 +999,10 @@ am__unit_tests_opt_SOURCES_DIST = driver.C libmesh_cppunit.h \
 	systems/systems_test.C utils/parameters_test.C \
 	utils/point_locator_test.C utils/rb_parameters_test.C \
 	utils/transparent_comparator.C utils/vectormap_test.C \
-	utils/xdr_test.C fparser/autodiff.C
-@LIBMESH_ENABLE_FPARSER_TRUE@am__objects_7 = fparser/unit_tests_opt-autodiff.$(OBJEXT)
-am__objects_8 = unit_tests_opt-driver.$(OBJEXT) \
+	utils/xdr_test.C fparser/autodiff.C \
+	../src/apps/L2system_kokkos.K kokkos_scope.K kokkos_scope.h
+@LIBMESH_ENABLE_FPARSER_TRUE@am__objects_9 = fparser/unit_tests_opt-autodiff.$(OBJEXT)
+am__objects_10 = unit_tests_opt-driver.$(OBJEXT) \
 	base/unit_tests_opt-dof_map_test.$(OBJEXT) \
 	base/unit_tests_opt-default_coupling_test.$(OBJEXT) \
 	base/unit_tests_opt-getpot_test.$(OBJEXT) \
@@ -1141,14 +1123,12 @@ am__objects_8 = unit_tests_opt-driver.$(OBJEXT) \
 	utils/unit_tests_opt-rb_parameters_test.$(OBJEXT) \
 	utils/unit_tests_opt-transparent_comparator.$(OBJEXT) \
 	utils/unit_tests_opt-vectormap_test.$(OBJEXT) \
-	utils/unit_tests_opt-xdr_test.$(OBJEXT) $(am__objects_7)
-@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPT_MODE_TRUE@am_unit_tests_opt_OBJECTS = $(am__objects_8)
+	utils/unit_tests_opt-xdr_test.$(OBJEXT) $(am__objects_9) \
+	$(am__objects_2)
+@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPT_MODE_TRUE@am_unit_tests_opt_OBJECTS = $(am__objects_10) \
+@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPT_MODE_TRUE@	$(am__objects_4)
 unit_tests_opt_OBJECTS = $(am_unit_tests_opt_OBJECTS)
 @LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPT_MODE_TRUE@unit_tests_opt_DEPENDENCIES = $(top_builddir)/libmesh_opt.la
-unit_tests_opt_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
-	$(unit_tests_opt_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
-	$(LDFLAGS) -o $@
 am__unit_tests_prof_SOURCES_DIST = driver.C libmesh_cppunit.h \
 	stream_redirector.h test_comm.h base/dof_object_test.h \
 	base/dof_map_test.C base/default_coupling_test.C \
@@ -1226,9 +1206,10 @@ am__unit_tests_prof_SOURCES_DIST = driver.C libmesh_cppunit.h \
 	systems/systems_test.C utils/parameters_test.C \
 	utils/point_locator_test.C utils/rb_parameters_test.C \
 	utils/transparent_comparator.C utils/vectormap_test.C \
-	utils/xdr_test.C fparser/autodiff.C
-@LIBMESH_ENABLE_FPARSER_TRUE@am__objects_9 = fparser/unit_tests_prof-autodiff.$(OBJEXT)
-am__objects_10 = unit_tests_prof-driver.$(OBJEXT) \
+	utils/xdr_test.C fparser/autodiff.C \
+	../src/apps/L2system_kokkos.K kokkos_scope.K kokkos_scope.h
+@LIBMESH_ENABLE_FPARSER_TRUE@am__objects_11 = fparser/unit_tests_prof-autodiff.$(OBJEXT)
+am__objects_12 = unit_tests_prof-driver.$(OBJEXT) \
 	base/unit_tests_prof-dof_map_test.$(OBJEXT) \
 	base/unit_tests_prof-default_coupling_test.$(OBJEXT) \
 	base/unit_tests_prof-getpot_test.$(OBJEXT) \
@@ -1349,14 +1330,12 @@ am__objects_10 = unit_tests_prof-driver.$(OBJEXT) \
 	utils/unit_tests_prof-rb_parameters_test.$(OBJEXT) \
 	utils/unit_tests_prof-transparent_comparator.$(OBJEXT) \
 	utils/unit_tests_prof-vectormap_test.$(OBJEXT) \
-	utils/unit_tests_prof-xdr_test.$(OBJEXT) $(am__objects_9)
-@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_PROF_MODE_TRUE@am_unit_tests_prof_OBJECTS = $(am__objects_10)
+	utils/unit_tests_prof-xdr_test.$(OBJEXT) $(am__objects_11) \
+	$(am__objects_2)
+@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_PROF_MODE_TRUE@am_unit_tests_prof_OBJECTS = $(am__objects_12) \
+@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_PROF_MODE_TRUE@	$(am__objects_4)
 unit_tests_prof_OBJECTS = $(am_unit_tests_prof_OBJECTS)
 @LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_PROF_MODE_TRUE@unit_tests_prof_DEPENDENCIES = $(top_builddir)/libmesh_prof.la
-unit_tests_prof_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
-	$(unit_tests_prof_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
-	$(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -2492,6 +2471,31 @@ AM_CPPFLAGS = $(libmesh_optional_INCLUDES) -I$(top_builddir)/include \
 
 AM_LDFLAGS = $(libmesh_LDFLAGS) $(libmesh_contrib_LDFLAGS)
 KOKKOS_TEST_CPPFLAGS = $(am__append_2)
+@LIBMESH_ENABLE_KOKKOS_TRUE@KOKKOS_TEST_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX)
+
+KOKKOS_TEST_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD)
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@KOKKOS_UNIT_TEST_SOURCES = kokkos_scope.K kokkos_scope.h
+KOKKOS_UNIT_TEST_SOURCES =
+@LIBMESH_ENABLE_KOKKOS_TRUE@KOKKOS_TEST_K_SOURCES = \
+@LIBMESH_ENABLE_KOKKOS_TRUE@    kokkos_scope.K \
+@LIBMESH_ENABLE_KOKKOS_TRUE@    fe/kokkos_fe_types_oracle_test.K \
+@LIBMESH_ENABLE_KOKKOS_TRUE@    fe/kokkos_fe_shape_oracle_test.K \
+@LIBMESH_ENABLE_KOKKOS_TRUE@    fe/kokkos_fe_map_oracle_test.K \
+@LIBMESH_ENABLE_KOKKOS_TRUE@    fe/kokkos_fe_invariant_test.K \
+@LIBMESH_ENABLE_KOKKOS_TRUE@    fe/kokkos_fe_contract_test.K \
+@LIBMESH_ENABLE_KOKKOS_TRUE@    fe/kokkos_fe_permuted_map_oracle_test.K \
+@LIBMESH_ENABLE_KOKKOS_TRUE@    fe/kokkos_fe_reconstruction_oracle_test.K \
+@LIBMESH_ENABLE_KOKKOS_TRUE@    fe/kokkos_fe_side_trace_oracle_test.K \
+@LIBMESH_ENABLE_KOKKOS_TRUE@    fe/kokkos_quadrature_oracle_test.K \
+@LIBMESH_ENABLE_KOKKOS_TRUE@    numerics/kokkos_vector_ops_oracle_test.K \
+@LIBMESH_ENABLE_KOKKOS_TRUE@    numerics/kokkos_tensor_ops_oracle_test.K
+
+KOKKOS_TEST_K_SOURCES =
+@LIBMESH_ENABLE_KOKKOS_TRUE@KOKKOS_TEST_OBJECTS = $(KOKKOS_TEST_K_SOURCES:.K=.o)
+KOKKOS_TEST_OBJECTS =
 unit_tests_sources = driver.C libmesh_cppunit.h stream_redirector.h \
 	test_comm.h base/dof_object_test.h base/dof_map_test.C \
 	base/default_coupling_test.C base/getpot_test.C \
@@ -2569,7 +2573,7 @@ unit_tests_sources = driver.C libmesh_cppunit.h stream_redirector.h \
 	systems/systems_test.C utils/parameters_test.C \
 	utils/point_locator_test.C utils/rb_parameters_test.C \
 	utils/transparent_comparator.C utils/vectormap_test.C \
-	utils/xdr_test.C $(am__append_1)
+	utils/xdr_test.C $(am__append_1) $(am__append_3)
 data = matrices/geom_1_extraction_op.h5 \
        matrices/geom_1_extraction_op.m \
        matrices/geom_1_extraction_op.m.gz \
@@ -2677,78 +2681,78 @@ kokkos_unit_test_sources = \
 
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_types_oracle_unit_SOURCES = fe/kokkos_fe_types_oracle_test.K
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_types_oracle_unit_CPPFLAGS = $(AM_CPPFLAGS) $(KOKKOS_TEST_CPPFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_types_oracle_unit_CXXFLAGS = $(AM_CXXFLAGS) $(KOKKOS_CXXFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_types_oracle_unit_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_types_oracle_unit_LDADD = $(top_builddir)/libmesh_opt.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_types_oracle_unit_CXXFLAGS = $(AM_CXXFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_types_oracle_unit_LDFLAGS = $(AM_LDFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_types_oracle_unit_LDADD = $(top_builddir)/libmesh_opt.la
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_shape_oracle_unit_SOURCES = fe/kokkos_fe_shape_oracle_test.K
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_shape_oracle_unit_CPPFLAGS = $(AM_CPPFLAGS) $(KOKKOS_TEST_CPPFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_shape_oracle_unit_CXXFLAGS = $(AM_CXXFLAGS) $(KOKKOS_CXXFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_shape_oracle_unit_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_shape_oracle_unit_LDADD = $(top_builddir)/libmesh_opt.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_shape_oracle_unit_CXXFLAGS = $(AM_CXXFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_shape_oracle_unit_LDFLAGS = $(AM_LDFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_shape_oracle_unit_LDADD = $(top_builddir)/libmesh_opt.la
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_map_oracle_unit_SOURCES = fe/kokkos_fe_map_oracle_test.K
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_map_oracle_unit_CPPFLAGS = $(AM_CPPFLAGS) $(KOKKOS_TEST_CPPFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_map_oracle_unit_CXXFLAGS = $(AM_CXXFLAGS) $(KOKKOS_CXXFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_map_oracle_unit_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_map_oracle_unit_LDADD = $(top_builddir)/libmesh_opt.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_map_oracle_unit_CXXFLAGS = $(AM_CXXFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_map_oracle_unit_LDFLAGS = $(AM_LDFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_map_oracle_unit_LDADD = $(top_builddir)/libmesh_opt.la
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_invariant_unit_SOURCES = fe/kokkos_fe_invariant_test.K
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_invariant_unit_CPPFLAGS = $(AM_CPPFLAGS) $(KOKKOS_TEST_CPPFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_invariant_unit_CXXFLAGS = $(AM_CXXFLAGS) $(KOKKOS_CXXFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_invariant_unit_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_invariant_unit_LDADD = $(top_builddir)/libmesh_opt.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_invariant_unit_CXXFLAGS = $(AM_CXXFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_invariant_unit_LDFLAGS = $(AM_LDFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_invariant_unit_LDADD = $(top_builddir)/libmesh_opt.la
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_contract_unit_SOURCES = fe/kokkos_fe_contract_test.K
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_contract_unit_CPPFLAGS = $(AM_CPPFLAGS) $(KOKKOS_TEST_CPPFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_contract_unit_CXXFLAGS = $(AM_CXXFLAGS) $(KOKKOS_CXXFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_contract_unit_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_contract_unit_LDADD = $(top_builddir)/libmesh_opt.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_contract_unit_CXXFLAGS = $(AM_CXXFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_contract_unit_LDFLAGS = $(AM_LDFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_contract_unit_LDADD = $(top_builddir)/libmesh_opt.la
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_permuted_map_oracle_unit_SOURCES = fe/kokkos_fe_permuted_map_oracle_test.K
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_permuted_map_oracle_unit_CPPFLAGS = $(AM_CPPFLAGS) $(KOKKOS_TEST_CPPFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_permuted_map_oracle_unit_CXXFLAGS = $(AM_CXXFLAGS) $(KOKKOS_CXXFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_permuted_map_oracle_unit_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_permuted_map_oracle_unit_LDADD = $(top_builddir)/libmesh_opt.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_permuted_map_oracle_unit_CXXFLAGS = $(AM_CXXFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_permuted_map_oracle_unit_LDFLAGS = $(AM_LDFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_permuted_map_oracle_unit_LDADD = $(top_builddir)/libmesh_opt.la
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_reconstruction_oracle_unit_SOURCES = fe/kokkos_fe_reconstruction_oracle_test.K
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_reconstruction_oracle_unit_CPPFLAGS = $(AM_CPPFLAGS) $(KOKKOS_TEST_CPPFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_reconstruction_oracle_unit_CXXFLAGS = $(AM_CXXFLAGS) $(KOKKOS_CXXFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_reconstruction_oracle_unit_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_reconstruction_oracle_unit_LDADD = $(top_builddir)/libmesh_opt.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_reconstruction_oracle_unit_CXXFLAGS = $(AM_CXXFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_reconstruction_oracle_unit_LDFLAGS = $(AM_LDFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_reconstruction_oracle_unit_LDADD = $(top_builddir)/libmesh_opt.la
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_side_trace_oracle_unit_SOURCES = fe/kokkos_fe_side_trace_oracle_test.K
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_side_trace_oracle_unit_CPPFLAGS = $(AM_CPPFLAGS) $(KOKKOS_TEST_CPPFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_side_trace_oracle_unit_CXXFLAGS = $(AM_CXXFLAGS) $(KOKKOS_CXXFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_side_trace_oracle_unit_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_side_trace_oracle_unit_LDADD = $(top_builddir)/libmesh_opt.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_side_trace_oracle_unit_CXXFLAGS = $(AM_CXXFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_side_trace_oracle_unit_LDFLAGS = $(AM_LDFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_fe_side_trace_oracle_unit_LDADD = $(top_builddir)/libmesh_opt.la
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_quadrature_oracle_unit_SOURCES = fe/kokkos_quadrature_oracle_test.K
 @LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_quadrature_oracle_unit_CPPFLAGS = $(AM_CPPFLAGS) $(KOKKOS_TEST_CPPFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_quadrature_oracle_unit_CXXFLAGS = $(AM_CXXFLAGS) $(KOKKOS_CXXFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_quadrature_oracle_unit_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_quadrature_oracle_unit_LDADD = $(top_builddir)/libmesh_opt.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_quadrature_oracle_unit_CXXFLAGS = $(AM_CXXFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_quadrature_oracle_unit_LDFLAGS = $(AM_LDFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@kokkos_quadrature_oracle_unit_LDADD = $(top_builddir)/libmesh_opt.la
 @LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@unit_tests_kokkos_dbg_SOURCES =
 @LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@EXTRA_unit_tests_kokkos_dbg_SOURCES = driver_kokkos.K
 @LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@unit_tests_kokkos_opt_SOURCES =
 @LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@EXTRA_unit_tests_kokkos_opt_SOURCES = driver_kokkos.K
-@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@unit_tests_dbg_SOURCES = $(unit_tests_sources)
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@unit_tests_dbg_SOURCES = $(unit_tests_sources) $(KOKKOS_UNIT_TEST_SOURCES)
 @LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@unit_tests_dbg_CPPFLAGS = $(CPPFLAGS_DBG) $(AM_CPPFLAGS)
 @LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@unit_tests_dbg_CXXFLAGS = $(CXXFLAGS_DBG)
 @LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@unit_tests_dbg_LDADD = $(top_builddir)/libmesh_dbg.la
 @LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@unit_tests_dbgdir = $(datadir)
 @LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@unit_tests_dbg_DATA = $(data)
-@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@unit_tests_devel_SOURCES = $(unit_tests_sources)
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@unit_tests_devel_SOURCES = $(unit_tests_sources) $(KOKKOS_UNIT_TEST_SOURCES)
 @LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@unit_tests_devel_CPPFLAGS = $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS)
 @LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@unit_tests_devel_CXXFLAGS = $(CXXFLAGS_DEVEL)
 @LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@unit_tests_devel_LDADD = $(top_builddir)/libmesh_devel.la
 @LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@unit_tests_develdir = $(datadir)
 @LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_CPPUNIT_TRUE@unit_tests_devel_DATA = $(data)
-@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_PROF_MODE_TRUE@unit_tests_prof_SOURCES = $(unit_tests_sources)
+@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_PROF_MODE_TRUE@unit_tests_prof_SOURCES = $(unit_tests_sources) $(KOKKOS_UNIT_TEST_SOURCES)
 @LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_PROF_MODE_TRUE@unit_tests_prof_CPPFLAGS = $(CPPFLAGS_PROF) $(AM_CPPFLAGS)
 @LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_PROF_MODE_TRUE@unit_tests_prof_CXXFLAGS = $(CXXFLAGS_PROF)
 @LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_PROF_MODE_TRUE@unit_tests_prof_LDADD = $(top_builddir)/libmesh_prof.la
 @LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_PROF_MODE_TRUE@unit_tests_profdir = $(datadir)
 @LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_PROF_MODE_TRUE@unit_tests_prof_DATA = $(data)
-@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPROF_MODE_TRUE@unit_tests_oprof_SOURCES = $(unit_tests_sources)
+@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPROF_MODE_TRUE@unit_tests_oprof_SOURCES = $(unit_tests_sources) $(KOKKOS_UNIT_TEST_SOURCES)
 @LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPROF_MODE_TRUE@unit_tests_oprof_CPPFLAGS = $(CPPFLAGS_OPROF) $(AM_CPPFLAGS)
 @LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPROF_MODE_TRUE@unit_tests_oprof_CXXFLAGS = $(CXXFLAGS_OPROF)
 @LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPROF_MODE_TRUE@unit_tests_oprof_LDADD = $(top_builddir)/libmesh_oprof.la
 @LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPROF_MODE_TRUE@unit_tests_oprofdir = $(datadir)
 @LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPROF_MODE_TRUE@unit_tests_oprof_DATA = $(data)
-@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPT_MODE_TRUE@unit_tests_opt_SOURCES = $(unit_tests_sources)
+@LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPT_MODE_TRUE@unit_tests_opt_SOURCES = $(unit_tests_sources) $(KOKKOS_UNIT_TEST_SOURCES)
 @LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPT_MODE_TRUE@unit_tests_opt_CPPFLAGS = $(CPPFLAGS_OPT) $(AM_CPPFLAGS)
 @LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPT_MODE_TRUE@unit_tests_opt_CXXFLAGS = $(CXXFLAGS_OPT)
 @LIBMESH_ENABLE_CPPUNIT_TRUE@@LIBMESH_OPT_MODE_TRUE@unit_tests_opt_LDADD = $(top_builddir)/libmesh_opt.la
@@ -2802,6 +2806,11 @@ kokkos_unit_test_sources = \
 @LIBMESH_ENABLE_KOKKOS_TRUE@  $(LIBTOOL) --tag=CXX --mode=link $(KOKKOS_CXX) \
 @LIBMESH_ENABLE_KOKKOS_TRUE@  $(LDFLAGS) $(kokkos_quadrature_oracle_unit_LDFLAGS) -o $@
 
+@LIBMESH_ENABLE_KOKKOS_TRUE@unit_tests_dbg_LINK = $(KOKKOS_TEST_LINK) $(unit_tests_dbg_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+@LIBMESH_ENABLE_KOKKOS_TRUE@unit_tests_devel_LINK = $(KOKKOS_TEST_LINK) $(unit_tests_devel_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+@LIBMESH_ENABLE_KOKKOS_TRUE@unit_tests_prof_LINK = $(KOKKOS_TEST_LINK) $(unit_tests_prof_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+@LIBMESH_ENABLE_KOKKOS_TRUE@unit_tests_oprof_LINK = $(KOKKOS_TEST_LINK) $(unit_tests_oprof_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+@LIBMESH_ENABLE_KOKKOS_TRUE@unit_tests_opt_LINK = $(KOKKOS_TEST_LINK) $(unit_tests_opt_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 CLEANFILES = cube_mesh.xda slit_mesh.xda slit_solution.xda out.e \
 	mesh_with_soln.e elemental_from_nodal.e write_elemset_data.e \
 	write_sideset_data.e write_nodeset_data.e write_edgeset_data.e \
@@ -2836,8 +2845,8 @@ CLEANFILES = cube_mesh.xda slit_mesh.xda slit_solution.xda out.e \
 	write_exodus_TET14.e write_exodus_TET4.e write_exodus_TRI3.e \
 	write_exodus_TRI6.e write_exodus_TRI7.e \
 	write_exodus_TRISHELL3.e smoother.out \
-	$(kokkos_unit_test_cleanfiles) $(am__append_16) \
-	$(am__append_17)
+	$(kokkos_unit_test_cleanfiles) $(am__append_17) \
+	$(am__append_18)
 
 # need to link any data files for VPATH builds
 @LIBMESH_VPATH_BUILD_TRUE@BUILT_SOURCES = .linkstamp
@@ -3259,10 +3268,18 @@ fparser/$(DEPDIR)/$(am__dirstamp):
 	@: >>fparser/$(DEPDIR)/$(am__dirstamp)
 fparser/unit_tests_dbg-autodiff.$(OBJEXT): fparser/$(am__dirstamp) \
 	fparser/$(DEPDIR)/$(am__dirstamp)
+../src/apps/$(am__dirstamp):
+	@$(MKDIR_P) ../src/apps
+	@: >>../src/apps/$(am__dirstamp)
+../src/apps/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) ../src/apps/$(DEPDIR)
+	@: >>../src/apps/$(DEPDIR)/$(am__dirstamp)
+../src/apps/L2system_kokkos.$(OBJEXT): ../src/apps/$(am__dirstamp) \
+	../src/apps/$(DEPDIR)/$(am__dirstamp)
 
 unit_tests-dbg$(EXEEXT): $(unit_tests_dbg_OBJECTS) $(unit_tests_dbg_DEPENDENCIES) $(EXTRA_unit_tests_dbg_DEPENDENCIES)
 	@rm -f unit_tests-dbg$(EXEEXT)
-	$(AM_V_CXXLD)$(unit_tests_dbg_LINK) $(unit_tests_dbg_OBJECTS) $(unit_tests_dbg_LDADD) $(LIBS)
+	$(AM_V_GEN)$(unit_tests_dbg_LINK) $(unit_tests_dbg_OBJECTS) $(unit_tests_dbg_LDADD) $(LIBS)
 base/unit_tests_devel-dof_map_test.$(OBJEXT): base/$(am__dirstamp) \
 	base/$(DEPDIR)/$(am__dirstamp)
 base/unit_tests_devel-default_coupling_test.$(OBJEXT):  \
@@ -3518,7 +3535,7 @@ fparser/unit_tests_devel-autodiff.$(OBJEXT): fparser/$(am__dirstamp) \
 
 unit_tests-devel$(EXEEXT): $(unit_tests_devel_OBJECTS) $(unit_tests_devel_DEPENDENCIES) $(EXTRA_unit_tests_devel_DEPENDENCIES)
 	@rm -f unit_tests-devel$(EXEEXT)
-	$(AM_V_CXXLD)$(unit_tests_devel_LINK) $(unit_tests_devel_OBJECTS) $(unit_tests_devel_LDADD) $(LIBS)
+	$(AM_V_GEN)$(unit_tests_devel_LINK) $(unit_tests_devel_OBJECTS) $(unit_tests_devel_LDADD) $(LIBS)
 
 @LIBMESH_ENABLE_KOKKOS_FALSE@unit_tests-kokkos-dbg$(EXEEXT): $(unit_tests_kokkos_dbg_OBJECTS) $(unit_tests_kokkos_dbg_DEPENDENCIES) $(EXTRA_unit_tests_kokkos_dbg_DEPENDENCIES)
 @LIBMESH_ENABLE_KOKKOS_FALSE@	@rm -f unit_tests-kokkos-dbg$(EXEEXT)
@@ -3782,7 +3799,7 @@ fparser/unit_tests_oprof-autodiff.$(OBJEXT): fparser/$(am__dirstamp) \
 
 unit_tests-oprof$(EXEEXT): $(unit_tests_oprof_OBJECTS) $(unit_tests_oprof_DEPENDENCIES) $(EXTRA_unit_tests_oprof_DEPENDENCIES)
 	@rm -f unit_tests-oprof$(EXEEXT)
-	$(AM_V_CXXLD)$(unit_tests_oprof_LINK) $(unit_tests_oprof_OBJECTS) $(unit_tests_oprof_LDADD) $(LIBS)
+	$(AM_V_GEN)$(unit_tests_oprof_LINK) $(unit_tests_oprof_OBJECTS) $(unit_tests_oprof_LDADD) $(LIBS)
 base/unit_tests_opt-dof_map_test.$(OBJEXT): base/$(am__dirstamp) \
 	base/$(DEPDIR)/$(am__dirstamp)
 base/unit_tests_opt-default_coupling_test.$(OBJEXT):  \
@@ -4038,7 +4055,7 @@ fparser/unit_tests_opt-autodiff.$(OBJEXT): fparser/$(am__dirstamp) \
 
 unit_tests-opt$(EXEEXT): $(unit_tests_opt_OBJECTS) $(unit_tests_opt_DEPENDENCIES) $(EXTRA_unit_tests_opt_DEPENDENCIES)
 	@rm -f unit_tests-opt$(EXEEXT)
-	$(AM_V_CXXLD)$(unit_tests_opt_LINK) $(unit_tests_opt_OBJECTS) $(unit_tests_opt_LDADD) $(LIBS)
+	$(AM_V_GEN)$(unit_tests_opt_LINK) $(unit_tests_opt_OBJECTS) $(unit_tests_opt_LDADD) $(LIBS)
 base/unit_tests_prof-dof_map_test.$(OBJEXT): base/$(am__dirstamp) \
 	base/$(DEPDIR)/$(am__dirstamp)
 base/unit_tests_prof-default_coupling_test.$(OBJEXT):  \
@@ -4294,10 +4311,11 @@ fparser/unit_tests_prof-autodiff.$(OBJEXT): fparser/$(am__dirstamp) \
 
 unit_tests-prof$(EXEEXT): $(unit_tests_prof_OBJECTS) $(unit_tests_prof_DEPENDENCIES) $(EXTRA_unit_tests_prof_DEPENDENCIES)
 	@rm -f unit_tests-prof$(EXEEXT)
-	$(AM_V_CXXLD)$(unit_tests_prof_LINK) $(unit_tests_prof_OBJECTS) $(unit_tests_prof_LDADD) $(LIBS)
+	$(AM_V_GEN)$(unit_tests_prof_LINK) $(unit_tests_prof_OBJECTS) $(unit_tests_prof_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f ../src/apps/*.$(OBJEXT)
 	-rm -f base/*.$(OBJEXT)
 	-rm -f fe/*.$(OBJEXT)
 	-rm -f fparser/*.$(OBJEXT)
@@ -13898,6 +13916,8 @@ clean-generic:
 distclean-generic:
 	-$(am__rm_f) $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || $(am__rm_f) $(CONFIG_CLEAN_VPATH_FILES)
+	-$(am__rm_f) ../src/apps/$(DEPDIR)/$(am__dirstamp)
+	-$(am__rm_f) ../src/apps/$(am__dirstamp)
 	-$(am__rm_f) base/$(DEPDIR)/$(am__dirstamp)
 	-$(am__rm_f) base/$(am__dirstamp)
 	-$(am__rm_f) fe/$(DEPDIR)/$(am__dirstamp)
@@ -15255,6 +15275,20 @@ uninstall-am: uninstall-unit_tests_dbgDATA \
 
 .PRECIOUS: Makefile
 
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@$(KOKKOS_TEST_OBJECTS): %.o: %.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(KOKKOS_CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(MPI_INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_TEST_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(AM_CXXFLAGS) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/apps/L2system_kokkos.o: ../src/apps/L2system_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(KOKKOS_CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(MPI_INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_TEST_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(AM_CXXFLAGS) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
 
 # Recursive automake builds subdirectories before parent directories.
 # But here we need the subdirectory to be able to link to
