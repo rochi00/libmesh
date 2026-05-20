@@ -11,6 +11,8 @@ AM_CXXFLAGS  += $(LIBMESH_KOKKOS_BUILD_CXXFLAGS)
 AM_LDFLAGS   += $(LIBMESH_KOKKOS_BUILD_LDFLAGS)
 LIBS         = $(libmesh_optional_LIBS) $(CPPUNIT_LIBS)
 KOKKOS_TEST_CPPFLAGS =
+KOKKOS_TEST_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD)
 
 # We might have turned on -Werror and/or paranoid warnings
 CXXFLAGS_DBG += $(ACSM_ANY_WERROR_FLAG) $(ACSM_ANY_PARANOID_FLAGS)
@@ -276,6 +278,9 @@ TESTS =
 
 if LIBMESH_ENABLE_KOKKOS
   KOKKOS_TEST_CPPFLAGS += -I$(top_srcdir)/include
+  KOKKOS_TEST_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX)
+  unit_tests_sources += ../src/apps/L2system_kokkos.K
 
   check_PROGRAMS += kokkos_fe_types_oracle_unit kokkos_fe_shape_oracle_unit \
                     kokkos_fe_map_oracle_unit kokkos_fe_invariant_unit \
@@ -558,6 +563,12 @@ unit_tests-kokkos-opt$(EXEEXT): $(unit_tests_kokkos_opt_object) $(top_builddir)/
 	  $(LDFLAGS) $(AM_LDFLAGS) $(KOKKOS_LDFLAGS) -o $@ \
 	  $(unit_tests_kokkos_opt_object) \
 	  $(top_builddir)/libmesh_opt.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS) $(LIBS)
+
+unit_tests_dbg_LINK = $(KOKKOS_TEST_LINK) $(unit_tests_dbg_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+unit_tests_devel_LINK = $(KOKKOS_TEST_LINK) $(unit_tests_devel_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+unit_tests_prof_LINK = $(KOKKOS_TEST_LINK) $(unit_tests_prof_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+unit_tests_oprof_LINK = $(KOKKOS_TEST_LINK) $(unit_tests_oprof_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+unit_tests_opt_LINK = $(KOKKOS_TEST_LINK) $(unit_tests_opt_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 
 -include $(kokkos_unit_test_depfiles)
 endif
