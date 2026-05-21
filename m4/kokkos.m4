@@ -61,13 +61,13 @@ AC_DEFUN([CONFIGURE_KOKKOS],
                 [
                   AS_IF([test -r "$KOKKOS_CFG"],
                     [
-                      AS_IF([grep -q 'KOKKOS_ENABLE_CUDA' "$KOKKOS_CFG"],
+                      AS_IF([grep -q '^#define KOKKOS_ENABLE_CUDA' "$KOKKOS_CFG"],
                         [KOKKOS_BACKEND=cuda],
-                        [AS_IF([grep -q 'KOKKOS_ENABLE_HIP' "$KOKKOS_CFG"],
+                        [AS_IF([grep -q '^#define KOKKOS_ENABLE_HIP' "$KOKKOS_CFG"],
                           [KOKKOS_BACKEND=hip],
-                          [AS_IF([grep -q 'KOKKOS_ENABLE_SYCL' "$KOKKOS_CFG"],
+                          [AS_IF([grep -q '^#define KOKKOS_ENABLE_SYCL' "$KOKKOS_CFG"],
                             [KOKKOS_BACKEND=sycl],
-                            [AS_IF([grep -q 'KOKKOS_ENABLE_OPENMP' "$KOKKOS_CFG"],
+                            [AS_IF([grep -q '^#define KOKKOS_ENABLE_OPENMP' "$KOKKOS_CFG"],
                               [KOKKOS_BACKEND=openmp],
                               [KOKKOS_BACKEND=serial])])])])
                     ],
@@ -79,7 +79,7 @@ AC_DEFUN([CONFIGURE_KOKKOS],
               dnl Check if Kokkos was built with OpenMP
               have_kokkos_openmp=no
               AS_IF([test -r "$KOKKOS_CFG"],
-                [AS_IF([grep -q 'KOKKOS_ENABLE_OPENMP' "$KOKKOS_CFG"],
+                [AS_IF([grep -q '^#define KOKKOS_ENABLE_OPENMP' "$KOKKOS_CFG"],
                   [have_kokkos_openmp=yes])])
 
               case "$KOKKOS_BACKEND" in

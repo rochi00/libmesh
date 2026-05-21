@@ -73303,19 +73303,19 @@ then :
                   if test -r "$KOKKOS_CFG"
 then :
 
-                      if grep -q 'KOKKOS_ENABLE_CUDA' "$KOKKOS_CFG"
+                      if grep -q '^#define KOKKOS_ENABLE_CUDA' "$KOKKOS_CFG"
 then :
   KOKKOS_BACKEND=cuda
 else case e in #(
-  e) if grep -q 'KOKKOS_ENABLE_HIP' "$KOKKOS_CFG"
+  e) if grep -q '^#define KOKKOS_ENABLE_HIP' "$KOKKOS_CFG"
 then :
   KOKKOS_BACKEND=hip
 else case e in #(
-  e) if grep -q 'KOKKOS_ENABLE_SYCL' "$KOKKOS_CFG"
+  e) if grep -q '^#define KOKKOS_ENABLE_SYCL' "$KOKKOS_CFG"
 then :
   KOKKOS_BACKEND=sycl
 else case e in #(
-  e) if grep -q 'KOKKOS_ENABLE_OPENMP' "$KOKKOS_CFG"
+  e) if grep -q '^#define KOKKOS_ENABLE_OPENMP' "$KOKKOS_CFG"
 then :
   KOKKOS_BACKEND=openmp
 else case e in #(
@@ -73342,7 +73342,7 @@ printf "%s\n" "Kokkos backend: $KOKKOS_BACKEND" >&6; }
                             have_kokkos_openmp=no
               if test -r "$KOKKOS_CFG"
 then :
-  if grep -q 'KOKKOS_ENABLE_OPENMP' "$KOKKOS_CFG"
+  if grep -q '^#define KOKKOS_ENABLE_OPENMP' "$KOKKOS_CFG"
 then :
   have_kokkos_openmp=yes
 fi
