@@ -223,7 +223,8 @@ am__nobase_include_HEADERS_DIST = gpu/kokkos_fe_types.h \
 	gpu/kokkos_fe_lagrange_2d.h gpu/kokkos_fe_lagrange_3d.h \
 	gpu/kokkos_fe_monomial.h gpu/kokkos_fe_face_map.h \
 	gpu/kokkos_fe_map.h gpu/kokkos_quadrature.h \
-	gpu/kokkos_hilbert_system.h gpu/kokkos_parsed_function.h
+	gpu/kokkos_hilbert_assembly.h gpu/kokkos_hilbert_system.h \
+	gpu/kokkos_parsed_function.h
 HEADERS = $(include_HEADERS) $(nobase_include_HEADERS) \
 	$(noinst_HEADERS)
 RECURSIVE_CLEAN_TARGETS = mostlyclean-recursive clean-recursive	\
@@ -635,6 +636,7 @@ SUBDIRS = libmesh
 @LIBMESH_ENABLE_KOKKOS_TRUE@  gpu/kokkos_fe_face_map.h \
 @LIBMESH_ENABLE_KOKKOS_TRUE@  gpu/kokkos_fe_map.h \
 @LIBMESH_ENABLE_KOKKOS_TRUE@  gpu/kokkos_quadrature.h \
+@LIBMESH_ENABLE_KOKKOS_TRUE@  gpu/kokkos_hilbert_assembly.h \
 @LIBMESH_ENABLE_KOKKOS_TRUE@  gpu/kokkos_hilbert_system.h \
 @LIBMESH_ENABLE_KOKKOS_TRUE@  gpu/kokkos_parsed_function.h
 
