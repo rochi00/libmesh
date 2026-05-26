@@ -1137,10 +1137,6 @@ std::size_t DofMap::distribute_dofs (MeshBase & mesh)
   // dependencies to the send_list too.
   // this->sort_send_list ();
 
-#ifdef LIBMESH_HAVE_KOKKOS
-  this->prepare_kokkos_dof_index_caches();
-#endif
-
   return n_dofs;
 }
 

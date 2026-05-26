@@ -1020,9 +1020,6 @@ void MeshBase::complete_preparation()
 #endif
 #endif
 
-#ifdef LIBMESH_HAVE_KOKKOS
-  this->prepare_kokkos_geometry_cache();
-#endif
 }
 
 void
