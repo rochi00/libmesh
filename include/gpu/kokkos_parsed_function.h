@@ -669,6 +669,30 @@ public:
   }
 
   LIBMESH_DEVICE_INLINE
+  unsigned int value_bytecode_extent() const
+  {
+    return _value.bytecode.extent(0);
+  }
+
+  LIBMESH_DEVICE_INLINE
+  unsigned int value_immediates_extent() const
+  {
+    return _value.immediates.extent(0);
+  }
+
+  LIBMESH_DEVICE_INLINE
+  unsigned int value_bytecode(const unsigned int i) const
+  {
+    return _value.bytecode(i);
+  }
+
+  LIBMESH_DEVICE_INLINE
+  Scalar value_immediate(const unsigned int i) const
+  {
+    return _value.immediates(i);
+  }
+
+  LIBMESH_DEVICE_INLINE
   Scalar time_derivative(const Point & p) const
   {
     return detail::eval_coordinate_parsed_function_program<Scalar, MaxStack>(_dt, p, _time);

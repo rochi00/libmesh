@@ -243,6 +243,10 @@ debug_kokkos_analytic_goal_values(const Parallel::Communicator & comm,
                                   const GoalFunction & goal_function)
 {
   KokkosScalarView<Number> values("kokkos_analytic_goal_debug_values", 4);
+  KokkosUnsignedIntView bytecode_extents("kokkos_analytic_goal_debug_bytecode_extents", 1);
+  KokkosUnsignedIntView immediate_extents("kokkos_analytic_goal_debug_immediate_extents", 1);
+  KokkosUnsignedIntView first_bytecodes("kokkos_analytic_goal_debug_first_bytecodes", 1);
+  KokkosScalarView<Number> first_immediates("kokkos_analytic_goal_debug_first_immediates", 1);
   using ExecutionSpace = typename KokkosScalarView<Number>::execution_space;
 
   ::Kokkos::parallel_for(
@@ -260,7 +264,25 @@ debug_kokkos_analytic_goal_values(const Parallel::Communicator & comm,
         values(i) = goal_function(p);
       });
 
+  ::Kokkos::parallel_for(
+      "kokkos_analytic_goal_debug_program",
+      ::Kokkos::RangePolicy<ExecutionSpace>(0, 1),
+      KOKKOS_LAMBDA(const int) {
+        bytecode_extents(0) = goal_function.value_bytecode_extent();
+        immediate_extents(0) = goal_function.value_immediates_extent();
+        first_bytecodes(0) = bytecode_extents(0) ? goal_function.value_bytecode(0) : 0;
+        first_immediates(0) = immediate_extents(0) ? goal_function.value_immediate(0) : 0.;
+      });
+
   auto host_values = ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), values);
+  auto host_bytecode_extents =
+      ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), bytecode_extents);
+  auto host_immediate_extents =
+      ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), immediate_extents);
+  auto host_first_bytecodes =
+      ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), first_bytecodes);
+  auto host_first_immediates =
+      ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), first_immediates);
 
   if (comm.rank() == 0)
   {
@@ -268,6 +290,12 @@ debug_kokkos_analytic_goal_values(const Parallel::Communicator & comm,
     for (unsigned int i = 0; i != 4; ++i)
       libMesh::out << (i ? "," : "") << host_values(i);
     libMesh::out << "]" << std::endl;
+    libMesh::out << "Kokkos L2 debug analytic device program: bytecode_n="
+                 << host_bytecode_extents(0)
+                 << " immediates_n=" << host_immediate_extents(0)
+                 << " bytecode0=" << host_first_bytecodes(0)
+                 << " immediate0=" << host_first_immediates(0)
+                 << std::endl;
   }
 }
 
