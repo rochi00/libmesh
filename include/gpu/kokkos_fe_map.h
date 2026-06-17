@@ -389,7 +389,7 @@ face_jacobian(libMesh::ElemMappingType mapping_type,
 // =========================================================================
 
 /// libMesh FEMap-compatible volume measure * quadrature_weight.
-///   3D: det(J)                       * weight
+///   3D: |det(J)|                     * weight
 ///   2D: ||J_row0 x J_row1||          * weight
 ///   1D: ||J_row0||                   * weight
 ///   0D: weight
@@ -397,7 +397,10 @@ LIBMESH_DEVICE_INLINE Real
 volume_jxw(const RealTensor & J, unsigned int dim, Real quad_weight)
 {
   if (dim == 3)
-    return detail::leading_determinant(J, 3) * quad_weight;
+  {
+    const Real detJ = detail::leading_determinant(J, 3);
+    return (detJ < 0. ? -detJ : detJ) * quad_weight;
+  }
   else if (dim == 2)
     return J.row(0).cross(J.row(1)).norm() * quad_weight;
   else if (dim == 1)
