@@ -207,6 +207,70 @@ debug_kokkos_entry_values(const Parallel::Communicator & comm,
                  << " bad=" << bad_count << " max_abs=" << max_abs << std::endl;
 }
 
+template <typename Scalar>
+void
+debug_parsed_program(const Parallel::Communicator & comm,
+                     const char * name,
+                     const ParsedFunctionProgram<Scalar> & program)
+{
+  if (comm.rank() != 0)
+    return;
+
+  libMesh::out << "Kokkos L2 debug parsed " << name
+               << ": bytecode_n=" << program.bytecode.size()
+               << " immediates_n=" << program.immediates.size()
+               << " stack_size=" << program.stack_size
+               << " n_variables=" << program.n_variables;
+
+  libMesh::out << " bytecode=[";
+  for (std::size_t i = 0; i != program.bytecode.size() && i != 12; ++i)
+    libMesh::out << (i ? "," : "") << program.bytecode[i];
+  if (program.bytecode.size() > 12)
+    libMesh::out << ",...";
+  libMesh::out << "]";
+
+  libMesh::out << " immediates=[";
+  for (std::size_t i = 0; i != program.immediates.size() && i != 12; ++i)
+    libMesh::out << (i ? "," : "") << program.immediates[i];
+  if (program.immediates.size() > 12)
+    libMesh::out << ",...";
+  libMesh::out << "]" << std::endl;
+}
+
+template <typename GoalFunction>
+void
+debug_kokkos_analytic_goal_values(const Parallel::Communicator & comm,
+                                  const GoalFunction & goal_function)
+{
+  KokkosScalarView<Number> values("kokkos_analytic_goal_debug_values", 4);
+  using ExecutionSpace = typename KokkosScalarView<Number>::execution_space;
+
+  ::Kokkos::parallel_for(
+      "kokkos_analytic_goal_debug_values",
+      ::Kokkos::RangePolicy<ExecutionSpace>(0, 4),
+      KOKKOS_LAMBDA(const int i) {
+        Point p;
+        p(0) = 0.125 * static_cast<Real>(i + 1);
+#if LIBMESH_DIM > 1
+        p(1) = 0.25 * static_cast<Real>(i + 1);
+#endif
+#if LIBMESH_DIM > 2
+        p(2) = -0.125 * static_cast<Real>(i + 1);
+#endif
+        values(i) = goal_function(p);
+      });
+
+  auto host_values = ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), values);
+
+  if (comm.rank() == 0)
+  {
+    libMesh::out << "Kokkos L2 debug analytic goal values: [";
+    for (unsigned int i = 0; i != 4; ++i)
+      libMesh::out << (i ? "," : "") << host_values(i);
+    libMesh::out << "]" << std::endl;
+  }
+}
+
 #ifdef LIBMESH_HAVE_PETSC
 void
 debug_petsc_object_types(const Parallel::Communicator & comm, Vec vec, Mat mat)
@@ -1280,6 +1344,8 @@ assemble_kokkos_petsc_global_system(
       };
 
       auto goal_copy = analytic_goal_func->with_time(sys.time);
+      if (kokkos_l2_env_enabled("LIBMESH_KOKKOS_L2_DEBUG"))
+        debug_kokkos_analytic_goal_values(sys.comm(), goal_copy);
       auto goal_grad = goal_copy.gradient_function();
       auto goal_access = libMesh::Kokkos::detail::make_hilbert_analytic_goal_access(
           std::move(goal_copy), std::move(goal_grad));
@@ -1454,12 +1520,25 @@ HilbertSystem::ensure_kokkos_goal_func()
   return ensure_kokkos_goal_cache<libMesh::ParsedFunction<libMesh::Number>>(
       state.goal_func,
       _analytic_goal_func,
-      [](const auto & parsed_goal)
+      [this](const auto & parsed_goal)
           -> std::unique_ptr<libMesh::Kokkos::KokkosParsedFunction<libMesh::Number>>
       {
 #ifdef LIBMESH_HAVE_FPARSER
+        const auto program_bundle = parsed_goal.build_program_bundle();
+        if (libMesh::kokkos_l2_env_enabled("LIBMESH_KOKKOS_L2_DEBUG"))
+        {
+          libMesh::debug_parsed_program(this->comm(), "analytic value", program_bundle.value);
+          libMesh::debug_parsed_program(this->comm(), "analytic dx", program_bundle.dx);
+#if LIBMESH_DIM > 1
+          libMesh::debug_parsed_program(this->comm(), "analytic dy", program_bundle.dy);
+#endif
+#if LIBMESH_DIM > 2
+          libMesh::debug_parsed_program(this->comm(), "analytic dz", program_bundle.dz);
+#endif
+          libMesh::debug_parsed_program(this->comm(), "analytic dt", program_bundle.dt);
+        }
         return std::make_unique<libMesh::Kokkos::KokkosParsedFunction<libMesh::Number>>(
-            parsed_goal.build_program_bundle());
+            program_bundle);
 #else
         libmesh_ignore(parsed_goal);
         return nullptr;
