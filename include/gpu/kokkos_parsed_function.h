@@ -400,28 +400,28 @@ eval_parsed_function_program(const DeviceParsedFunctionProgram<Scalar> & program
           continue;
         }
 
-      switch (static_cast<libMesh::ParsedFunctionOpcode>(opcode))
+      switch (opcode)
         {
-        case libMesh::ParsedFunctionOpcode::cAbs: stack[sp] = pf_abs(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cAcos: stack[sp] = pf_acos(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cAcosh: stack[sp] = pf_acosh(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cAsin: stack[sp] = pf_asin(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cAsinh: stack[sp] = pf_asinh(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cAtan: stack[sp] = pf_atan(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cAtan2: stack[sp - 1] = pf_atan2(stack[sp - 1], stack[sp]); --sp; break;
-        case libMesh::ParsedFunctionOpcode::cAtanh: stack[sp] = pf_atanh(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cCbrt: stack[sp] = pf_cbrt(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cCeil: stack[sp] = pf_ceil(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cCos: stack[sp] = pf_cos(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cCosh: stack[sp] = pf_cosh(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cCot: stack[sp] = Scalar(1) / pf_tan(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cCsc: stack[sp] = Scalar(1) / pf_sin(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cExp: stack[sp] = pf_exp(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cExp2: stack[sp] = pf_exp2(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cFloor: stack[sp] = pf_floor(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cHypot: stack[sp - 1] = pf_hypot(stack[sp - 1], stack[sp]); --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cAbs): stack[sp] = pf_abs(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cAcos): stack[sp] = pf_acos(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cAcosh): stack[sp] = pf_acosh(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cAsin): stack[sp] = pf_asin(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cAsinh): stack[sp] = pf_asinh(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cAtan): stack[sp] = pf_atan(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cAtan2): stack[sp - 1] = pf_atan2(stack[sp - 1], stack[sp]); --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cAtanh): stack[sp] = pf_atanh(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cCbrt): stack[sp] = pf_cbrt(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cCeil): stack[sp] = pf_ceil(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cCos): stack[sp] = pf_cos(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cCosh): stack[sp] = pf_cosh(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cCot): stack[sp] = Scalar(1) / pf_tan(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cCsc): stack[sp] = Scalar(1) / pf_sin(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cExp): stack[sp] = pf_exp(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cExp2): stack[sp] = pf_exp2(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cFloor): stack[sp] = pf_floor(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cHypot): stack[sp - 1] = pf_hypot(stack[sp - 1], stack[sp]); --sp; break;
 
-        case libMesh::ParsedFunctionOpcode::cIf:
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cIf):
           if (pf_truth(stack[sp--]))
             ip += 2;
           else
@@ -433,48 +433,48 @@ eval_parsed_function_program(const DeviceParsedFunctionProgram<Scalar> & program
             }
           break;
 
-        case libMesh::ParsedFunctionOpcode::cInt: stack[sp] = pf_int(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cLog: stack[sp] = pf_log(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cLog10: stack[sp] = pf_log10(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cLog2: stack[sp] = pf_log2(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cMax: stack[sp - 1] = stack[sp - 1] > stack[sp] ? stack[sp - 1] : stack[sp]; --sp; break;
-        case libMesh::ParsedFunctionOpcode::cMin: stack[sp - 1] = stack[sp - 1] < stack[sp] ? stack[sp - 1] : stack[sp]; --sp; break;
-        case libMesh::ParsedFunctionOpcode::cPow: stack[sp - 1] = pf_pow(stack[sp - 1], stack[sp]); --sp; break;
-        case libMesh::ParsedFunctionOpcode::cSec: stack[sp] = Scalar(1) / pf_cos(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cSin: stack[sp] = pf_sin(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cSinh: stack[sp] = pf_sinh(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cSqrt: stack[sp] = pf_sqrt(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cTan: stack[sp] = pf_tan(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cTanh: stack[sp] = pf_tanh(stack[sp]); break;
-        case libMesh::ParsedFunctionOpcode::cTrunc: stack[sp] = pf_trunc(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cInt): stack[sp] = pf_int(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cLog): stack[sp] = pf_log(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cLog10): stack[sp] = pf_log10(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cLog2): stack[sp] = pf_log2(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cMax): stack[sp - 1] = stack[sp - 1] > stack[sp] ? stack[sp - 1] : stack[sp]; --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cMin): stack[sp - 1] = stack[sp - 1] < stack[sp] ? stack[sp - 1] : stack[sp]; --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cPow): stack[sp - 1] = pf_pow(stack[sp - 1], stack[sp]); --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cSec): stack[sp] = Scalar(1) / pf_cos(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cSin): stack[sp] = pf_sin(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cSinh): stack[sp] = pf_sinh(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cSqrt): stack[sp] = pf_sqrt(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cTan): stack[sp] = pf_tan(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cTanh): stack[sp] = pf_tanh(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cTrunc): stack[sp] = pf_trunc(stack[sp]); break;
 
-        case libMesh::ParsedFunctionOpcode::cImmed: stack[++sp] = program.immediates(dp++); break;
-        case libMesh::ParsedFunctionOpcode::cJump:
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cImmed): stack[++sp] = program.immediates(dp++); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cJump):
           ip = program.bytecode(ip + 1);
           dp = program.bytecode(ip + 2);
           break;
 
-        case libMesh::ParsedFunctionOpcode::cNeg: stack[sp] = -stack[sp]; break;
-        case libMesh::ParsedFunctionOpcode::cAdd: stack[sp - 1] += stack[sp]; --sp; break;
-        case libMesh::ParsedFunctionOpcode::cSub: stack[sp - 1] -= stack[sp]; --sp; break;
-        case libMesh::ParsedFunctionOpcode::cMul: stack[sp - 1] *= stack[sp]; --sp; break;
-        case libMesh::ParsedFunctionOpcode::cDiv: stack[sp - 1] /= stack[sp]; --sp; break;
-        case libMesh::ParsedFunctionOpcode::cMod: stack[sp - 1] = pf_mod(stack[sp - 1], stack[sp]); --sp; break;
-        case libMesh::ParsedFunctionOpcode::cEqual: stack[sp - 1] = Scalar(pf_equal(stack[sp - 1], stack[sp], program.epsilon)); --sp; break;
-        case libMesh::ParsedFunctionOpcode::cNEqual: stack[sp - 1] = Scalar(pf_nequal(stack[sp - 1], stack[sp], program.epsilon)); --sp; break;
-        case libMesh::ParsedFunctionOpcode::cLess: stack[sp - 1] = Scalar(pf_less(stack[sp - 1], stack[sp], program.epsilon)); --sp; break;
-        case libMesh::ParsedFunctionOpcode::cLessOrEq: stack[sp - 1] = Scalar(pf_less_or_eq(stack[sp - 1], stack[sp], program.epsilon)); --sp; break;
-        case libMesh::ParsedFunctionOpcode::cGreater: stack[sp - 1] = Scalar(pf_less(stack[sp], stack[sp - 1], program.epsilon)); --sp; break;
-        case libMesh::ParsedFunctionOpcode::cGreaterOrEq: stack[sp - 1] = Scalar(pf_less_or_eq(stack[sp], stack[sp - 1], program.epsilon)); --sp; break;
-        case libMesh::ParsedFunctionOpcode::cNot: stack[sp] = Scalar(!pf_truth(stack[sp])); break;
-        case libMesh::ParsedFunctionOpcode::cAnd: stack[sp - 1] = Scalar(pf_truth(stack[sp - 1]) && pf_truth(stack[sp])); --sp; break;
-        case libMesh::ParsedFunctionOpcode::cOr: stack[sp - 1] = Scalar(pf_truth(stack[sp - 1]) || pf_truth(stack[sp])); --sp; break;
-        case libMesh::ParsedFunctionOpcode::cNotNot: stack[sp] = Scalar(pf_truth(stack[sp])); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cNeg): stack[sp] = -stack[sp]; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cAdd): stack[sp - 1] += stack[sp]; --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cSub): stack[sp - 1] -= stack[sp]; --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cMul): stack[sp - 1] *= stack[sp]; --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cDiv): stack[sp - 1] /= stack[sp]; --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cMod): stack[sp - 1] = pf_mod(stack[sp - 1], stack[sp]); --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cEqual): stack[sp - 1] = Scalar(pf_equal(stack[sp - 1], stack[sp], program.epsilon)); --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cNEqual): stack[sp - 1] = Scalar(pf_nequal(stack[sp - 1], stack[sp], program.epsilon)); --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cLess): stack[sp - 1] = Scalar(pf_less(stack[sp - 1], stack[sp], program.epsilon)); --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cLessOrEq): stack[sp - 1] = Scalar(pf_less_or_eq(stack[sp - 1], stack[sp], program.epsilon)); --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cGreater): stack[sp - 1] = Scalar(pf_less(stack[sp], stack[sp - 1], program.epsilon)); --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cGreaterOrEq): stack[sp - 1] = Scalar(pf_less_or_eq(stack[sp], stack[sp - 1], program.epsilon)); --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cNot): stack[sp] = Scalar(!pf_truth(stack[sp])); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cAnd): stack[sp - 1] = Scalar(pf_truth(stack[sp - 1]) && pf_truth(stack[sp])); --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cOr): stack[sp - 1] = Scalar(pf_truth(stack[sp - 1]) || pf_truth(stack[sp])); --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cNotNot): stack[sp] = Scalar(pf_truth(stack[sp])); break;
 
-        case libMesh::ParsedFunctionOpcode::cDeg: stack[sp] = stack[sp] * Scalar(180.) / libMesh::pi; break;
-        case libMesh::ParsedFunctionOpcode::cRad: stack[sp] = stack[sp] * libMesh::pi / Scalar(180.); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cDeg): stack[sp] = stack[sp] * Scalar(180.) / libMesh::pi; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cRad): stack[sp] = stack[sp] * libMesh::pi / Scalar(180.); break;
 
-        case libMesh::ParsedFunctionOpcode::cPopNMov:
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cPopNMov):
           {
             const unsigned int target = program.bytecode(++ip);
             const unsigned int source = program.bytecode(++ip);
@@ -483,32 +483,32 @@ eval_parsed_function_program(const DeviceParsedFunctionProgram<Scalar> & program
             break;
           }
 
-        case libMesh::ParsedFunctionOpcode::cLog2by:
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cLog2by):
           stack[sp - 1] = pf_log2(stack[sp - 1]) * stack[sp];
           --sp;
           break;
 
-        case libMesh::ParsedFunctionOpcode::cNop:
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cNop):
           break;
 
-        case libMesh::ParsedFunctionOpcode::cSinCos:
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cSinCos):
           stack[sp + 1] = pf_cos(stack[sp]);
           stack[sp] = pf_sin(stack[sp]);
           ++sp;
           break;
 
-        case libMesh::ParsedFunctionOpcode::cSinhCosh:
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cSinhCosh):
           stack[sp + 1] = pf_cosh(stack[sp]);
           stack[sp] = pf_sinh(stack[sp]);
           ++sp;
           break;
 
-        case libMesh::ParsedFunctionOpcode::cAbsNot: stack[sp] = Scalar(!pf_abs_truth(stack[sp])); break;
-        case libMesh::ParsedFunctionOpcode::cAbsNotNot: stack[sp] = Scalar(pf_abs_truth(stack[sp])); break;
-        case libMesh::ParsedFunctionOpcode::cAbsAnd: stack[sp - 1] = Scalar(pf_abs_truth(stack[sp - 1]) && pf_abs_truth(stack[sp])); --sp; break;
-        case libMesh::ParsedFunctionOpcode::cAbsOr: stack[sp - 1] = Scalar(pf_abs_truth(stack[sp - 1]) || pf_abs_truth(stack[sp])); --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cAbsNot): stack[sp] = Scalar(!pf_abs_truth(stack[sp])); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cAbsNotNot): stack[sp] = Scalar(pf_abs_truth(stack[sp])); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cAbsAnd): stack[sp - 1] = Scalar(pf_abs_truth(stack[sp - 1]) && pf_abs_truth(stack[sp])); --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cAbsOr): stack[sp - 1] = Scalar(pf_abs_truth(stack[sp - 1]) || pf_abs_truth(stack[sp])); --sp; break;
 
-        case libMesh::ParsedFunctionOpcode::cAbsIf:
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cAbsIf):
           if (pf_abs_truth(stack[sp--]))
             ip += 2;
           else
@@ -520,9 +520,9 @@ eval_parsed_function_program(const DeviceParsedFunctionProgram<Scalar> & program
             }
           break;
 
-        case libMesh::ParsedFunctionOpcode::cDup: stack[sp + 1] = stack[sp]; ++sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cDup): stack[sp + 1] = stack[sp]; ++sp; break;
 
-        case libMesh::ParsedFunctionOpcode::cFetch:
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cFetch):
           {
             const unsigned int stack_offset = program.bytecode(++ip);
             stack[sp + 1] = stack[stack_offset];
@@ -530,11 +530,11 @@ eval_parsed_function_program(const DeviceParsedFunctionProgram<Scalar> & program
             break;
           }
 
-        case libMesh::ParsedFunctionOpcode::cInv: stack[sp] = Scalar(1) / stack[sp]; break;
-        case libMesh::ParsedFunctionOpcode::cSqr: stack[sp] = stack[sp] * stack[sp]; break;
-        case libMesh::ParsedFunctionOpcode::cRDiv: stack[sp - 1] = stack[sp] / stack[sp - 1]; --sp; break;
-        case libMesh::ParsedFunctionOpcode::cRSub: stack[sp - 1] = stack[sp] - stack[sp - 1]; --sp; break;
-        case libMesh::ParsedFunctionOpcode::cRSqrt: stack[sp] = Scalar(1) / pf_sqrt(stack[sp]); break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cInv): stack[sp] = Scalar(1) / stack[sp]; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cSqr): stack[sp] = stack[sp] * stack[sp]; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cRDiv): stack[sp - 1] = stack[sp] / stack[sp - 1]; --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cRSub): stack[sp - 1] = stack[sp] - stack[sp - 1]; --sp; break;
+        case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cRSqrt): stack[sp] = Scalar(1) / pf_sqrt(stack[sp]); break;
 
         default:
           return Scalar(0);
