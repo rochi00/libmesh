@@ -73609,21 +73609,50 @@ fi
 
                             if test "x$KOKKOS_MPI_CPPFLAGS" = "x"
 then :
-  KOKKOS_MPI_CPPFLAGS=`$CXX -show 2>/dev/null | sed 's/^^ * //'`
+  KOKKOS_MPI_CPPFLAGS=`$CXX -show 2>/dev/null | sed 's/^[^ ]* //'`
 fi
 
 
               STRIPPED_FLAGS=""
+              flag_arg_action=""
               for flag in $KOKKOS_MPI_CPPFLAGS; do
-                case "$flag" in
-                  -O*) # Skip possibly-undesired optimization level
-                    ;;
-                  -std=*) # Skip possibly-incompatible standard
-                    ;;
-                  *) # Append everything else
+                if test "x$flag_arg_action" = "xkeep"
+then :
+
                     STRIPPED_FLAGS="$STRIPPED_FLAGS $flag"
-                    ;;
-                esac
+                    flag_arg_action=""
+
+else case e in #(
+  e) if test "x$flag_arg_action" = "xskip"
+then :
+  flag_arg_action=""
+else case e in #(
+  e) case "$flag" in
+                      -O*|-std=*|-x)
+                        ;;
+                      -I|-D|-U|-isystem|-iquote|-idirafter|-include|-imacros)
+                        STRIPPED_FLAGS="$STRIPPED_FLAGS $flag"
+                        flag_arg_action="keep"
+                        ;;
+                      -I*|-D*|-U*|-pthread|-pthreads|-f*|-m*|-W*)
+                        STRIPPED_FLAGS="$STRIPPED_FLAGS $flag"
+                        ;;
+                      -Xcompiler|-Xcudafe|-Xptxas)
+                        STRIPPED_FLAGS="$STRIPPED_FLAGS $flag"
+                        flag_arg_action="keep"
+                        ;;
+                      -L*|-l*|-Wl,*)
+                        ;;
+                      -*)
+                        STRIPPED_FLAGS="$STRIPPED_FLAGS $flag"
+                        ;;
+                      *)
+                        ;;
+                    esac ;;
+esac
+fi ;;
+esac
+fi
               done
               KOKKOS_MPI_CPPFLAGS=$STRIPPED_FLAGS
 
@@ -73653,20 +73682,20 @@ printf %s "checking whether the Kokkos compiler configuration works... " >&6; }
           libmesh_save_LIBS="$LIBS"
           libmesh_kokkos_probe_LIBS="$KOKKOS_LIBS"
           libmesh_kokkos_probe_MPI_LDFLAGS="$MPI_LDFLAGS"
-                              libmesh_kokkos_cxx_driver_flags=`printf "%s\n" "$libmesh_save_CXX" | sed 's/^^ *//'`
+                              libmesh_kokkos_cxx_driver_flags=`printf "%s\n" "$libmesh_save_CXX" | sed 's/^[^ ]*//'`
 
                                         if test "x$KOKKOS_BACKEND" = "xcuda"
 then :
   libmesh_kokkos_probe_LIBS=`printf "%s\n" " $libmesh_kokkos_probe_LIBS " | \
-              sed -e 's/ -Wl,-rpath,^ * / /g' \
-                  -e 's/ -Wl,-rpath -Wl,^ * / /g' \
+              sed -e 's/ -Wl,-rpath,[^ ]* / /g' \
+                  -e 's/ -Wl,-rpath -Wl,[^ ]* / /g' \
                   -e 's/ -Wl,--enable-new-dtags / /g' \
                   -e 's/  */ /g' \
                   -e 's/^ *//' \
                   -e 's/ *$//'`
              libmesh_kokkos_probe_MPI_LDFLAGS=`printf "%s\n" " $libmesh_kokkos_probe_MPI_LDFLAGS " | \
-               sed -e 's/ -Wl,-rpath,^ * / /g' \
-                   -e 's/ -Wl,-rpath -Wl,^ * / /g' \
+               sed -e 's/ -Wl,-rpath,[^ ]* / /g' \
+                   -e 's/ -Wl,-rpath -Wl,[^ ]* / /g' \
                    -e 's/ -Wl,--enable-new-dtags / /g' \
                    -e 's/  */ /g' \
                    -e 's/^ *//' \

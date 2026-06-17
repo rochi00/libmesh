@@ -62,13 +62,17 @@ public:
   enum class KokkosAssemblyPath
   {
     none,
-    petsc_direct_storage
+    petsc_coo
   };
 
   struct KokkosTimingInfo
   {
     libMesh::Real plan_seconds = 0.;
     libMesh::Real assembly_seconds = 0.;
+    libMesh::Real assembly_coo_setup_seconds = 0.;
+    libMesh::Real assembly_record_seconds = 0.;
+    libMesh::Real assembly_vecset_values_seconds = 0.;
+    libMesh::Real assembly_matset_values_seconds = 0.;
     libMesh::Real solve_seconds = 0.;
     libMesh::Real total_seconds = 0.;
     KokkosAssemblyPath assembly_path = KokkosAssemblyPath::none;

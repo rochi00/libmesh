@@ -190,7 +190,7 @@ AC_DEFUN([CONFIGURE_KOKKOS],
 
               dnl If we still have nothing, try Intel MPI arguments
               AS_IF([test "x$KOKKOS_MPI_CPPFLAGS" = "x"],
-                [KOKKOS_MPI_CPPFLAGS=`$CXX -show 2>/dev/null | sed 's/^[^ ]* //'`])
+                [KOKKOS_MPI_CPPFLAGS=`$CXX -show 2>/dev/null | sed 's/^[[^ ]]* //'`])
 
               dnl Our MPI compiler might be reporting a full compiler command
               dnl rather than just preprocessor flags.  Bare words such as the
@@ -257,22 +257,22 @@ AC_DEFUN([CONFIGURE_KOKKOS],
           libmesh_kokkos_probe_MPI_LDFLAGS="$MPI_LDFLAGS"
           dnl Preserve non-compiler driver flags that configure attached to CXX,
           dnl such as the required -std=gnu++17 mode selected earlier.
-          libmesh_kokkos_cxx_driver_flags=`AS_ECHO(["$libmesh_save_CXX"]) | sed 's/^[^ ]*//'`
+          libmesh_kokkos_cxx_driver_flags=`AS_ECHO(["$libmesh_save_CXX"]) | sed 's/^[[^ ]]*//'`
 
           dnl PETSc-installed Kokkos/CUDA link lines can carry -Wl,-rpath entries.
           dnl Raw nvcc may reject those during this configure smoke test even
           dnl though the real libMesh link later handles them correctly.
           AS_IF([test "x$KOKKOS_BACKEND" = "xcuda"],
             [libmesh_kokkos_probe_LIBS=`AS_ECHO([" $libmesh_kokkos_probe_LIBS "]) | \
-              sed -e 's/ -Wl,-rpath,[^ ]* / /g' \
-                  -e 's/ -Wl,-rpath -Wl,[^ ]* / /g' \
+              sed -e 's/ -Wl,-rpath,[[^ ]]* / /g' \
+                  -e 's/ -Wl,-rpath -Wl,[[^ ]]* / /g' \
                   -e 's/ -Wl,--enable-new-dtags / /g' \
                   -e 's/  */ /g' \
                   -e 's/^ *//' \
                   -e 's/ *$//'`
              libmesh_kokkos_probe_MPI_LDFLAGS=`AS_ECHO([" $libmesh_kokkos_probe_MPI_LDFLAGS "]) | \
-               sed -e 's/ -Wl,-rpath,[^ ]* / /g' \
-                   -e 's/ -Wl,-rpath -Wl,[^ ]* / /g' \
+               sed -e 's/ -Wl,-rpath,[[^ ]]* / /g' \
+                   -e 's/ -Wl,-rpath -Wl,[[^ ]]* / /g' \
                    -e 's/ -Wl,--enable-new-dtags / /g' \
                    -e 's/  */ /g' \
                    -e 's/^ *//' \

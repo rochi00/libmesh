@@ -119,14 +119,9 @@ bin_PROGRAMS = $(am__EXEEXT_4) $(am__EXEEXT_8) $(am__EXEEXT_12) \
 	$(am__EXEEXT_14)
 
 # calculator
-
-# hilbert_kokkos_benchmark
-@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_17 = calculator-kokkos-opt \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	hilbert_kokkos_benchmark-opt
-@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_18 = calculator-kokkos-devel \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	hilbert_kokkos_benchmark-devel
-@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_19 = calculator-kokkos-dbg \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	hilbert_kokkos_benchmark-dbg
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_17 = calculator-kokkos-opt
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_18 = calculator-kokkos-devel
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_19 = calculator-kokkos-dbg
 @LIBMESH_ENABLE_KOKKOS_FALSE@am__append_20 = calculator-opt
 @LIBMESH_ENABLE_KOKKOS_FALSE@am__append_21 = calculator-devel
 @LIBMESH_ENABLE_KOKKOS_FALSE@am__append_22 = calculator-dbg
@@ -215,8 +210,7 @@ CONFIG_CLEAN_FILES = contrib/utils/Makefile contrib/utils/Make.common \
 	contrib/bin/create_libmesh_release contrib/utils/libmesh.pc
 CONFIG_CLEAN_VPATH_FILES =
 @LIBMESH_ENABLE_KOKKOS_TRUE@am__EXEEXT_1 =  \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	calculator-kokkos-opt$(EXEEXT) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	hilbert_kokkos_benchmark-opt$(EXEEXT)
+@LIBMESH_ENABLE_KOKKOS_TRUE@	calculator-kokkos-opt$(EXEEXT)
 @LIBMESH_ENABLE_KOKKOS_FALSE@am__EXEEXT_2 = calculator-opt$(EXEEXT)
 am__EXEEXT_3 = fparser_parse-opt$(EXEEXT) getpot_parse-opt$(EXEEXT) \
 	amr-opt$(EXEEXT) matrixconvert-opt$(EXEEXT) \
@@ -229,8 +223,7 @@ am__EXEEXT_3 = fparser_parse-opt$(EXEEXT) getpot_parse-opt$(EXEEXT) \
 	embedding-opt$(EXEEXT)
 @LIBMESH_OPT_MODE_TRUE@am__EXEEXT_4 = $(am__EXEEXT_3)
 @LIBMESH_ENABLE_KOKKOS_TRUE@am__EXEEXT_5 =  \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	calculator-kokkos-devel$(EXEEXT) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	hilbert_kokkos_benchmark-devel$(EXEEXT)
+@LIBMESH_ENABLE_KOKKOS_TRUE@	calculator-kokkos-devel$(EXEEXT)
 @LIBMESH_ENABLE_KOKKOS_FALSE@am__EXEEXT_6 = calculator-devel$(EXEEXT)
 am__EXEEXT_7 = fparser_parse-devel$(EXEEXT) \
 	getpot_parse-devel$(EXEEXT) amr-devel$(EXEEXT) \
@@ -245,8 +238,7 @@ am__EXEEXT_7 = fparser_parse-devel$(EXEEXT) \
 	embedding-devel$(EXEEXT)
 @LIBMESH_DEVEL_MODE_TRUE@am__EXEEXT_8 = $(am__EXEEXT_7)
 @LIBMESH_ENABLE_KOKKOS_TRUE@am__EXEEXT_9 =  \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	calculator-kokkos-dbg$(EXEEXT) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	hilbert_kokkos_benchmark-dbg$(EXEEXT)
+@LIBMESH_ENABLE_KOKKOS_TRUE@	calculator-kokkos-dbg$(EXEEXT)
 @LIBMESH_ENABLE_KOKKOS_FALSE@am__EXEEXT_10 = calculator-dbg$(EXEEXT)
 am__EXEEXT_11 = fparser_parse-dbg$(EXEEXT) getpot_parse-dbg$(EXEEXT) \
 	amr-dbg$(EXEEXT) matrixconvert-dbg$(EXEEXT) \
@@ -4422,9 +4414,10 @@ calculator_devel_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(calculator_devel_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am__calculator_kokkos_dbg_SOURCES_DIST = src/apps/calculator_kokkos.K \
+am__calculator_kokkos_dbg_SOURCES_DIST = src/apps/calculator.C \
 	src/apps/L2system.C src/apps/L2system.h
-@LIBMESH_ENABLE_KOKKOS_TRUE@am_calculator_kokkos_dbg_OBJECTS = src/apps/calculator_kokkos_dbg-L2system.$(OBJEXT)
+@LIBMESH_ENABLE_KOKKOS_TRUE@am_calculator_kokkos_dbg_OBJECTS = src/apps/calculator_kokkos_dbg-calculator.$(OBJEXT) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/calculator_kokkos_dbg-L2system.$(OBJEXT)
 calculator_kokkos_dbg_OBJECTS = $(am_calculator_kokkos_dbg_OBJECTS)
 @LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@am__DEPENDENCIES_3 = src/apps/L2system_kokkos_dbg.o
 @LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_dbg_DEPENDENCIES =  \
@@ -4432,10 +4425,10 @@ calculator_kokkos_dbg_OBJECTS = $(am_calculator_kokkos_dbg_OBJECTS)
 @LIBMESH_ENABLE_KOKKOS_TRUE@	$(KOKKOS_LIBMESH_DBG_OBJECTS) \
 @LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_3) \
 @LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
-am__calculator_kokkos_devel_SOURCES_DIST =  \
-	src/apps/calculator_kokkos.K src/apps/L2system.C \
-	src/apps/L2system.h
-@LIBMESH_ENABLE_KOKKOS_TRUE@am_calculator_kokkos_devel_OBJECTS = src/apps/calculator_kokkos_devel-L2system.$(OBJEXT)
+am__calculator_kokkos_devel_SOURCES_DIST = src/apps/calculator.C \
+	src/apps/L2system.C src/apps/L2system.h
+@LIBMESH_ENABLE_KOKKOS_TRUE@am_calculator_kokkos_devel_OBJECTS = src/apps/calculator_kokkos_devel-calculator.$(OBJEXT) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/calculator_kokkos_devel-L2system.$(OBJEXT)
 calculator_kokkos_devel_OBJECTS =  \
 	$(am_calculator_kokkos_devel_OBJECTS)
 @LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@am__DEPENDENCIES_4 = src/apps/L2system_kokkos_devel.o
@@ -4444,9 +4437,10 @@ calculator_kokkos_devel_OBJECTS =  \
 @LIBMESH_ENABLE_KOKKOS_TRUE@	$(KOKKOS_LIBMESH_DEVEL_OBJECTS) \
 @LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_4) \
 @LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
-am__calculator_kokkos_opt_SOURCES_DIST = src/apps/calculator_kokkos.K \
+am__calculator_kokkos_opt_SOURCES_DIST = src/apps/calculator.C \
 	src/apps/L2system.C src/apps/L2system.h
-@LIBMESH_ENABLE_KOKKOS_TRUE@am_calculator_kokkos_opt_OBJECTS = src/apps/calculator_kokkos_opt-L2system.$(OBJEXT)
+@LIBMESH_ENABLE_KOKKOS_TRUE@am_calculator_kokkos_opt_OBJECTS = src/apps/calculator_kokkos_opt-calculator.$(OBJEXT) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/calculator_kokkos_opt-L2system.$(OBJEXT)
 calculator_kokkos_opt_OBJECTS = $(am_calculator_kokkos_opt_OBJECTS)
 @LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@am__DEPENDENCIES_5 = src/apps/L2system_kokkos_opt.o
 @LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_opt_DEPENDENCIES =  \
@@ -4594,42 +4588,6 @@ getpot_parse_opt_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(getpot_parse_opt_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am__hilbert_kokkos_benchmark_dbg_SOURCES_DIST =  \
-	src/apps/hilbert_kokkos_benchmark.C src/apps/L2system.C \
-	src/apps/L2system.h
-@LIBMESH_ENABLE_KOKKOS_TRUE@am_hilbert_kokkos_benchmark_dbg_OBJECTS = src/apps/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.$(OBJEXT) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/hilbert_kokkos_benchmark_dbg-L2system.$(OBJEXT)
-hilbert_kokkos_benchmark_dbg_OBJECTS =  \
-	$(am_hilbert_kokkos_benchmark_dbg_OBJECTS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_dbg_DEPENDENCIES =  \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	libmesh_dbg.la \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(KOKKOS_LIBMESH_DBG_OBJECTS) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_3) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
-am__hilbert_kokkos_benchmark_devel_SOURCES_DIST =  \
-	src/apps/hilbert_kokkos_benchmark.C src/apps/L2system.C \
-	src/apps/L2system.h
-@LIBMESH_ENABLE_KOKKOS_TRUE@am_hilbert_kokkos_benchmark_devel_OBJECTS = src/apps/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.$(OBJEXT) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/hilbert_kokkos_benchmark_devel-L2system.$(OBJEXT)
-hilbert_kokkos_benchmark_devel_OBJECTS =  \
-	$(am_hilbert_kokkos_benchmark_devel_OBJECTS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_devel_DEPENDENCIES =  \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	libmesh_devel.la \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(KOKKOS_LIBMESH_DEVEL_OBJECTS) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_4) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
-am__hilbert_kokkos_benchmark_opt_SOURCES_DIST =  \
-	src/apps/hilbert_kokkos_benchmark.C src/apps/L2system.C \
-	src/apps/L2system.h
-@LIBMESH_ENABLE_KOKKOS_TRUE@am_hilbert_kokkos_benchmark_opt_OBJECTS = src/apps/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.$(OBJEXT) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/hilbert_kokkos_benchmark_opt-L2system.$(OBJEXT)
-hilbert_kokkos_benchmark_opt_OBJECTS =  \
-	$(am_hilbert_kokkos_benchmark_opt_OBJECTS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_opt_DEPENDENCIES =  \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	libmesh_opt.la \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(KOKKOS_LIBMESH_OPT_OBJECTS) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_5) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
 am_matrixconvert_dbg_OBJECTS =  \
 	src/apps/matrixconvert_dbg-matrixconvert.$(OBJEXT)
 matrixconvert_dbg_OBJECTS = $(am_matrixconvert_dbg_OBJECTS)
@@ -5034,8 +4992,11 @@ am__depfiles_remade = src/apps/$(DEPDIR)/amr_dbg-amr.Po \
 	src/apps/$(DEPDIR)/calculator_devel-L2system.Po \
 	src/apps/$(DEPDIR)/calculator_devel-calculator.Po \
 	src/apps/$(DEPDIR)/calculator_kokkos_dbg-L2system.Po \
+	src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Po \
 	src/apps/$(DEPDIR)/calculator_kokkos_devel-L2system.Po \
+	src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Po \
 	src/apps/$(DEPDIR)/calculator_kokkos_opt-L2system.Po \
+	src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Po \
 	src/apps/$(DEPDIR)/calculator_oprof-L2system.Po \
 	src/apps/$(DEPDIR)/calculator_oprof-calculator.Po \
 	src/apps/$(DEPDIR)/calculator_opt-L2system.Po \
@@ -5056,12 +5017,6 @@ am__depfiles_remade = src/apps/$(DEPDIR)/amr_dbg-amr.Po \
 	src/apps/$(DEPDIR)/getpot_parse_devel-getpot_parse.Po \
 	src/apps/$(DEPDIR)/getpot_parse_oprof-getpot_parse.Po \
 	src/apps/$(DEPDIR)/getpot_parse_opt-getpot_parse.Po \
-	src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-L2system.Po \
-	src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.Po \
-	src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-L2system.Po \
-	src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.Po \
-	src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-L2system.Po \
-	src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.Po \
 	src/apps/$(DEPDIR)/matrixconvert_dbg-matrixconvert.Po \
 	src/apps/$(DEPDIR)/matrixconvert_devel-matrixconvert.Po \
 	src/apps/$(DEPDIR)/matrixconvert_oprof-matrixconvert.Po \
@@ -7552,29 +7507,25 @@ SOURCES = $(libmesh_dbg_la_SOURCES) $(libmesh_devel_la_SOURCES) \
 	$(fparser_parse_devel_SOURCES) $(fparser_parse_oprof_SOURCES) \
 	$(fparser_parse_opt_SOURCES) $(getpot_parse_dbg_SOURCES) \
 	$(getpot_parse_devel_SOURCES) $(getpot_parse_oprof_SOURCES) \
-	$(getpot_parse_opt_SOURCES) \
-	$(hilbert_kokkos_benchmark_dbg_SOURCES) \
-	$(hilbert_kokkos_benchmark_devel_SOURCES) \
-	$(hilbert_kokkos_benchmark_opt_SOURCES) \
-	$(matrixconvert_dbg_SOURCES) $(matrixconvert_devel_SOURCES) \
-	$(matrixconvert_oprof_SOURCES) $(matrixconvert_opt_SOURCES) \
-	$(matrixsolve_dbg_SOURCES) $(matrixsolve_devel_SOURCES) \
-	$(matrixsolve_oprof_SOURCES) $(matrixsolve_opt_SOURCES) \
-	$(meshavg_dbg_SOURCES) $(meshavg_devel_SOURCES) \
-	$(meshavg_oprof_SOURCES) $(meshavg_opt_SOURCES) \
-	$(meshbcid_dbg_SOURCES) $(meshbcid_devel_SOURCES) \
-	$(meshbcid_oprof_SOURCES) $(meshbcid_opt_SOURCES) \
-	$(meshdiff_dbg_SOURCES) $(meshdiff_devel_SOURCES) \
-	$(meshdiff_oprof_SOURCES) $(meshdiff_opt_SOURCES) \
-	$(meshid_dbg_SOURCES) $(meshid_devel_SOURCES) \
-	$(meshid_oprof_SOURCES) $(meshid_opt_SOURCES) \
-	$(meshnorm_dbg_SOURCES) $(meshnorm_devel_SOURCES) \
-	$(meshnorm_oprof_SOURCES) $(meshnorm_opt_SOURCES) \
-	$(meshplot_dbg_SOURCES) $(meshplot_devel_SOURCES) \
-	$(meshplot_oprof_SOURCES) $(meshplot_opt_SOURCES) \
-	$(meshtool_dbg_SOURCES) $(meshtool_devel_SOURCES) \
-	$(meshtool_oprof_SOURCES) $(meshtool_opt_SOURCES) \
-	$(output_libmesh_version_dbg_SOURCES) \
+	$(getpot_parse_opt_SOURCES) $(matrixconvert_dbg_SOURCES) \
+	$(matrixconvert_devel_SOURCES) $(matrixconvert_oprof_SOURCES) \
+	$(matrixconvert_opt_SOURCES) $(matrixsolve_dbg_SOURCES) \
+	$(matrixsolve_devel_SOURCES) $(matrixsolve_oprof_SOURCES) \
+	$(matrixsolve_opt_SOURCES) $(meshavg_dbg_SOURCES) \
+	$(meshavg_devel_SOURCES) $(meshavg_oprof_SOURCES) \
+	$(meshavg_opt_SOURCES) $(meshbcid_dbg_SOURCES) \
+	$(meshbcid_devel_SOURCES) $(meshbcid_oprof_SOURCES) \
+	$(meshbcid_opt_SOURCES) $(meshdiff_dbg_SOURCES) \
+	$(meshdiff_devel_SOURCES) $(meshdiff_oprof_SOURCES) \
+	$(meshdiff_opt_SOURCES) $(meshid_dbg_SOURCES) \
+	$(meshid_devel_SOURCES) $(meshid_oprof_SOURCES) \
+	$(meshid_opt_SOURCES) $(meshnorm_dbg_SOURCES) \
+	$(meshnorm_devel_SOURCES) $(meshnorm_oprof_SOURCES) \
+	$(meshnorm_opt_SOURCES) $(meshplot_dbg_SOURCES) \
+	$(meshplot_devel_SOURCES) $(meshplot_oprof_SOURCES) \
+	$(meshplot_opt_SOURCES) $(meshtool_dbg_SOURCES) \
+	$(meshtool_devel_SOURCES) $(meshtool_oprof_SOURCES) \
+	$(meshtool_opt_SOURCES) $(output_libmesh_version_dbg_SOURCES) \
 	$(output_libmesh_version_devel_SOURCES) \
 	$(output_libmesh_version_oprof_SOURCES) \
 	$(output_libmesh_version_opt_SOURCES) \
@@ -7606,9 +7557,6 @@ DIST_SOURCES = $(am__libmesh_dbg_la_SOURCES_DIST) \
 	$(fparser_parse_oprof_SOURCES) $(fparser_parse_opt_SOURCES) \
 	$(getpot_parse_dbg_SOURCES) $(getpot_parse_devel_SOURCES) \
 	$(getpot_parse_oprof_SOURCES) $(getpot_parse_opt_SOURCES) \
-	$(am__hilbert_kokkos_benchmark_dbg_SOURCES_DIST) \
-	$(am__hilbert_kokkos_benchmark_devel_SOURCES_DIST) \
-	$(am__hilbert_kokkos_benchmark_opt_SOURCES_DIST) \
 	$(matrixconvert_dbg_SOURCES) $(matrixconvert_devel_SOURCES) \
 	$(matrixconvert_oprof_SOURCES) $(matrixconvert_opt_SOURCES) \
 	$(matrixsolve_dbg_SOURCES) $(matrixsolve_devel_SOURCES) \
@@ -8146,6 +8094,7 @@ AM_CPPFLAGS = -DLIBMESH_IS_COMPILING_ITSELF \
                    $(libmesh_contrib_INCLUDES) \
                    $(libmesh_optional_INCLUDES) \
                    -I$(top_builddir)/include # required for libmesh_version.h
+
 
 # nvcc does not reliably treat GCC-style two-token -iquote options as
 # preprocessor options, so keep Kokkos .K rules on -I include paths.
@@ -8916,7 +8865,7 @@ meshtool_oprof_CPPFLAGS = $(CPPFLAGS_OPROF) $(AM_CPPFLAGS)
 meshtool_oprof_CXXFLAGS = $(CXXFLAGS_OPROF)
 meshtool_oprof_LDADD = libmesh_oprof.la
 @LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_opt_SOURCES =  \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/calculator_kokkos.K \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/calculator.C \
 @LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system.C \
 @LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system.h
 @LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_opt_CPPFLAGS = $(CPPFLAGS_OPT) $(AM_CPPFLAGS)
@@ -8932,7 +8881,7 @@ meshtool_oprof_LDADD = libmesh_oprof.la
 @LIBMESH_ENABLE_KOKKOS_TRUE@	$(calculator_kokkos_opt_LDFLAGS) $(LDFLAGS) -o $@
 
 @LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_devel_SOURCES =  \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/calculator_kokkos.K \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/calculator.C \
 @LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system.C \
 @LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system.h
 @LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_devel_CPPFLAGS = $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS)
@@ -8948,7 +8897,7 @@ meshtool_oprof_LDADD = libmesh_oprof.la
 @LIBMESH_ENABLE_KOKKOS_TRUE@	$(calculator_kokkos_devel_LDFLAGS) $(LDFLAGS) -o $@
 
 @LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_dbg_SOURCES =  \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/calculator_kokkos.K \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/calculator.C \
 @LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system.C \
 @LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system.h
 @LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_dbg_CPPFLAGS = $(CPPFLAGS_DBG) $(AM_CPPFLAGS)
@@ -8962,51 +8911,6 @@ meshtool_oprof_LDADD = libmesh_oprof.la
 @LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_dbg_LINK = \
 @LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
 @LIBMESH_ENABLE_KOKKOS_TRUE@	$(calculator_kokkos_dbg_LDFLAGS) $(LDFLAGS) -o $@
-
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_opt_SOURCES = src/apps/hilbert_kokkos_benchmark.C \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system.C \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system.h
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_opt_CPPFLAGS = $(CPPFLAGS_OPT) $(AM_CPPFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_opt_CXXFLAGS = $(CXXFLAGS_OPT)
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_opt_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_opt_LDADD = libmesh_opt.la \
-@LIBMESH_ENABLE_KOKKOS_TRUE@                                        $(KOKKOS_LIBMESH_OPT_OBJECTS) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@                                        $(KOKKOS_L2SYSTEM_OPT_OBJECTS) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@                                        $(KOKKOS_LIBS)
-
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_opt_LINK = \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(hilbert_kokkos_benchmark_opt_LDFLAGS) $(LDFLAGS) -o $@
-
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_devel_SOURCES = src/apps/hilbert_kokkos_benchmark.C \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system.C \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system.h
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_devel_CPPFLAGS = $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_devel_CXXFLAGS = $(CXXFLAGS_DEVEL)
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_devel_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_devel_LDADD = libmesh_devel.la \
-@LIBMESH_ENABLE_KOKKOS_TRUE@                                          $(KOKKOS_LIBMESH_DEVEL_OBJECTS) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@                                          $(KOKKOS_L2SYSTEM_DEVEL_OBJECTS) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@                                          $(KOKKOS_LIBS)
-
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_devel_LINK = \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(hilbert_kokkos_benchmark_devel_LDFLAGS) $(LDFLAGS) -o $@
-
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_dbg_SOURCES = src/apps/hilbert_kokkos_benchmark.C \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system.C \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system.h
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_dbg_CPPFLAGS = $(CPPFLAGS_DBG) $(AM_CPPFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_dbg_CXXFLAGS = $(CXXFLAGS_DBG)
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_dbg_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_dbg_LDADD = libmesh_dbg.la \
-@LIBMESH_ENABLE_KOKKOS_TRUE@                                        $(KOKKOS_LIBMESH_DBG_OBJECTS) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@                                        $(KOKKOS_L2SYSTEM_DBG_OBJECTS) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@                                        $(KOKKOS_LIBS)
-
-@LIBMESH_ENABLE_KOKKOS_TRUE@hilbert_kokkos_benchmark_dbg_LINK = \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(hilbert_kokkos_benchmark_dbg_LDFLAGS) $(LDFLAGS) -o $@
 
 @LIBMESH_ENABLE_KOKKOS_FALSE@calculator_opt_SOURCES =  \
 @LIBMESH_ENABLE_KOKKOS_FALSE@	src/apps/calculator.C \
@@ -15386,18 +15290,24 @@ src/apps/calculator_devel-L2system.$(OBJEXT):  \
 calculator-devel$(EXEEXT): $(calculator_devel_OBJECTS) $(calculator_devel_DEPENDENCIES) $(EXTRA_calculator_devel_DEPENDENCIES)
 	@rm -f calculator-devel$(EXEEXT)
 	$(AM_V_CXXLD)$(calculator_devel_LINK) $(calculator_devel_OBJECTS) $(calculator_devel_LDADD) $(LIBS)
+src/apps/calculator_kokkos_dbg-calculator.$(OBJEXT):  \
+	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
 src/apps/calculator_kokkos_dbg-L2system.$(OBJEXT):  \
 	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
 
 calculator-kokkos-dbg$(EXEEXT): $(calculator_kokkos_dbg_OBJECTS) $(calculator_kokkos_dbg_DEPENDENCIES) $(EXTRA_calculator_kokkos_dbg_DEPENDENCIES)
 	@rm -f calculator-kokkos-dbg$(EXEEXT)
 	$(AM_V_GEN)$(calculator_kokkos_dbg_LINK) $(calculator_kokkos_dbg_OBJECTS) $(calculator_kokkos_dbg_LDADD) $(LIBS)
+src/apps/calculator_kokkos_devel-calculator.$(OBJEXT):  \
+	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
 src/apps/calculator_kokkos_devel-L2system.$(OBJEXT):  \
 	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
 
 calculator-kokkos-devel$(EXEEXT): $(calculator_kokkos_devel_OBJECTS) $(calculator_kokkos_devel_DEPENDENCIES) $(EXTRA_calculator_kokkos_devel_DEPENDENCIES)
 	@rm -f calculator-kokkos-devel$(EXEEXT)
 	$(AM_V_GEN)$(calculator_kokkos_devel_LINK) $(calculator_kokkos_devel_OBJECTS) $(calculator_kokkos_devel_LDADD) $(LIBS)
+src/apps/calculator_kokkos_opt-calculator.$(OBJEXT):  \
+	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
 src/apps/calculator_kokkos_opt-L2system.$(OBJEXT):  \
 	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
 
@@ -15516,30 +15426,6 @@ src/apps/getpot_parse_opt-getpot_parse.$(OBJEXT):  \
 getpot_parse-opt$(EXEEXT): $(getpot_parse_opt_OBJECTS) $(getpot_parse_opt_DEPENDENCIES) $(EXTRA_getpot_parse_opt_DEPENDENCIES)
 	@rm -f getpot_parse-opt$(EXEEXT)
 	$(AM_V_CXXLD)$(getpot_parse_opt_LINK) $(getpot_parse_opt_OBJECTS) $(getpot_parse_opt_LDADD) $(LIBS)
-src/apps/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.$(OBJEXT):  \
-	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
-src/apps/hilbert_kokkos_benchmark_dbg-L2system.$(OBJEXT):  \
-	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
-
-hilbert_kokkos_benchmark-dbg$(EXEEXT): $(hilbert_kokkos_benchmark_dbg_OBJECTS) $(hilbert_kokkos_benchmark_dbg_DEPENDENCIES) $(EXTRA_hilbert_kokkos_benchmark_dbg_DEPENDENCIES)
-	@rm -f hilbert_kokkos_benchmark-dbg$(EXEEXT)
-	$(AM_V_GEN)$(hilbert_kokkos_benchmark_dbg_LINK) $(hilbert_kokkos_benchmark_dbg_OBJECTS) $(hilbert_kokkos_benchmark_dbg_LDADD) $(LIBS)
-src/apps/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.$(OBJEXT):  \
-	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
-src/apps/hilbert_kokkos_benchmark_devel-L2system.$(OBJEXT):  \
-	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
-
-hilbert_kokkos_benchmark-devel$(EXEEXT): $(hilbert_kokkos_benchmark_devel_OBJECTS) $(hilbert_kokkos_benchmark_devel_DEPENDENCIES) $(EXTRA_hilbert_kokkos_benchmark_devel_DEPENDENCIES)
-	@rm -f hilbert_kokkos_benchmark-devel$(EXEEXT)
-	$(AM_V_GEN)$(hilbert_kokkos_benchmark_devel_LINK) $(hilbert_kokkos_benchmark_devel_OBJECTS) $(hilbert_kokkos_benchmark_devel_LDADD) $(LIBS)
-src/apps/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.$(OBJEXT):  \
-	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
-src/apps/hilbert_kokkos_benchmark_opt-L2system.$(OBJEXT):  \
-	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
-
-hilbert_kokkos_benchmark-opt$(EXEEXT): $(hilbert_kokkos_benchmark_opt_OBJECTS) $(hilbert_kokkos_benchmark_opt_DEPENDENCIES) $(EXTRA_hilbert_kokkos_benchmark_opt_DEPENDENCIES)
-	@rm -f hilbert_kokkos_benchmark-opt$(EXEEXT)
-	$(AM_V_GEN)$(hilbert_kokkos_benchmark_opt_LINK) $(hilbert_kokkos_benchmark_opt_OBJECTS) $(hilbert_kokkos_benchmark_opt_LDADD) $(LIBS)
 src/apps/matrixconvert_dbg-matrixconvert.$(OBJEXT):  \
 	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
 
@@ -16006,8 +15892,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_devel-L2system.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_devel-calculator.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_kokkos_dbg-L2system.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_kokkos_devel-L2system.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_kokkos_opt-L2system.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_oprof-L2system.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_oprof-calculator.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_opt-L2system.Po@am__quote@ # am--include-marker
@@ -16028,12 +15917,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/getpot_parse_devel-getpot_parse.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/getpot_parse_oprof-getpot_parse.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/getpot_parse_opt-getpot_parse.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-L2system.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-L2system.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-L2system.Po@am__quote@ # am--include-marker
-@AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/matrixconvert_dbg-matrixconvert.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/matrixconvert_devel-matrixconvert.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/matrixconvert_oprof-matrixconvert.Po@am__quote@ # am--include-marker
@@ -35309,6 +35192,20 @@ src/apps/calculator_devel-L2system.obj: src/apps/L2system.C
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_devel_CPPFLAGS) $(CPPFLAGS) $(calculator_devel_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_devel-L2system.obj `if test -f 'src/apps/L2system.C'; then $(CYGPATH_W) 'src/apps/L2system.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/L2system.C'; fi`
 
+src/apps/calculator_kokkos_dbg-calculator.o: src/apps/calculator.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_dbg-calculator.o -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Tpo -c -o src/apps/calculator_kokkos_dbg-calculator.o `test -f 'src/apps/calculator.C' || echo '$(srcdir)/'`src/apps/calculator.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Tpo src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/calculator.C' object='src/apps/calculator_kokkos_dbg-calculator.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_dbg-calculator.o `test -f 'src/apps/calculator.C' || echo '$(srcdir)/'`src/apps/calculator.C
+
+src/apps/calculator_kokkos_dbg-calculator.obj: src/apps/calculator.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_dbg-calculator.obj -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Tpo -c -o src/apps/calculator_kokkos_dbg-calculator.obj `if test -f 'src/apps/calculator.C'; then $(CYGPATH_W) 'src/apps/calculator.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/calculator.C'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Tpo src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/calculator.C' object='src/apps/calculator_kokkos_dbg-calculator.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_dbg-calculator.obj `if test -f 'src/apps/calculator.C'; then $(CYGPATH_W) 'src/apps/calculator.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/calculator.C'; fi`
+
 @LIBMESH_ENABLE_KOKKOS_FALSE@src/apps/calculator_kokkos_dbg-L2system.o: src/apps/L2system.C
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_dbg-L2system.o -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_dbg-L2system.Tpo -c -o src/apps/calculator_kokkos_dbg-L2system.o `test -f 'src/apps/L2system.C' || echo '$(srcdir)/'`src/apps/L2system.C
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_dbg-L2system.Tpo src/apps/$(DEPDIR)/calculator_kokkos_dbg-L2system.Po
@@ -35323,6 +35220,20 @@ src/apps/calculator_kokkos_dbg-L2system.obj: src/apps/L2system.C
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_dbg-L2system.obj `if test -f 'src/apps/L2system.C'; then $(CYGPATH_W) 'src/apps/L2system.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/L2system.C'; fi`
 
+src/apps/calculator_kokkos_devel-calculator.o: src/apps/calculator.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_devel_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_devel-calculator.o -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Tpo -c -o src/apps/calculator_kokkos_devel-calculator.o `test -f 'src/apps/calculator.C' || echo '$(srcdir)/'`src/apps/calculator.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Tpo src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/calculator.C' object='src/apps/calculator_kokkos_devel-calculator.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_devel_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_devel-calculator.o `test -f 'src/apps/calculator.C' || echo '$(srcdir)/'`src/apps/calculator.C
+
+src/apps/calculator_kokkos_devel-calculator.obj: src/apps/calculator.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_devel_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_devel-calculator.obj -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Tpo -c -o src/apps/calculator_kokkos_devel-calculator.obj `if test -f 'src/apps/calculator.C'; then $(CYGPATH_W) 'src/apps/calculator.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/calculator.C'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Tpo src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/calculator.C' object='src/apps/calculator_kokkos_devel-calculator.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_devel_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_devel-calculator.obj `if test -f 'src/apps/calculator.C'; then $(CYGPATH_W) 'src/apps/calculator.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/calculator.C'; fi`
+
 @LIBMESH_ENABLE_KOKKOS_FALSE@src/apps/calculator_kokkos_devel-L2system.o: src/apps/L2system.C
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_devel_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_devel-L2system.o -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_devel-L2system.Tpo -c -o src/apps/calculator_kokkos_devel-L2system.o `test -f 'src/apps/L2system.C' || echo '$(srcdir)/'`src/apps/L2system.C
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_devel-L2system.Tpo src/apps/$(DEPDIR)/calculator_kokkos_devel-L2system.Po
@@ -35336,6 +35247,20 @@ src/apps/calculator_kokkos_devel-L2system.obj: src/apps/L2system.C
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/L2system.C' object='src/apps/calculator_kokkos_devel-L2system.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_devel_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_devel-L2system.obj `if test -f 'src/apps/L2system.C'; then $(CYGPATH_W) 'src/apps/L2system.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/L2system.C'; fi`
+
+src/apps/calculator_kokkos_opt-calculator.o: src/apps/calculator.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_opt_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_opt_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_opt-calculator.o -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Tpo -c -o src/apps/calculator_kokkos_opt-calculator.o `test -f 'src/apps/calculator.C' || echo '$(srcdir)/'`src/apps/calculator.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Tpo src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/calculator.C' object='src/apps/calculator_kokkos_opt-calculator.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_opt_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_opt_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_opt-calculator.o `test -f 'src/apps/calculator.C' || echo '$(srcdir)/'`src/apps/calculator.C
+
+src/apps/calculator_kokkos_opt-calculator.obj: src/apps/calculator.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_opt_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_opt_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_opt-calculator.obj -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Tpo -c -o src/apps/calculator_kokkos_opt-calculator.obj `if test -f 'src/apps/calculator.C'; then $(CYGPATH_W) 'src/apps/calculator.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/calculator.C'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Tpo src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/calculator.C' object='src/apps/calculator_kokkos_opt-calculator.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_opt_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_opt_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_opt-calculator.obj `if test -f 'src/apps/calculator.C'; then $(CYGPATH_W) 'src/apps/calculator.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/calculator.C'; fi`
 
 @LIBMESH_ENABLE_KOKKOS_FALSE@src/apps/calculator_kokkos_opt-L2system.o: src/apps/L2system.C
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_opt_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_opt_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_opt-L2system.o -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_opt-L2system.Tpo -c -o src/apps/calculator_kokkos_opt-L2system.o `test -f 'src/apps/L2system.C' || echo '$(srcdir)/'`src/apps/L2system.C
@@ -35630,90 +35555,6 @@ src/apps/getpot_parse_opt-getpot_parse.obj: src/apps/getpot_parse.C
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/getpot_parse.C' object='src/apps/getpot_parse_opt-getpot_parse.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(getpot_parse_opt_CPPFLAGS) $(CPPFLAGS) $(getpot_parse_opt_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/getpot_parse_opt-getpot_parse.obj `if test -f 'src/apps/getpot_parse.C'; then $(CYGPATH_W) 'src/apps/getpot_parse.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/getpot_parse.C'; fi`
-
-src/apps/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.o: src/apps/hilbert_kokkos_benchmark.C
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_dbg_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_dbg_CXXFLAGS) $(CXXFLAGS) -MT src/apps/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.o -MD -MP -MF src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.Tpo -c -o src/apps/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.o `test -f 'src/apps/hilbert_kokkos_benchmark.C' || echo '$(srcdir)/'`src/apps/hilbert_kokkos_benchmark.C
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.Tpo src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/hilbert_kokkos_benchmark.C' object='src/apps/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_dbg_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_dbg_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.o `test -f 'src/apps/hilbert_kokkos_benchmark.C' || echo '$(srcdir)/'`src/apps/hilbert_kokkos_benchmark.C
-
-src/apps/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.obj: src/apps/hilbert_kokkos_benchmark.C
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_dbg_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_dbg_CXXFLAGS) $(CXXFLAGS) -MT src/apps/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.obj -MD -MP -MF src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.Tpo -c -o src/apps/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.obj `if test -f 'src/apps/hilbert_kokkos_benchmark.C'; then $(CYGPATH_W) 'src/apps/hilbert_kokkos_benchmark.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/hilbert_kokkos_benchmark.C'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.Tpo src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/hilbert_kokkos_benchmark.C' object='src/apps/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_dbg_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_dbg_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.obj `if test -f 'src/apps/hilbert_kokkos_benchmark.C'; then $(CYGPATH_W) 'src/apps/hilbert_kokkos_benchmark.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/hilbert_kokkos_benchmark.C'; fi`
-
-src/apps/hilbert_kokkos_benchmark_dbg-L2system.o: src/apps/L2system.C
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_dbg_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_dbg_CXXFLAGS) $(CXXFLAGS) -MT src/apps/hilbert_kokkos_benchmark_dbg-L2system.o -MD -MP -MF src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-L2system.Tpo -c -o src/apps/hilbert_kokkos_benchmark_dbg-L2system.o `test -f 'src/apps/L2system.C' || echo '$(srcdir)/'`src/apps/L2system.C
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-L2system.Tpo src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-L2system.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/L2system.C' object='src/apps/hilbert_kokkos_benchmark_dbg-L2system.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_dbg_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_dbg_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/hilbert_kokkos_benchmark_dbg-L2system.o `test -f 'src/apps/L2system.C' || echo '$(srcdir)/'`src/apps/L2system.C
-
-src/apps/hilbert_kokkos_benchmark_dbg-L2system.obj: src/apps/L2system.C
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_dbg_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_dbg_CXXFLAGS) $(CXXFLAGS) -MT src/apps/hilbert_kokkos_benchmark_dbg-L2system.obj -MD -MP -MF src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-L2system.Tpo -c -o src/apps/hilbert_kokkos_benchmark_dbg-L2system.obj `if test -f 'src/apps/L2system.C'; then $(CYGPATH_W) 'src/apps/L2system.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/L2system.C'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-L2system.Tpo src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-L2system.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/L2system.C' object='src/apps/hilbert_kokkos_benchmark_dbg-L2system.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_dbg_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_dbg_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/hilbert_kokkos_benchmark_dbg-L2system.obj `if test -f 'src/apps/L2system.C'; then $(CYGPATH_W) 'src/apps/L2system.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/L2system.C'; fi`
-
-src/apps/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.o: src/apps/hilbert_kokkos_benchmark.C
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_devel_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_devel_CXXFLAGS) $(CXXFLAGS) -MT src/apps/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.o -MD -MP -MF src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.Tpo -c -o src/apps/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.o `test -f 'src/apps/hilbert_kokkos_benchmark.C' || echo '$(srcdir)/'`src/apps/hilbert_kokkos_benchmark.C
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.Tpo src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/hilbert_kokkos_benchmark.C' object='src/apps/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_devel_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_devel_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.o `test -f 'src/apps/hilbert_kokkos_benchmark.C' || echo '$(srcdir)/'`src/apps/hilbert_kokkos_benchmark.C
-
-src/apps/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.obj: src/apps/hilbert_kokkos_benchmark.C
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_devel_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_devel_CXXFLAGS) $(CXXFLAGS) -MT src/apps/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.obj -MD -MP -MF src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.Tpo -c -o src/apps/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.obj `if test -f 'src/apps/hilbert_kokkos_benchmark.C'; then $(CYGPATH_W) 'src/apps/hilbert_kokkos_benchmark.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/hilbert_kokkos_benchmark.C'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.Tpo src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/hilbert_kokkos_benchmark.C' object='src/apps/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_devel_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_devel_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.obj `if test -f 'src/apps/hilbert_kokkos_benchmark.C'; then $(CYGPATH_W) 'src/apps/hilbert_kokkos_benchmark.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/hilbert_kokkos_benchmark.C'; fi`
-
-src/apps/hilbert_kokkos_benchmark_devel-L2system.o: src/apps/L2system.C
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_devel_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_devel_CXXFLAGS) $(CXXFLAGS) -MT src/apps/hilbert_kokkos_benchmark_devel-L2system.o -MD -MP -MF src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-L2system.Tpo -c -o src/apps/hilbert_kokkos_benchmark_devel-L2system.o `test -f 'src/apps/L2system.C' || echo '$(srcdir)/'`src/apps/L2system.C
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-L2system.Tpo src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-L2system.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/L2system.C' object='src/apps/hilbert_kokkos_benchmark_devel-L2system.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_devel_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_devel_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/hilbert_kokkos_benchmark_devel-L2system.o `test -f 'src/apps/L2system.C' || echo '$(srcdir)/'`src/apps/L2system.C
-
-src/apps/hilbert_kokkos_benchmark_devel-L2system.obj: src/apps/L2system.C
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_devel_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_devel_CXXFLAGS) $(CXXFLAGS) -MT src/apps/hilbert_kokkos_benchmark_devel-L2system.obj -MD -MP -MF src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-L2system.Tpo -c -o src/apps/hilbert_kokkos_benchmark_devel-L2system.obj `if test -f 'src/apps/L2system.C'; then $(CYGPATH_W) 'src/apps/L2system.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/L2system.C'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-L2system.Tpo src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-L2system.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/L2system.C' object='src/apps/hilbert_kokkos_benchmark_devel-L2system.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_devel_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_devel_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/hilbert_kokkos_benchmark_devel-L2system.obj `if test -f 'src/apps/L2system.C'; then $(CYGPATH_W) 'src/apps/L2system.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/L2system.C'; fi`
-
-src/apps/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.o: src/apps/hilbert_kokkos_benchmark.C
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_opt_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_opt_CXXFLAGS) $(CXXFLAGS) -MT src/apps/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.o -MD -MP -MF src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.Tpo -c -o src/apps/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.o `test -f 'src/apps/hilbert_kokkos_benchmark.C' || echo '$(srcdir)/'`src/apps/hilbert_kokkos_benchmark.C
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.Tpo src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/hilbert_kokkos_benchmark.C' object='src/apps/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_opt_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_opt_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.o `test -f 'src/apps/hilbert_kokkos_benchmark.C' || echo '$(srcdir)/'`src/apps/hilbert_kokkos_benchmark.C
-
-src/apps/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.obj: src/apps/hilbert_kokkos_benchmark.C
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_opt_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_opt_CXXFLAGS) $(CXXFLAGS) -MT src/apps/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.obj -MD -MP -MF src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.Tpo -c -o src/apps/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.obj `if test -f 'src/apps/hilbert_kokkos_benchmark.C'; then $(CYGPATH_W) 'src/apps/hilbert_kokkos_benchmark.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/hilbert_kokkos_benchmark.C'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.Tpo src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/hilbert_kokkos_benchmark.C' object='src/apps/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_opt_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_opt_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.obj `if test -f 'src/apps/hilbert_kokkos_benchmark.C'; then $(CYGPATH_W) 'src/apps/hilbert_kokkos_benchmark.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/hilbert_kokkos_benchmark.C'; fi`
-
-src/apps/hilbert_kokkos_benchmark_opt-L2system.o: src/apps/L2system.C
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_opt_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_opt_CXXFLAGS) $(CXXFLAGS) -MT src/apps/hilbert_kokkos_benchmark_opt-L2system.o -MD -MP -MF src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-L2system.Tpo -c -o src/apps/hilbert_kokkos_benchmark_opt-L2system.o `test -f 'src/apps/L2system.C' || echo '$(srcdir)/'`src/apps/L2system.C
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-L2system.Tpo src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-L2system.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/L2system.C' object='src/apps/hilbert_kokkos_benchmark_opt-L2system.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_opt_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_opt_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/hilbert_kokkos_benchmark_opt-L2system.o `test -f 'src/apps/L2system.C' || echo '$(srcdir)/'`src/apps/L2system.C
-
-src/apps/hilbert_kokkos_benchmark_opt-L2system.obj: src/apps/L2system.C
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_opt_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_opt_CXXFLAGS) $(CXXFLAGS) -MT src/apps/hilbert_kokkos_benchmark_opt-L2system.obj -MD -MP -MF src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-L2system.Tpo -c -o src/apps/hilbert_kokkos_benchmark_opt-L2system.obj `if test -f 'src/apps/L2system.C'; then $(CYGPATH_W) 'src/apps/L2system.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/L2system.C'; fi`
-@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-L2system.Tpo src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-L2system.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/L2system.C' object='src/apps/hilbert_kokkos_benchmark_opt-L2system.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(hilbert_kokkos_benchmark_opt_CPPFLAGS) $(CPPFLAGS) $(hilbert_kokkos_benchmark_opt_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/hilbert_kokkos_benchmark_opt-L2system.obj `if test -f 'src/apps/L2system.C'; then $(CYGPATH_W) 'src/apps/L2system.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/L2system.C'; fi`
 
 src/apps/matrixconvert_dbg-matrixconvert.o: src/apps/matrixconvert.C
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(matrixconvert_dbg_CPPFLAGS) $(CPPFLAGS) $(matrixconvert_dbg_CXXFLAGS) $(CXXFLAGS) -MT src/apps/matrixconvert_dbg-matrixconvert.o -MD -MP -MF src/apps/$(DEPDIR)/matrixconvert_dbg-matrixconvert.Tpo -c -o src/apps/matrixconvert_dbg-matrixconvert.o `test -f 'src/apps/matrixconvert.C' || echo '$(srcdir)/'`src/apps/matrixconvert.C
@@ -36936,8 +36777,11 @@ distclean: distclean-recursive
 	-rm -f src/apps/$(DEPDIR)/calculator_devel-L2system.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_devel-calculator.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_dbg-L2system.Po
+	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_devel-L2system.Po
+	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_opt-L2system.Po
+	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_oprof-L2system.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_oprof-calculator.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_opt-L2system.Po
@@ -36958,12 +36802,6 @@ distclean: distclean-recursive
 	-rm -f src/apps/$(DEPDIR)/getpot_parse_devel-getpot_parse.Po
 	-rm -f src/apps/$(DEPDIR)/getpot_parse_oprof-getpot_parse.Po
 	-rm -f src/apps/$(DEPDIR)/getpot_parse_opt-getpot_parse.Po
-	-rm -f src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-L2system.Po
-	-rm -f src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.Po
-	-rm -f src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-L2system.Po
-	-rm -f src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.Po
-	-rm -f src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-L2system.Po
-	-rm -f src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.Po
 	-rm -f src/apps/$(DEPDIR)/matrixconvert_dbg-matrixconvert.Po
 	-rm -f src/apps/$(DEPDIR)/matrixconvert_devel-matrixconvert.Po
 	-rm -f src/apps/$(DEPDIR)/matrixconvert_oprof-matrixconvert.Po
@@ -39461,8 +39299,11 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f src/apps/$(DEPDIR)/calculator_devel-L2system.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_devel-calculator.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_dbg-L2system.Po
+	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_devel-L2system.Po
+	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_opt-L2system.Po
+	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_oprof-L2system.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_oprof-calculator.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_opt-L2system.Po
@@ -39483,12 +39324,6 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f src/apps/$(DEPDIR)/getpot_parse_devel-getpot_parse.Po
 	-rm -f src/apps/$(DEPDIR)/getpot_parse_oprof-getpot_parse.Po
 	-rm -f src/apps/$(DEPDIR)/getpot_parse_opt-getpot_parse.Po
-	-rm -f src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-L2system.Po
-	-rm -f src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_dbg-hilbert_kokkos_benchmark.Po
-	-rm -f src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-L2system.Po
-	-rm -f src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_devel-hilbert_kokkos_benchmark.Po
-	-rm -f src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-L2system.Po
-	-rm -f src/apps/$(DEPDIR)/hilbert_kokkos_benchmark_opt-hilbert_kokkos_benchmark.Po
 	-rm -f src/apps/$(DEPDIR)/matrixconvert_dbg-matrixconvert.Po
 	-rm -f src/apps/$(DEPDIR)/matrixconvert_devel-matrixconvert.Po
 	-rm -f src/apps/$(DEPDIR)/matrixconvert_oprof-matrixconvert.Po
@@ -42201,35 +42036,17 @@ beautify:
           emacs -batch $$file --eval '(delete-trailing-whitespace)' -f save-buffer 2>/dev/null ; \
         done
 
-@LIBMESH_ENABLE_KOKKOS_TRUE@src/apps/calculator_kokkos_opt-calculator_kokkos.o: src/apps/calculator_kokkos.K
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(calculator_kokkos_opt_CPPFLAGS) $(CPPFLAGS) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(calculator_kokkos_opt_CXXFLAGS) $(CXXFLAGS) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	  -x c++ -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
-
 @LIBMESH_ENABLE_KOKKOS_TRUE@src/apps/calculator_kokkos_opt-L2system.o: src/apps/L2system.C
 @LIBMESH_ENABLE_KOKKOS_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 @LIBMESH_ENABLE_KOKKOS_TRUE@	  $(calculator_kokkos_opt_CPPFLAGS) $(CPPFLAGS) \
 @LIBMESH_ENABLE_KOKKOS_TRUE@	  $(calculator_kokkos_opt_CXXFLAGS) $(CXXFLAGS) \
 @LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
 
-@LIBMESH_ENABLE_KOKKOS_TRUE@src/apps/calculator_kokkos_devel-calculator_kokkos.o: src/apps/calculator_kokkos.K
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(calculator_kokkos_devel_CXXFLAGS) $(CXXFLAGS) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	  -x c++ -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
-
 @LIBMESH_ENABLE_KOKKOS_TRUE@src/apps/calculator_kokkos_devel-L2system.o: src/apps/L2system.C
 @LIBMESH_ENABLE_KOKKOS_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 @LIBMESH_ENABLE_KOKKOS_TRUE@	  $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) \
 @LIBMESH_ENABLE_KOKKOS_TRUE@	  $(calculator_kokkos_devel_CXXFLAGS) $(CXXFLAGS) \
 @LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
-
-@LIBMESH_ENABLE_KOKKOS_TRUE@src/apps/calculator_kokkos_dbg-calculator_kokkos.o: src/apps/calculator_kokkos.K
-@LIBMESH_ENABLE_KOKKOS_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(calculator_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(calculator_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) \
-@LIBMESH_ENABLE_KOKKOS_TRUE@	  -x c++ -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
 
 @LIBMESH_ENABLE_KOKKOS_TRUE@src/apps/calculator_kokkos_dbg-L2system.o: src/apps/L2system.C
 @LIBMESH_ENABLE_KOKKOS_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \

@@ -649,7 +649,7 @@ meshtool_oprof_LDADD    = libmesh_oprof.la
 # calculator
 if LIBMESH_ENABLE_KOKKOS
 opt_programs                 += calculator-kokkos-opt
-calculator_kokkos_opt_SOURCES = src/apps/calculator_kokkos.K
+calculator_kokkos_opt_SOURCES = src/apps/calculator.C
 calculator_kokkos_opt_SOURCES += src/apps/L2system.C src/apps/L2system.h
 calculator_kokkos_opt_CPPFLAGS = $(CPPFLAGS_OPT) $(AM_CPPFLAGS)
 calculator_kokkos_opt_CXXFLAGS = $(CXXFLAGS_OPT)
@@ -662,12 +662,6 @@ calculator_kokkos_opt_LINK = \
 	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
 	$(calculator_kokkos_opt_LDFLAGS) $(LDFLAGS) -o $@
 
-src/apps/calculator_kokkos_opt-calculator_kokkos.o: src/apps/calculator_kokkos.K
-	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
-	  $(calculator_kokkos_opt_CPPFLAGS) $(CPPFLAGS) \
-	  $(calculator_kokkos_opt_CXXFLAGS) $(CXXFLAGS) \
-	  -x c++ -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
-
 src/apps/calculator_kokkos_opt-L2system.o: src/apps/L2system.C
 	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	  $(calculator_kokkos_opt_CPPFLAGS) $(CPPFLAGS) \
@@ -675,7 +669,7 @@ src/apps/calculator_kokkos_opt-L2system.o: src/apps/L2system.C
 	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
 
 devel_programs                   += calculator-kokkos-devel
-calculator_kokkos_devel_SOURCES   = src/apps/calculator_kokkos.K
+calculator_kokkos_devel_SOURCES   = src/apps/calculator.C
 calculator_kokkos_devel_SOURCES  += src/apps/L2system.C src/apps/L2system.h
 calculator_kokkos_devel_CPPFLAGS  = $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS)
 calculator_kokkos_devel_CXXFLAGS  = $(CXXFLAGS_DEVEL)
@@ -688,12 +682,6 @@ calculator_kokkos_devel_LINK = \
 	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
 	$(calculator_kokkos_devel_LDFLAGS) $(LDFLAGS) -o $@
 
-src/apps/calculator_kokkos_devel-calculator_kokkos.o: src/apps/calculator_kokkos.K
-	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
-	  $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) \
-	  $(calculator_kokkos_devel_CXXFLAGS) $(CXXFLAGS) \
-	  -x c++ -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
-
 src/apps/calculator_kokkos_devel-L2system.o: src/apps/L2system.C
 	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	  $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) \
@@ -701,7 +689,7 @@ src/apps/calculator_kokkos_devel-L2system.o: src/apps/L2system.C
 	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
 
 dbg_programs                 += calculator-kokkos-dbg
-calculator_kokkos_dbg_SOURCES = src/apps/calculator_kokkos.K
+calculator_kokkos_dbg_SOURCES = src/apps/calculator.C
 calculator_kokkos_dbg_SOURCES += src/apps/L2system.C src/apps/L2system.h
 calculator_kokkos_dbg_CPPFLAGS = $(CPPFLAGS_DBG) $(AM_CPPFLAGS)
 calculator_kokkos_dbg_CXXFLAGS = $(CXXFLAGS_DBG)
@@ -714,60 +702,12 @@ calculator_kokkos_dbg_LINK = \
 	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
 	$(calculator_kokkos_dbg_LDFLAGS) $(LDFLAGS) -o $@
 
-src/apps/calculator_kokkos_dbg-calculator_kokkos.o: src/apps/calculator_kokkos.K
-	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
-	  $(calculator_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) \
-	  $(calculator_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) \
-	  -x c++ -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
-
 src/apps/calculator_kokkos_dbg-L2system.o: src/apps/L2system.C
 	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	  $(calculator_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) \
 	  $(calculator_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) \
 	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
 
-# hilbert_kokkos_benchmark
-opt_programs += hilbert_kokkos_benchmark-opt
-hilbert_kokkos_benchmark_opt_SOURCES  = src/apps/hilbert_kokkos_benchmark.C
-hilbert_kokkos_benchmark_opt_SOURCES += src/apps/L2system.C src/apps/L2system.h
-hilbert_kokkos_benchmark_opt_CPPFLAGS = $(CPPFLAGS_OPT) $(AM_CPPFLAGS)
-hilbert_kokkos_benchmark_opt_CXXFLAGS = $(CXXFLAGS_OPT)
-hilbert_kokkos_benchmark_opt_LDFLAGS  = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
-hilbert_kokkos_benchmark_opt_LDADD    = libmesh_opt.la \
-                                        $(KOKKOS_LIBMESH_OPT_OBJECTS) \
-                                        $(KOKKOS_L2SYSTEM_OPT_OBJECTS) \
-                                        $(KOKKOS_LIBS)
-hilbert_kokkos_benchmark_opt_LINK = \
-	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
-	$(hilbert_kokkos_benchmark_opt_LDFLAGS) $(LDFLAGS) -o $@
-
-devel_programs += hilbert_kokkos_benchmark-devel
-hilbert_kokkos_benchmark_devel_SOURCES  = src/apps/hilbert_kokkos_benchmark.C
-hilbert_kokkos_benchmark_devel_SOURCES += src/apps/L2system.C src/apps/L2system.h
-hilbert_kokkos_benchmark_devel_CPPFLAGS = $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS)
-hilbert_kokkos_benchmark_devel_CXXFLAGS = $(CXXFLAGS_DEVEL)
-hilbert_kokkos_benchmark_devel_LDFLAGS  = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
-hilbert_kokkos_benchmark_devel_LDADD    = libmesh_devel.la \
-                                          $(KOKKOS_LIBMESH_DEVEL_OBJECTS) \
-                                          $(KOKKOS_L2SYSTEM_DEVEL_OBJECTS) \
-                                          $(KOKKOS_LIBS)
-hilbert_kokkos_benchmark_devel_LINK = \
-	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
-	$(hilbert_kokkos_benchmark_devel_LDFLAGS) $(LDFLAGS) -o $@
-
-dbg_programs += hilbert_kokkos_benchmark-dbg
-hilbert_kokkos_benchmark_dbg_SOURCES  = src/apps/hilbert_kokkos_benchmark.C
-hilbert_kokkos_benchmark_dbg_SOURCES += src/apps/L2system.C src/apps/L2system.h
-hilbert_kokkos_benchmark_dbg_CPPFLAGS = $(CPPFLAGS_DBG) $(AM_CPPFLAGS)
-hilbert_kokkos_benchmark_dbg_CXXFLAGS = $(CXXFLAGS_DBG)
-hilbert_kokkos_benchmark_dbg_LDFLAGS  = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
-hilbert_kokkos_benchmark_dbg_LDADD    = libmesh_dbg.la \
-                                        $(KOKKOS_LIBMESH_DBG_OBJECTS) \
-                                        $(KOKKOS_L2SYSTEM_DBG_OBJECTS) \
-                                        $(KOKKOS_LIBS)
-hilbert_kokkos_benchmark_dbg_LINK = \
-	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
-	$(hilbert_kokkos_benchmark_dbg_LDFLAGS) $(LDFLAGS) -o $@
 else
 opt_programs          += calculator-opt
 calculator_opt_SOURCES    = src/apps/calculator.C

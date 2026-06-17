@@ -195,7 +195,6 @@ BUILT_SOURCES = \
         kokkos_linalg_base.h \
         kokkos_parsed_function.h \
         kokkos_quadrature.h \
-        kokkos_scalar_types.h \
         kokkos_storage.h \
         kokkos_storage_policy.h \
         kokkos_tensor_ops.h \
@@ -1216,9 +1215,6 @@ kokkos_parsed_function.h: $(top_srcdir)/include/gpu/kokkos_parsed_function.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 kokkos_quadrature.h: $(top_srcdir)/include/gpu/kokkos_quadrature.h
-	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
-
-kokkos_scalar_types.h: $(top_srcdir)/include/gpu/kokkos_scalar_types.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 kokkos_storage.h: $(top_srcdir)/include/gpu/kokkos_storage.h
