@@ -32,6 +32,7 @@
 
 #include <array>
 #include <chrono>
+#include <cstdlib>
 #include <cstdint>
 #include <cstring>
 #include <type_traits>
@@ -153,6 +154,86 @@ struct KokkosProfilingRegion
   KokkosProfilingRegion(const KokkosProfilingRegion &) = delete;
   KokkosProfilingRegion & operator=(const KokkosProfilingRegion &) = delete;
 };
+
+bool
+kokkos_l2_env_enabled(const char * name)
+{
+  const char * value = std::getenv(name);
+  return value && std::strcmp(value, "0") && std::strcmp(value, "false") &&
+         std::strcmp(value, "FALSE") && std::strcmp(value, "off") &&
+         std::strcmp(value, "OFF");
+}
+
+template <typename View>
+void
+debug_kokkos_entry_values(const Parallel::Communicator & comm,
+                          const char * name,
+                          const View & values)
+{
+  using ExecutionSpace = typename View::execution_space;
+  using RangePolicy = ::Kokkos::RangePolicy<ExecutionSpace, ::Kokkos::IndexType<std::size_t>>;
+
+  unsigned long long bad_count = 0;
+  double max_abs = 0.;
+
+  ::Kokkos::parallel_reduce(
+      RangePolicy(0, values.extent(0)),
+      KOKKOS_LAMBDA(const std::size_t i, unsigned long long & local_bad) {
+        const double value = static_cast<double>(values(i));
+        if (!(value == value) || value > 1.e300 || value < -1.e300)
+          ++local_bad;
+      },
+      bad_count);
+
+  ::Kokkos::parallel_reduce(
+      RangePolicy(0, values.extent(0)),
+      KOKKOS_LAMBDA(const std::size_t i, double & local_max) {
+        const double value = static_cast<double>(values(i));
+        if (value == value)
+        {
+          const double abs_value = value < 0. ? -value : value;
+          if (abs_value > local_max)
+            local_max = abs_value;
+        }
+      },
+      ::Kokkos::Max<double>(max_abs));
+  ::Kokkos::fence();
+
+  comm.sum(bad_count);
+  comm.max(max_abs);
+
+  if (comm.rank() == 0)
+    libMesh::out << "Kokkos L2 debug " << name << ": n=" << values.extent(0)
+                 << " bad=" << bad_count << " max_abs=" << max_abs << std::endl;
+}
+
+#ifdef LIBMESH_HAVE_PETSC
+void
+debug_petsc_object_types(const Parallel::Communicator & comm, Vec vec, Mat mat)
+{
+  const char * vec_type = nullptr;
+  const char * mat_type = nullptr;
+  LibmeshPetscCall2(comm, VecGetType(vec, &vec_type));
+  LibmeshPetscCall2(comm, MatGetType(mat, &mat_type));
+
+  if (comm.rank() == 0)
+    libMesh::out << "Kokkos L2 debug PETSc types: vec=" << vec_type
+                 << " mat=" << mat_type << std::endl;
+}
+
+void
+debug_petsc_object_norms(const Parallel::Communicator & comm, Vec vec, Mat mat)
+{
+  PetscReal vec_norm = 0.;
+  PetscReal mat_norm = 0.;
+  LibmeshPetscCall2(comm, VecNorm(vec, NORM_INFINITY, &vec_norm));
+  LibmeshPetscCall2(comm, MatNorm(mat, NORM_INFINITY, &mat_norm));
+
+  if (comm.rank() == 0)
+    libMesh::out << "Kokkos L2 debug PETSc norms: rhs_inf=" << vec_norm
+                 << " mat_inf=" << mat_norm << std::endl;
+}
+#endif
 
 void
 accumulate_hilbert_dense_outputs(const KokkosScalarView<Number> & d_F,
@@ -1100,6 +1181,11 @@ try_kokkos_hilbert_bucket_value_batch(const KokkosPetscAssemblyPlan & const_plan
 {
   KokkosProfilingRegion kokkos_region("L2Kokkos::try bucket value batch");
 
+  using ExecutionSpace = typename std::decay_t<NodeCoordinateStorage>::execution_space;
+  if constexpr (!libMesh::Kokkos::detail::is_host_thread_execution_space<ExecutionSpace>())
+    if (kokkos_l2_env_enabled("LIBMESH_KOKKOS_L2_DISABLE_BUCKET"))
+      return false;
+
   KokkosHilbertHomogeneousBucket bucket;
   if (!get_cached_single_supported_hilbert_bucket(const_plan, bucket))
     return false;
@@ -1230,6 +1316,12 @@ assemble_kokkos_petsc_global_system(
           "hilbert_fem_all_record_values");
     }
     ::Kokkos::fence();
+    if (kokkos_l2_env_enabled("LIBMESH_KOKKOS_L2_DEBUG"))
+    {
+      debug_kokkos_entry_values(sys.comm(), "rhs_entry_values", plan.rhs_entry_values);
+      debug_kokkos_entry_values(sys.comm(), "mat_entry_values", plan.mat_entry_values);
+      debug_petsc_object_types(sys.comm(), system_rhs.vec(), system_matrix.mat());
+    }
     if (timing)
       timing->assembly_record_seconds += seconds_between(records_start, clock::now());
   }
@@ -1238,8 +1330,15 @@ assemble_kokkos_petsc_global_system(
     const auto vecset_start = clock::now();
     LOG_SCOPE("L2Kokkos::VecSetValuesCOO", "HilbertSystem");
     KokkosProfilingRegion vec_values_region("PETSc::VecSetValuesCOO");
-    LibmeshPetscCall2(sys.comm(),
-                      VecSetValuesCOO(system_rhs.vec(), plan.rhs_entry_values.data(), ADD_VALUES));
+    if (kokkos_l2_env_enabled("LIBMESH_KOKKOS_L2_HOST_COO_VALUES"))
+    {
+      auto rhs_host =
+          ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), plan.rhs_entry_values);
+      LibmeshPetscCall2(sys.comm(), VecSetValuesCOO(system_rhs.vec(), rhs_host.data(), ADD_VALUES));
+    }
+    else
+      LibmeshPetscCall2(
+          sys.comm(), VecSetValuesCOO(system_rhs.vec(), plan.rhs_entry_values.data(), ADD_VALUES));
     if (timing)
       timing->assembly_vecset_values_seconds += seconds_between(vecset_start, clock::now());
   }
@@ -1248,11 +1347,23 @@ assemble_kokkos_petsc_global_system(
     const auto matset_start = clock::now();
     LOG_SCOPE("L2Kokkos::MatSetValuesCOO", "HilbertSystem");
     KokkosProfilingRegion mat_values_region("PETSc::MatSetValuesCOO");
-    LibmeshPetscCall2(
-        sys.comm(), MatSetValuesCOO(system_matrix.mat(), plan.mat_entry_values.data(), ADD_VALUES));
+    if (kokkos_l2_env_enabled("LIBMESH_KOKKOS_L2_HOST_COO_VALUES"))
+    {
+      auto mat_host =
+          ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), plan.mat_entry_values);
+      LibmeshPetscCall2(
+          sys.comm(), MatSetValuesCOO(system_matrix.mat(), mat_host.data(), ADD_VALUES));
+    }
+    else
+      LibmeshPetscCall2(
+          sys.comm(),
+          MatSetValuesCOO(system_matrix.mat(), plan.mat_entry_values.data(), ADD_VALUES));
     if (timing)
       timing->assembly_matset_values_seconds += seconds_between(matset_start, clock::now());
   }
+
+  if (kokkos_l2_env_enabled("LIBMESH_KOKKOS_L2_DEBUG"))
+    debug_petsc_object_norms(sys.comm(), system_rhs.vec(), system_matrix.mat());
 
   return true;
 }
