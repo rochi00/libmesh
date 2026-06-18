@@ -237,68 +237,6 @@ debug_parsed_program(const Parallel::Communicator & comm,
   libMesh::out << "]" << std::endl;
 }
 
-template <typename GoalFunction>
-void
-debug_kokkos_analytic_goal_values(const Parallel::Communicator & comm,
-                                  const GoalFunction & goal_function)
-{
-  KokkosScalarView<Number> values("kokkos_analytic_goal_debug_values", 4);
-  KokkosUnsignedIntView bytecode_extents("kokkos_analytic_goal_debug_bytecode_extents", 1);
-  KokkosUnsignedIntView immediate_extents("kokkos_analytic_goal_debug_immediate_extents", 1);
-  KokkosUnsignedIntView first_bytecodes("kokkos_analytic_goal_debug_first_bytecodes", 1);
-  KokkosScalarView<Number> first_immediates("kokkos_analytic_goal_debug_first_immediates", 1);
-  using ExecutionSpace = typename KokkosScalarView<Number>::execution_space;
-
-  ::Kokkos::parallel_for(
-      "kokkos_analytic_goal_debug_values",
-      ::Kokkos::RangePolicy<ExecutionSpace>(0, 4),
-      KOKKOS_LAMBDA(const int i) {
-        Point p;
-        p(0) = 0.125 * static_cast<Real>(i + 1);
-#if LIBMESH_DIM > 1
-        p(1) = 0.25 * static_cast<Real>(i + 1);
-#endif
-#if LIBMESH_DIM > 2
-        p(2) = -0.125 * static_cast<Real>(i + 1);
-#endif
-        values(i) = goal_function(p);
-      });
-
-  ::Kokkos::parallel_for(
-      "kokkos_analytic_goal_debug_program",
-      ::Kokkos::RangePolicy<ExecutionSpace>(0, 1),
-      KOKKOS_LAMBDA(const int) {
-        bytecode_extents(0) = goal_function.value_bytecode_extent();
-        immediate_extents(0) = goal_function.value_immediates_extent();
-        first_bytecodes(0) = bytecode_extents(0) ? goal_function.value_bytecode(0) : 0;
-        first_immediates(0) = immediate_extents(0) ? goal_function.value_immediate(0) : 0.;
-      });
-
-  auto host_values = ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), values);
-  auto host_bytecode_extents =
-      ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), bytecode_extents);
-  auto host_immediate_extents =
-      ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), immediate_extents);
-  auto host_first_bytecodes =
-      ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), first_bytecodes);
-  auto host_first_immediates =
-      ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), first_immediates);
-
-  if (comm.rank() == 0)
-  {
-    libMesh::out << "Kokkos L2 debug analytic goal values: [";
-    for (unsigned int i = 0; i != 4; ++i)
-      libMesh::out << (i ? "," : "") << host_values(i);
-    libMesh::out << "]" << std::endl;
-    libMesh::out << "Kokkos L2 debug analytic device program: bytecode_n="
-                 << host_bytecode_extents(0)
-                 << " immediates_n=" << host_immediate_extents(0)
-                 << " bytecode0=" << host_first_bytecodes(0)
-                 << " immediate0=" << host_first_immediates(0)
-                 << std::endl;
-  }
-}
-
 #ifdef LIBMESH_HAVE_PETSC
 void
 debug_petsc_object_types(const Parallel::Communicator & comm, Vec vec, Mat mat)
@@ -526,6 +464,13 @@ struct KokkosHilbertBatchData
   KokkosShapeKeyRecordView shape_keys;
 };
 
+struct KokkosAnalyticGoalBatchData
+{
+  KokkosSizeView qp_offsets;
+  KokkosScalarView<Number> values;
+  KokkosScalarView<Number> gradients;
+};
+
 struct KokkosFEMGoalBatchData
 {
   KokkosFieldKeyRecordView field_keys;
@@ -555,6 +500,7 @@ struct KokkosPetscAssemblyPlan
   std::vector<PetscInt> mat_coo_cols;
   KokkosScalarView<Number> rhs_entry_values;
   KokkosScalarView<Number> mat_entry_values;
+  KokkosAnalyticGoalBatchData analytic_goal_batch_data;
   KokkosFEMGoalBatchData fem_goal_batch_data;
   const void * geometry_cache_id = nullptr;
   const void * dof_index_cache_id = nullptr;
@@ -564,6 +510,9 @@ struct KokkosPetscAssemblyPlan
   std::set<subdomain_id_type> subdomains;
   const void * coo_matrix_target = nullptr;
   const void * coo_rhs_target = nullptr;
+  const void * analytic_goal_target = nullptr;
+  const void * analytic_goal_gradient_target = nullptr;
+  Real analytic_goal_time = 0.;
   const void * fem_goal_target = nullptr;
   const void * input_vector_target = nullptr;
   KokkosHilbertHomogeneousBucket single_hilbert_bucket;
@@ -946,9 +895,143 @@ build_kokkos_petsc_assembly_plan(::HilbertSystem & sys, KokkosPetscAssemblyPlan 
   plan.subdomains = sys.subdomains_list();
   plan.coo_matrix_target = nullptr;
   plan.coo_rhs_target = nullptr;
+  plan.analytic_goal_target = nullptr;
+  plan.analytic_goal_gradient_target = nullptr;
+  plan.analytic_goal_time = 0.;
   plan.fem_goal_target = nullptr;
   plan.input_vector_target = nullptr;
   cache_single_supported_hilbert_bucket(plan, geometry_cache);
+  return true;
+}
+
+bool
+build_kokkos_analytic_goal_batch_data(
+    ::HilbertSystem & sys,
+    const KokkosPetscAssemblyPlan & plan,
+    FunctionBase<Number> & goal_function,
+    FunctionBase<Gradient> * goal_gradient,
+    KokkosAnalyticGoalBatchData & batch_data)
+{
+  KokkosProfilingRegion kokkos_region("L2Kokkos::sample analytic goal");
+
+  if (sys.hilbert_order() > 0 && !goal_gradient)
+    return false;
+
+  const auto & geometry_cache = sys.get_mesh().get_kokkos_geometry_cache();
+  const auto h_node_coordinates = geometry_cache.node_coordinates_dual.view_host();
+  const auto h_element_node_ids = geometry_cache.element_node_ids_dual.view_host();
+
+  batch_data.qp_offsets =
+      KokkosSizeView("hilbert_analytic_goal_qp_offsets",
+                     geometry_cache.host_element_ids.size());
+  auto h_qp_offsets = ::Kokkos::create_mirror_view(batch_data.qp_offsets);
+
+  std::size_t total_qpoints = 0;
+  for (const auto & record : plan.records)
+  {
+    h_qp_offsets(record.elem_index) = total_qpoints;
+    total_qpoints += libMesh::Kokkos::GaussQuadrature::n_points(
+        geometry_cache.host_element_types[record.elem_index],
+        record.quadrature_order);
+  }
+
+  batch_data.values = KokkosScalarView<Number>("hilbert_analytic_goal_values", total_qpoints);
+  batch_data.gradients =
+      KokkosScalarView<Number>("hilbert_analytic_goal_gradients", total_qpoints * LIBMESH_DIM);
+
+  auto h_values = ::Kokkos::create_mirror_view(batch_data.values);
+  auto h_gradients = ::Kokkos::create_mirror_view(batch_data.gradients);
+  std::vector<libMesh::Kokkos::RealVector> elem_nodes(geometry_cache.max_nodes);
+
+  for (const auto & record : plan.records)
+  {
+    const unsigned int elem_index = record.elem_index;
+    const ElemType elem_type = geometry_cache.host_element_types[elem_index];
+    const ElemMappingType mapping_type = geometry_cache.host_element_mapping_types[elem_index];
+    const unsigned int n_nodes = geometry_cache.host_element_n_nodes[elem_index];
+    const unsigned int n_qpoints =
+        libMesh::Kokkos::GaussQuadrature::n_points(elem_type, record.quadrature_order);
+    const std::size_t qp_offset = h_qp_offsets(elem_index);
+
+    for (unsigned int n = 0; n != n_nodes; ++n)
+    {
+      const unsigned int node_index = h_element_node_ids(elem_index, n);
+      elem_nodes[n] = libMesh::Kokkos::zero_vector();
+      elem_nodes[n](0) = h_node_coordinates(node_index, 0);
+#if LIBMESH_DIM > 1
+      elem_nodes[n](1) = h_node_coordinates(node_index, 1);
+#endif
+#if LIBMESH_DIM > 2
+      elem_nodes[n](2) = h_node_coordinates(node_index, 2);
+#endif
+    }
+
+    for (unsigned int qp = 0; qp != n_qpoints; ++qp)
+    {
+      const libMesh::Kokkos::RealVector qp_ref =
+          libMesh::Kokkos::GaussQuadrature::point(elem_type, record.quadrature_order, qp);
+      libMesh::Kokkos::RealVector xyz_vector = libMesh::Kokkos::zero_vector();
+      libMesh::Kokkos::RealTensor J = libMesh::Kokkos::zero_tensor();
+      libMesh::Kokkos::physical_point_and_jacobian(mapping_type,
+                                                   elem_type,
+                                                   elem_nodes.data(),
+                                                   n_nodes,
+                                                   qp_ref(0),
+                                                   qp_ref(1),
+                                                   qp_ref(2),
+                                                   xyz_vector,
+                                                   J);
+      libmesh_ignore(J);
+
+      const Point xyz(xyz_vector(0), xyz_vector(1), xyz_vector(2));
+      const std::size_t flat_qp = qp_offset + qp;
+      h_values(flat_qp) = goal_function(xyz, sys.time);
+
+      Gradient grad;
+      grad.zero();
+      if (goal_gradient)
+        grad = (*goal_gradient)(xyz, sys.time);
+
+      h_gradients(flat_qp * LIBMESH_DIM) = grad(0);
+#if LIBMESH_DIM > 1
+      h_gradients(flat_qp * LIBMESH_DIM + 1) = grad(1);
+#endif
+#if LIBMESH_DIM > 2
+      h_gradients(flat_qp * LIBMESH_DIM + 2) = grad(2);
+#endif
+    }
+  }
+
+  ::Kokkos::deep_copy(batch_data.qp_offsets, h_qp_offsets);
+  ::Kokkos::deep_copy(batch_data.values, h_values);
+  ::Kokkos::deep_copy(batch_data.gradients, h_gradients);
+
+  return true;
+}
+
+bool
+ensure_kokkos_analytic_goal_batch_data(
+    ::HilbertSystem & sys,
+    FunctionBase<Number> & goal_function,
+    FunctionBase<Gradient> * goal_gradient,
+    KokkosPetscAssemblyPlan & plan)
+{
+  KokkosProfilingRegion kokkos_region("L2Kokkos::ensure analytic goal samples");
+
+  if (plan.analytic_goal_target == &goal_function &&
+      plan.analytic_goal_gradient_target == goal_gradient &&
+      plan.analytic_goal_time == sys.time)
+    return true;
+
+  KokkosAnalyticGoalBatchData batch_data;
+  if (!build_kokkos_analytic_goal_batch_data(
+          sys, plan, goal_function, goal_gradient, batch_data))
+    return false;
+
+  plan.analytic_goal_batch_data = batch_data;
+  plan.analytic_goal_target = &goal_function;
+  plan.analytic_goal_gradient_target = goal_gradient;
+  plan.analytic_goal_time = sys.time;
   return true;
 }
 
@@ -1298,7 +1381,8 @@ assemble_kokkos_petsc_global_system(
     ::HilbertSystem & sys,
     KokkosPetscAssemblyPlan & plan,
     const bool analytic_goal,
-    const libMesh::Kokkos::KokkosParsedFunction<Number> * analytic_goal_func,
+    FunctionBase<Number> * analytic_goal_func,
+    FunctionBase<Gradient> * analytic_goal_grad,
     const libMesh::Kokkos::KokkosParsedFEMFunction<Number> * fem_goal,
     PetscMatrixBase<Number> & system_matrix,
     PetscVector<Number> & system_rhs,
@@ -1340,10 +1424,16 @@ assemble_kokkos_petsc_global_system(
     if (analytic_goal)
     {
       libmesh_error_msg_if(!analytic_goal_func,
-                           "HilbertSystem Kokkos PETSc COO assembly requires parsed analytic "
-                           "goals for device assembly.");
+                           "HilbertSystem Kokkos PETSc COO assembly requires an analytic goal.");
+      libmesh_error_msg_if(sys.hilbert_order() > 0 && !analytic_goal_grad,
+                           "HilbertSystem Kokkos PETSc COO assembly requires an analytic goal "
+                           "gradient for Hilbert orders greater than zero.");
 
       ensure_kokkos_entry_value_storage(plan);
+      if (!ensure_kokkos_analytic_goal_batch_data(
+              sys, *analytic_goal_func, analytic_goal_grad, plan))
+        return false;
+
       const auto node_coordinates = geometry_cache.node_coordinates_dual.view_device();
       const auto element_node_ids = geometry_cache.element_node_ids_dual.view_device();
       const auto element_mapping_types = geometry_cache.element_mapping_types_dual.view_device();
@@ -1371,12 +1461,12 @@ assemble_kokkos_petsc_global_system(
               bucket_name);
       };
 
-      auto goal_copy = analytic_goal_func->with_time(sys.time);
-      if (kokkos_l2_env_enabled("LIBMESH_KOKKOS_L2_DEBUG"))
-        debug_kokkos_analytic_goal_values(sys.comm(), goal_copy);
-      auto goal_grad = goal_copy.gradient_function();
-      auto goal_access = libMesh::Kokkos::detail::make_hilbert_analytic_goal_access(
-          std::move(goal_copy), std::move(goal_grad));
+      auto goal_access = libMesh::Kokkos::detail::SampledAnalyticGoalAccess<
+          KokkosSizeView,
+          KokkosScalarView<Number>,
+          KokkosScalarView<Number>>(plan.analytic_goal_batch_data.qp_offsets,
+                                    plan.analytic_goal_batch_data.values,
+                                    plan.analytic_goal_batch_data.gradients);
       assemble_with_goal(goal_access, "hilbert_device_analytic_all_record_values");
     }
     else
@@ -1796,10 +1886,9 @@ HilbertSystem::try_kokkos_petsc_solve()
   libmesh_error_msg_if(!plan,
                        "HilbertSystem Kokkos PETSc COO assembly could not build a supported "
                        "assembly plan for the current FE/mapping/quadrature configuration.");
-  const auto * kokkos_analytic_goal = analytic_goal ? this->ensure_kokkos_goal_func() : nullptr;
-  libmesh_error_msg_if(analytic_goal && !kokkos_analytic_goal,
-                       "HilbertSystem Kokkos PETSc COO assembly requires parsed analytic goals "
-                       "for device assembly.");
+  libmesh_error_msg_if(analytic_goal && _hilbert_order > 0 && !_analytic_goal_grad,
+                       "HilbertSystem Kokkos PETSc COO assembly requires an analytic goal "
+                       "gradient for Hilbert orders greater than zero.");
   const auto plan_stop = clock::now();
   this->_last_kokkos_timing.plan_seconds =
       rebuilt_plan
@@ -1814,7 +1903,8 @@ HilbertSystem::try_kokkos_petsc_solve()
     if (!assemble_kokkos_petsc_global_system(*this,
                                              *plan,
                                              analytic_goal,
-                                             kokkos_analytic_goal,
+                                             _analytic_goal_func.get(),
+                                             _analytic_goal_grad.get(),
                                              fem_goal,
                                              *petsc_matrix,
                                              *petsc_rhs,

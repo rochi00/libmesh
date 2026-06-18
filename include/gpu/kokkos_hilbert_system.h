@@ -297,6 +297,50 @@ struct ZeroCoeffAccess
   }
 };
 
+template <typename OffsetStorage, typename ValueStorage, typename GradientStorage>
+class SampledAnalyticGoalAccess
+{
+public:
+  LIBMESH_DEVICE_INLINE
+  SampledAnalyticGoalAccess(OffsetStorage qp_offsets,
+                            ValueStorage values,
+                            GradientStorage gradients)
+    : _qp_offsets(qp_offsets),
+      _values(values),
+      _gradients(gradients)
+  {
+  }
+
+  template <typename QpData>
+  LIBMESH_DEVICE_INLINE
+  Number value(const QpData & qp_data, const Point &) const
+  {
+    return _values(_qp_offsets(qp_data.elem_index()) + qp_data.qp_index());
+  }
+
+  template <typename QpData>
+  LIBMESH_DEVICE_INLINE
+  Gradient gradient(const QpData & qp_data, const Point &) const
+  {
+    const std::size_t offset =
+      (_qp_offsets(qp_data.elem_index()) + qp_data.qp_index()) * LIBMESH_DIM;
+    Gradient g;
+    g(0) = _gradients(offset);
+#if LIBMESH_DIM > 1
+    g(1) = _gradients(offset + 1);
+#endif
+#if LIBMESH_DIM > 2
+    g(2) = _gradients(offset + 2);
+#endif
+    return g;
+  }
+
+private:
+  OffsetStorage _qp_offsets;
+  ValueStorage _values;
+  GradientStorage _gradients;
+};
+
 template <typename FieldKeyStorage,
           typename FieldDofStorage,
           typename GlobalCoeffView,
