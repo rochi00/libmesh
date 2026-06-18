@@ -49,6 +49,7 @@ struct DeviceParsedFunctionProgram
   unsigned int n_variables = 0;
   Scalar epsilon = 0;
 
+  LIBMESH_DEVICE_INLINE
   bool empty() const { return bytecode.extent(0) == 0; }
 };
 
@@ -383,14 +384,15 @@ LIBMESH_DEVICE_INLINE Scalar
 eval_parsed_function_program(const DeviceParsedFunctionProgram<Scalar> & program,
                              const Scalar * vars)
 {
-  if (program.empty())
+  const unsigned int n_bytecode = program.bytecode.extent(0);
+  if (n_bytecode == 0)
     return 0;
 
   Scalar stack[MaxStack];
   unsigned int dp = 0;
   int sp = -1;
 
-  for (unsigned int ip = 0; ip < program.bytecode.extent(0); ++ip)
+  for (unsigned int ip = 0; ip < n_bytecode; ++ip)
     {
       const unsigned int opcode = program.bytecode(ip);
 
@@ -450,8 +452,12 @@ eval_parsed_function_program(const DeviceParsedFunctionProgram<Scalar> & program
 
         case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cImmed): stack[++sp] = program.immediates(dp++); break;
         case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cJump):
-          ip = program.bytecode(ip + 1);
-          dp = program.bytecode(ip + 2);
+          {
+            const unsigned int jump_ip = program.bytecode(ip + 1);
+            const unsigned int jump_dp = program.bytecode(ip + 2);
+            ip = jump_ip;
+            dp = jump_dp;
+          }
           break;
 
         case static_cast<unsigned int>(libMesh::ParsedFunctionOpcode::cNeg): stack[sp] = -stack[sp]; break;

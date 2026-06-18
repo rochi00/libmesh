@@ -31,92 +31,92 @@ class FunctionParserADBase;
 namespace libMesh
 {
 
-enum class ParsedFunctionOpcode : unsigned int
+namespace ParsedFunctionOpcode
 {
-  cAbs,
-  cAcos,
-  cAcosh,
-  cArg,
-  cAsin,
-  cAsinh,
-  cAtan,
-  cAtan2,
-  cAtanh,
-  cCbrt,
-  cCeil,
-  cConj,
-  cCos,
-  cCosh,
-  cCot,
-  cCsc,
-  cExp,
-  cExp2,
-  cFloor,
-  cHypot,
-  cIf,
-  cImag,
-  cInt,
-  cLog,
-  cLog10,
-  cLog2,
-  cMax,
-  cMin,
-  cPolar,
-  cPow,
-  cReal,
-  cSec,
-  cSin,
-  cSinh,
-  cSqrt,
-  cTan,
-  cTanh,
-  cTrunc,
-  cImmed,
-  cJump,
-  cNeg,
-  cAdd,
-  cSub,
-  cMul,
-  cDiv,
-  cMod,
-  cEqual,
-  cNEqual,
-  cLess,
-  cLessOrEq,
-  cGreater,
-  cGreaterOrEq,
-  cNot,
-  cAnd,
-  cOr,
-  cNotNot,
-  cDeg,
-  cRad,
-  cFCall,
-  cPCall,
-  cPopNMov,
-  cLog2by,
-  cNop,
-  cSinCos,
-  cSinhCosh,
-  cAbsAnd,
-  cAbsOr,
-  cAbsNot,
-  cAbsNotNot,
-  cAbsIf,
-  cDup,
-  cFetch,
-  cInv,
-  cSqr,
-  cRDiv,
-  cRSub,
-  cRSqrt,
-  VarBegin
-};
+static constexpr unsigned int cAbs = 0;
+static constexpr unsigned int cAcos = 1;
+static constexpr unsigned int cAcosh = 2;
+static constexpr unsigned int cArg = 3;
+static constexpr unsigned int cAsin = 4;
+static constexpr unsigned int cAsinh = 5;
+static constexpr unsigned int cAtan = 6;
+static constexpr unsigned int cAtan2 = 7;
+static constexpr unsigned int cAtanh = 8;
+static constexpr unsigned int cCbrt = 9;
+static constexpr unsigned int cCeil = 10;
+static constexpr unsigned int cConj = 11;
+static constexpr unsigned int cCos = 12;
+static constexpr unsigned int cCosh = 13;
+static constexpr unsigned int cCot = 14;
+static constexpr unsigned int cCsc = 15;
+static constexpr unsigned int cExp = 16;
+static constexpr unsigned int cExp2 = 17;
+static constexpr unsigned int cFloor = 18;
+static constexpr unsigned int cHypot = 19;
+static constexpr unsigned int cIf = 20;
+static constexpr unsigned int cImag = 21;
+static constexpr unsigned int cInt = 22;
+static constexpr unsigned int cLog = 23;
+static constexpr unsigned int cLog10 = 24;
+static constexpr unsigned int cLog2 = 25;
+static constexpr unsigned int cMax = 26;
+static constexpr unsigned int cMin = 27;
+static constexpr unsigned int cPolar = 28;
+static constexpr unsigned int cPow = 29;
+static constexpr unsigned int cReal = 30;
+static constexpr unsigned int cSec = 31;
+static constexpr unsigned int cSin = 32;
+static constexpr unsigned int cSinh = 33;
+static constexpr unsigned int cSqrt = 34;
+static constexpr unsigned int cTan = 35;
+static constexpr unsigned int cTanh = 36;
+static constexpr unsigned int cTrunc = 37;
+static constexpr unsigned int cImmed = 38;
+static constexpr unsigned int cJump = 39;
+static constexpr unsigned int cNeg = 40;
+static constexpr unsigned int cAdd = 41;
+static constexpr unsigned int cSub = 42;
+static constexpr unsigned int cMul = 43;
+static constexpr unsigned int cDiv = 44;
+static constexpr unsigned int cMod = 45;
+static constexpr unsigned int cEqual = 46;
+static constexpr unsigned int cNEqual = 47;
+static constexpr unsigned int cLess = 48;
+static constexpr unsigned int cLessOrEq = 49;
+static constexpr unsigned int cGreater = 50;
+static constexpr unsigned int cGreaterOrEq = 51;
+static constexpr unsigned int cNot = 52;
+static constexpr unsigned int cAnd = 53;
+static constexpr unsigned int cOr = 54;
+static constexpr unsigned int cNotNot = 55;
+static constexpr unsigned int cDeg = 56;
+static constexpr unsigned int cRad = 57;
+static constexpr unsigned int cFCall = 58;
+static constexpr unsigned int cPCall = 59;
+static constexpr unsigned int cPopNMov = 60;
+static constexpr unsigned int cLog2by = 61;
+static constexpr unsigned int cNop = 62;
+static constexpr unsigned int cSinCos = 63;
+static constexpr unsigned int cSinhCosh = 64;
+static constexpr unsigned int cAbsAnd = 65;
+static constexpr unsigned int cAbsOr = 66;
+static constexpr unsigned int cAbsNot = 67;
+static constexpr unsigned int cAbsNotNot = 68;
+static constexpr unsigned int cAbsIf = 69;
+static constexpr unsigned int cDup = 70;
+static constexpr unsigned int cFetch = 71;
+static constexpr unsigned int cInv = 72;
+static constexpr unsigned int cSqr = 73;
+static constexpr unsigned int cRDiv = 74;
+static constexpr unsigned int cRSub = 75;
+static constexpr unsigned int cRSqrt = 76;
+static constexpr unsigned int VarBegin = 77;
+}
 
 LIBMESH_DEVICE_INLINE constexpr unsigned int
 parsed_function_var_begin()
 {
-  return static_cast<unsigned int>(ParsedFunctionOpcode::VarBegin);
+  return ParsedFunctionOpcode::VarBegin;
 }
 
 LIBMESH_DEVICE_INLINE constexpr bool
