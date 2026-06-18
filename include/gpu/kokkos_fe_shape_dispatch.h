@@ -532,6 +532,7 @@ dispatch_exact_shape_key(libMesh::FEShapeKey key, const Dispatcher & dispatcher)
   switch (key.family)
   {
     case libMesh::LAGRANGE:
+    case libMesh::L2_LAGRANGE:
       return dispatch_exact_lagrange_shape_key(key, dispatcher);
 
     case libMesh::MONOMIAL:
@@ -575,6 +576,7 @@ dispatch_supported_shape_key_with_lagrange_map(libMesh::FEShapeKey key,
   switch (key.family)
   {
     case libMesh::LAGRANGE:
+    case libMesh::L2_LAGRANGE:
       return dispatch_exact_lagrange_shape_key_with_map(key, dispatcher);
 
     case libMesh::MONOMIAL:

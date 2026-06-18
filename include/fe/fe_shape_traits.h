@@ -589,6 +589,18 @@ LIBMESH_DEVICE_INLINE bool
 supports_shape(FEShapeKey key);
 
 LIBMESH_DEVICE_INLINE bool
+supports_vector_shape(FEShapeKey key);
+
+LIBMESH_DEVICE_INLINE unsigned int
+vector_component_count_or_zero(ElemType elem_type)
+{
+  if (elem_type == NODEELEM)
+    return 1;
+
+  return topology_dim_or_zero(elem_type);
+}
+
+LIBMESH_DEVICE_INLINE bool
 supports_lagrange_map_topology(ElemType topo)
 {
   switch (topo)
@@ -667,11 +679,19 @@ supports_shape_with_lagrange_map(FEShapeKey key)
 }
 
 LIBMESH_DEVICE_INLINE bool
+supports_vector_shape_with_lagrange_map(FEShapeKey key)
+{
+  return supports_vector_shape(key) &&
+         supports_lagrange_map_topology(key.elem_type);
+}
+
+LIBMESH_DEVICE_INLINE bool
 supports_shape(FEShapeKey key)
 {
   switch (key.family)
   {
     case LAGRANGE:
+    case L2_LAGRANGE:
       return lagrange_exact_n_dofs_or_zero(key.elem_type, key.order) != 0 &&
              lagrange_shape_topology_or_invalid(key) != INVALID_ELEM;
 
@@ -687,15 +707,37 @@ supports_shape(FEShapeKey key)
 }
 
 LIBMESH_DEVICE_INLINE bool
+supports_vector_shape(FEShapeKey key)
+{
+  switch (key.family)
+  {
+    case LAGRANGE_VEC:
+    case L2_LAGRANGE_VEC:
+      return vector_component_count_or_zero(key.elem_type) != 0 &&
+             lagrange_exact_n_dofs_or_zero(key.elem_type, key.order) != 0 &&
+             lagrange_shape_topology_or_invalid(key) != INVALID_ELEM;
+
+    default:
+      return false;
+  }
+}
+
+LIBMESH_DEVICE_INLINE bool
 supports_grad_shape(FEShapeKey key)
 {
   return supports_shape(key);
 }
 
 LIBMESH_DEVICE_INLINE bool
+supports_vector_shape_deriv(FEShapeKey key)
+{
+  return supports_vector_shape(key);
+}
+
+LIBMESH_DEVICE_INLINE bool
 supports_n_dofs(FEShapeKey key)
 {
-  return supports_shape(key);
+  return supports_shape(key) || supports_vector_shape(key);
 }
 
 LIBMESH_DEVICE_INLINE unsigned int
@@ -704,7 +746,13 @@ n_dofs_or_zero(FEShapeKey key)
   switch (key.family)
   {
     case LAGRANGE:
+    case L2_LAGRANGE:
       return lagrange_exact_n_dofs_or_zero(key.elem_type, key.order);
+
+    case LAGRANGE_VEC:
+    case L2_LAGRANGE_VEC:
+      return vector_component_count_or_zero(key.elem_type) *
+             lagrange_exact_n_dofs_or_zero(key.elem_type, key.order);
 
     case MONOMIAL:
       return monomial_exact_n_dofs_or_zero(key.elem_type, key.order);

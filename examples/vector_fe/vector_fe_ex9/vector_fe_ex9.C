@@ -39,6 +39,7 @@
 // The finite element object and the geometric element type.
 #include "libmesh/fe.h"
 #include "libmesh/fe_interface.h"
+#include "libmesh/fe_shape_traits.h"
 #include "libmesh/elem.h"
 
 // Gauss quadrature rules.
@@ -68,6 +69,75 @@
 
 using namespace libMesh;
 
+namespace
+{
+void
+print_kokkos_hdg_probe(const MeshBase & mesh,
+                       const NonlinearImplicitSystem & system,
+                       const ElemType elem_type,
+                       const bool cavity)
+{
+  const Elem * elem = nullptr;
+  for (const auto & active_elem : mesh.active_local_element_ptr_range())
+    {
+      elem = active_elem;
+      break;
+    }
+
+  libMesh::out << "Kokkos HDG probe:" << std::endl;
+#ifdef LIBMESH_HAVE_KOKKOS
+  libMesh::out << "  libmesh_kokkos=yes" << std::endl;
+#else
+  libMesh::out << "  libmesh_kokkos=no" << std::endl;
+#endif
+  libMesh::out << "  elem_type=" << Utility::enum_to_string(elem_type)
+               << " active_local_elem=" << mesh.n_active_local_elem() << std::endl;
+
+  bool all_supported = true;
+  const auto print_var = [&](const std::string & name)
+  {
+    const unsigned int var = system.variable_number(name);
+    const FEType fe_type = system.variable_type(var);
+    const Order fe_order = static_cast<Order>(fe_type.order.get_order());
+    const FEShapeKey key{fe_type.family, elem_type, fe_order};
+    const unsigned int local_dofs =
+        elem ? FEInterface::n_dofs(mesh.mesh_dimension(), fe_type, elem_type) : 0;
+    const bool vector_family =
+        fe_type.family == LAGRANGE_VEC || fe_type.family == L2_LAGRANGE_VEC;
+    const bool shape_supported =
+        vector_family ? supports_vector_shape(key) : supports_shape(key);
+    const bool map_supported = vector_family ? supports_vector_shape_with_lagrange_map(key) :
+                                               supports_shape_with_lagrange_map(key);
+    const bool grad_supported =
+        vector_family ? supports_vector_shape_deriv(key) : supports_grad_shape(key);
+    all_supported = all_supported && shape_supported && map_supported && grad_supported;
+
+    libMesh::out << "  var=" << name
+                 << " family=" << Utility::enum_to_string(fe_type.family)
+                 << " order=" << Utility::enum_to_string(fe_order)
+                 << " local_dofs=" << local_dofs
+                 << " kokkos_shape=" << (shape_supported ? "yes" : "no")
+                 << " kokkos_lagrange_map=" << (map_supported ? "yes" : "no")
+                 << " kokkos_grad=" << (grad_supported ? "yes" : "no")
+                 << std::endl;
+  };
+
+  print_var("qu");
+  print_var("qv");
+  print_var("vel_x");
+  print_var("vel_y");
+  print_var("lm_u");
+  print_var("lm_v");
+  print_var("pressure");
+  if (cavity)
+    print_var("global_lm");
+
+  libMesh::out << "  current_device_fe_boundary="
+               << (all_supported ? "sufficient" : "insufficient")
+               << std::endl;
+}
+} // namespace
+
 int
 main(int argc, char ** argv)
 {
@@ -90,6 +160,8 @@ main(int argc, char ** argv)
   const bool mms = infile("mms", true);
   const Real nu = infile("nu", 1.);
   const bool cavity = infile("cavity", false);
+  const bool kokkos_probe = infile("kokkos_probe", false);
+  const bool kokkos_probe_only = infile("kokkos_probe_only", false);
 
   // Skip higher-dimensional examples on a lower-dimensional libMesh build.
   libmesh_example_requires(dimension <= LIBMESH_DIM, dimension << "D support");
@@ -178,6 +250,15 @@ main(int argc, char ** argv)
   // Initialize the data structures for the equation system.
   equation_systems.init();
   equation_systems.print_info();
+
+  if (kokkos_probe)
+    print_kokkos_hdg_probe(mesh,
+                           system,
+                           Utility::string_to_enum<ElemType>(elem_str),
+                           cavity);
+
+  if (kokkos_probe_only)
+    return 0;
 
   // Solve the implicit system for the Lagrange multiplier
   system.solve();

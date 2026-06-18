@@ -27,8 +27,12 @@ using libMesh::lagrange_exact_n_dofs_or_zero;
 using libMesh::monomial_exact_n_dofs_or_zero;
 using libMesh::monomial_evaluator_dim_or_zero;
 using libMesh::supports_shape;
+using libMesh::supports_vector_shape;
+using libMesh::supports_vector_shape_with_lagrange_map;
+using libMesh::supports_vector_shape_deriv;
 using libMesh::supports_grad_shape;
 using libMesh::supports_n_dofs;
+using libMesh::vector_component_count_or_zero;
 
 namespace detail
 {

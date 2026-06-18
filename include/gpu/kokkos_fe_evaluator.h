@@ -5,6 +5,8 @@
 //   grad_map_shape      — isoparametric Lagrange gradient (topology-based)
 //   shape               — physics FE shape (FEShapeKey-based)
 //   grad_shape          — physics FE gradient (FEShapeKey-based)
+//   vector_shape        — vector-valued physics FE shape (FEShapeKey-based)
+//   vector_shape_deriv  — vector-valued reference derivative (FEShapeKey-based)
 //
 // All functions are LIBMESH_DEVICE_INLINE and dispatch via switch statements
 // that compile to fast GPU branch logic.
@@ -43,6 +45,23 @@ eval_lagrange_grad_shape(libMesh::ElemType topo,
                          Real xi,
                          Real eta,
                          Real zeta);
+
+LIBMESH_DEVICE_INLINE RealVector
+eval_lagrange_vector_shape(libMesh::ElemType topo,
+                           unsigned int vector_dim,
+                           unsigned int i,
+                           Real xi,
+                           Real eta,
+                           Real zeta);
+
+LIBMESH_DEVICE_INLINE RealVector
+eval_lagrange_vector_shape_deriv(libMesh::ElemType topo,
+                                 unsigned int vector_dim,
+                                 unsigned int i,
+                                 unsigned int deriv_dim,
+                                 Real xi,
+                                 Real eta,
+                                 Real zeta);
 
 namespace detail
 {
@@ -174,6 +193,7 @@ dispatch_shape_family(libMesh::FEShapeKey key,
   switch (key.family)
   {
     case libMesh::LAGRANGE:
+    case libMesh::L2_LAGRANGE:
       return lagrange_op();
 
     case libMesh::MONOMIAL:
@@ -313,6 +333,51 @@ eval_lagrange_grad_shape(libMesh::ElemType topo,
   return detail::dispatch_lagrange_topology(topo, detail::LagrangeGradShapeOp{i, xi, eta, zeta});
 }
 
+LIBMESH_DEVICE_INLINE RealVector
+eval_lagrange_vector_shape(libMesh::ElemType topo,
+                           unsigned int vector_dim,
+                           unsigned int i,
+                           Real xi,
+                           Real eta,
+                           Real zeta)
+{
+  if (vector_dim == 0)
+  {
+    detail::abort_unsupported("eval_lagrange_vector_shape(): invalid vector dimension");
+    return zero_vector();
+  }
+
+  const unsigned int scalar_i = i / vector_dim;
+  const unsigned int component = i - scalar_i * vector_dim;
+  RealVector value = zero_vector();
+  value(component) = eval_lagrange_shape(topo, scalar_i, xi, eta, zeta);
+  return value;
+}
+
+LIBMESH_DEVICE_INLINE RealVector
+eval_lagrange_vector_shape_deriv(libMesh::ElemType topo,
+                                 unsigned int vector_dim,
+                                 unsigned int i,
+                                 unsigned int deriv_dim,
+                                 Real xi,
+                                 Real eta,
+                                 Real zeta)
+{
+  if (vector_dim == 0)
+  {
+    detail::abort_unsupported("eval_lagrange_vector_shape_deriv(): invalid vector dimension");
+    return zero_vector();
+  }
+
+  const unsigned int scalar_i = i / vector_dim;
+  const unsigned int component = i - scalar_i * vector_dim;
+  const RealVector scalar_grad =
+    eval_lagrange_grad_shape(topo, scalar_i, xi, eta, zeta);
+  RealVector value = zero_vector();
+  value(component) = scalar_grad(deriv_dim);
+  return value;
+}
+
 // ── Geometry-only shape dispatch (mapping-type + topology) ────────────────────
 //
 // Used by map_face_qp_to_parent() for the isoparametric mapping from face reference
@@ -418,6 +483,48 @@ grad_shape(FEShapeKey key, unsigned int i, Real xi, Real eta, Real zeta)
     detail::KeyedLagrangeGradShapeOp{key, i, xi, eta, zeta},
     detail::KeyedMonomialGradShapeOp{key, i, xi, eta, zeta},
     "grad_shape(): unsupported FE family");
+}
+
+/// Evaluate the i-th vector-valued physics shape function at (xi, eta, zeta).
+LIBMESH_DEVICE_INLINE RealVector
+vector_shape(FEShapeKey key, unsigned int i, Real xi, Real eta, Real zeta)
+{
+  if (!supports_vector_shape(key))
+  {
+    detail::abort_unsupported("vector_shape(): unsupported vector FE key for current Kokkos evaluator support boundary");
+    return zero_vector();
+  }
+
+  return eval_lagrange_vector_shape(lagrange_shape_topology_for_key(key),
+                                    vector_component_count_or_zero(key.elem_type),
+                                    i,
+                                    xi,
+                                    eta,
+                                    zeta);
+}
+
+/// Evaluate d/d reference-coordinate of the i-th vector-valued physics shape.
+LIBMESH_DEVICE_INLINE RealVector
+vector_shape_deriv(FEShapeKey key,
+                   unsigned int i,
+                   unsigned int deriv_dim,
+                   Real xi,
+                   Real eta,
+                   Real zeta)
+{
+  if (!supports_vector_shape_deriv(key))
+  {
+    detail::abort_unsupported("vector_shape_deriv(): unsupported vector FE key for current Kokkos evaluator support boundary");
+    return zero_vector();
+  }
+
+  return eval_lagrange_vector_shape_deriv(lagrange_shape_topology_for_key(key),
+                                          vector_component_count_or_zero(key.elem_type),
+                                          i,
+                                          deriv_dim,
+                                          xi,
+                                          eta,
+                                          zeta);
 }
 
 } // namespace libMesh::Kokkos
