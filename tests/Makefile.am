@@ -257,6 +257,7 @@ kokkos_unit_test_sources = \
   fe/kokkos_fe_shape_oracle_test.K \
   fe/kokkos_fe_side_trace_oracle_test.K \
   fe/kokkos_fe_types_oracle_test.K \
+  fe/kokkos_hdg_assembly_oracle_test.K \
   numerics/kokkos_numerics_oracle_test_utils.h \
   numerics/kokkos_tensor_ops_oracle_fixtures.h \
   numerics/kokkos_tensor_ops_oracle_runners.h \

@@ -16,8 +16,5 @@ nu = 1
 # Whether to do a lid cavity problem. This is incompatible with mms=true
 cavity = false
 
-# Print the current Kokkos FE support boundary for this HDG example.
-kokkos_probe = false
-
-# Return after the Kokkos support probe instead of solving.
-kokkos_probe_only = false
+# Whether to use the Kokkos assembly backend.
+kokkos_backend = false

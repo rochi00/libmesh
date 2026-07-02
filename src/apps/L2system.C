@@ -161,7 +161,7 @@ bool HilbertSystem::element_time_derivative(const bool request_jacobian,
   if (_use_kokkos_backend)
     {
 #if !defined(LIBMESH_USE_COMPLEX_NUMBERS)
-      if (this->try_kokkos_element_assembly(c, request_jacobian, F, K))
+      if (this->kokkos_element_assembly(c, request_jacobian, F, K))
         return request_jacobian;
 #else
       if (_analytic_goal_func &&
@@ -191,11 +191,11 @@ bool HilbertSystem::element_time_derivative(const bool request_jacobian,
 #if defined(LIBMESH_HAVE_KOKKOS) && defined(LIBMESH_HAVE_PETSC) && !defined(LIBMESH_USE_COMPLEX_NUMBERS)
   if (_use_kokkos_backend)
     {
-      if (this->try_exact_kokkos_analytic_goal_host_assembly(c, request_jacobian, F, K))
+      if (this->kokkos_exact_analytic_goal_host_assembly(c, request_jacobian, F, K))
         return request_jacobian;
 
       if (_use_exact_parsed_fem_host_path && input_system)
-        if (this->try_exact_kokkos_fem_goal_host_assembly(c, request_jacobian, F, K))
+        if (this->kokkos_exact_fem_goal_host_assembly(c, request_jacobian, F, K))
           return request_jacobian;
     }
 #endif
@@ -230,7 +230,7 @@ void HilbertSystem::solve()
 #if defined(LIBMESH_HAVE_KOKKOS) && defined(LIBMESH_HAVE_PETSC) && !defined(LIBMESH_USE_COMPLEX_NUMBERS)
   if (_use_kokkos_backend)
     {
-      if (this->try_kokkos_petsc_solve())
+      if (this->kokkos_petsc_solve())
         return;
 
       libmesh_error_msg("HilbertSystem Kokkos backend did not complete the direct PETSc "

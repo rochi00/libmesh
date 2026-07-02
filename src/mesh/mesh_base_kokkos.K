@@ -45,6 +45,13 @@ MeshBase::get_kokkos_geometry_cache() const
       cache->element_lookup.emplace(elem->id(), cast_int<unsigned int>(cache->host_element_ids.size()));
       cache->host_element_ids.push_back(elem->id());
       cache->max_nodes = std::max(cache->max_nodes, elem->n_nodes());
+      cache->max_sides = std::max(cache->max_sides, elem->n_sides());
+      cache->max_edges = std::max(cache->max_edges, elem->n_edges());
+      cache->max_faces = std::max(cache->max_faces, elem->n_faces());
+
+      for (unsigned int s = 0; s != elem->n_sides(); ++s)
+        cache->max_side_nodes =
+          std::max(cache->max_side_nodes, cast_int<unsigned int>(elem->nodes_on_side(s).size()));
 
       for (unsigned int n = 0; n != elem->n_nodes(); ++n)
         {
@@ -78,6 +85,36 @@ MeshBase::get_kokkos_geometry_cache() const
   cache->element_n_nodes_dual =
     KokkosGeometryCache::elem_n_nodes_dual_view("mesh_kokkos_element_n_nodes",
                                                 cache->host_element_ids.size());
+  cache->element_n_sides_dual =
+    KokkosGeometryCache::elem_n_sides_dual_view("mesh_kokkos_element_n_sides",
+                                                cache->host_element_ids.size());
+  cache->element_n_edges_dual =
+    KokkosGeometryCache::elem_n_edges_dual_view("mesh_kokkos_element_n_edges",
+                                                cache->host_element_ids.size());
+  cache->element_n_faces_dual =
+    KokkosGeometryCache::elem_n_faces_dual_view("mesh_kokkos_element_n_faces",
+                                                cache->host_element_ids.size());
+  cache->element_side_types_dual =
+    KokkosGeometryCache::elem_side_type_dual_view("mesh_kokkos_element_side_types",
+                                                  cache->host_element_ids.size(),
+                                                  cache->max_sides);
+  cache->element_side_n_nodes_dual =
+    KokkosGeometryCache::elem_side_n_nodes_dual_view("mesh_kokkos_element_side_n_nodes",
+                                                     cache->host_element_ids.size(),
+                                                     cache->max_sides);
+  cache->element_side_local_nodes_dual =
+    KokkosGeometryCache::elem_side_local_node_dual_view("mesh_kokkos_element_side_local_nodes",
+                                                        cache->host_element_ids.size(),
+                                                        cache->max_sides,
+                                                        cache->max_side_nodes);
+  cache->element_edge_positive_orientations_dual =
+    KokkosGeometryCache::elem_edge_orientation_dual_view("mesh_kokkos_element_edge_orientations",
+                                                         cache->host_element_ids.size(),
+                                                         cache->max_edges);
+  cache->element_face_positive_orientations_dual =
+    KokkosGeometryCache::elem_face_orientation_dual_view("mesh_kokkos_element_face_orientations",
+                                                         cache->host_element_ids.size(),
+                                                         cache->max_faces);
   cache->element_p_levels_dual =
     KokkosGeometryCache::elem_p_level_dual_view("mesh_kokkos_element_p_levels",
                                                 cache->host_element_ids.size());
@@ -92,6 +129,16 @@ MeshBase::get_kokkos_geometry_cache() const
   auto h_element_types = cache->element_types_dual.view_host();
   auto h_element_mapping_types = cache->element_mapping_types_dual.view_host();
   auto h_element_n_nodes = cache->element_n_nodes_dual.view_host();
+  auto h_element_n_sides = cache->element_n_sides_dual.view_host();
+  auto h_element_n_edges = cache->element_n_edges_dual.view_host();
+  auto h_element_n_faces = cache->element_n_faces_dual.view_host();
+  auto h_element_side_types = cache->element_side_types_dual.view_host();
+  auto h_element_side_n_nodes = cache->element_side_n_nodes_dual.view_host();
+  auto h_element_side_local_nodes = cache->element_side_local_nodes_dual.view_host();
+  auto h_element_edge_positive_orientations =
+    cache->element_edge_positive_orientations_dual.view_host();
+  auto h_element_face_positive_orientations =
+    cache->element_face_positive_orientations_dual.view_host();
   auto h_element_p_levels = cache->element_p_levels_dual.view_host();
   auto h_element_subdomains = cache->element_subdomains_dual.view_host();
   cache->host_element_types.resize(cache->host_element_ids.size());
@@ -100,6 +147,12 @@ MeshBase::get_kokkos_geometry_cache() const
   cache->host_element_p_levels.resize(cache->host_element_ids.size());
   cache->host_element_subdomains.resize(cache->host_element_ids.size(),
                                         static_cast<subdomain_id_type>(Elem::invalid_subdomain_id));
+
+  ::Kokkos::deep_copy(h_element_side_types, INVALID_ELEM);
+  ::Kokkos::deep_copy(h_element_side_n_nodes, 0);
+  ::Kokkos::deep_copy(h_element_side_local_nodes, libMesh::invalid_uint);
+  ::Kokkos::deep_copy(h_element_edge_positive_orientations, static_cast<unsigned char>(0));
+  ::Kokkos::deep_copy(h_element_face_positive_orientations, static_cast<unsigned char>(0));
 
   for (auto node_index : index_range(cache->host_node_ids))
     {
@@ -112,22 +165,47 @@ MeshBase::get_kokkos_geometry_cache() const
 
   for (auto elem_index : index_range(cache->host_element_ids))
     {
+      const unsigned int elem_index_uint = cast_int<unsigned int>(elem_index);
       const dof_id_type elem_id = cache->host_element_ids[elem_index];
       const Elem & elem = *this->query_elem_ptr(elem_id);
-      h_element_ids(cast_int<unsigned int>(elem_index)) = elem_id;
-      h_element_types(cast_int<unsigned int>(elem_index)) = elem.type();
-      h_element_mapping_types(cast_int<unsigned int>(elem_index)) = elem.mapping_type();
-      h_element_n_nodes(cast_int<unsigned int>(elem_index)) = elem.n_nodes();
-      h_element_p_levels(cast_int<unsigned int>(elem_index)) = elem.p_level();
-      h_element_subdomains(cast_int<unsigned int>(elem_index)) = elem.subdomain_id();
+      h_element_ids(elem_index_uint) = elem_id;
+      h_element_types(elem_index_uint) = elem.type();
+      h_element_mapping_types(elem_index_uint) = elem.mapping_type();
+      h_element_n_nodes(elem_index_uint) = elem.n_nodes();
+      h_element_n_sides(elem_index_uint) = elem.n_sides();
+      h_element_n_edges(elem_index_uint) = elem.n_edges();
+      h_element_n_faces(elem_index_uint) = elem.n_faces();
+      h_element_p_levels(elem_index_uint) = elem.p_level();
+      h_element_subdomains(elem_index_uint) = elem.subdomain_id();
       cache->host_element_types[elem_index] = elem.type();
       cache->host_element_mapping_types[elem_index] = elem.mapping_type();
       cache->host_element_n_nodes[elem_index] = elem.n_nodes();
       cache->host_element_p_levels[elem_index] = elem.p_level();
       cache->host_element_subdomains[elem_index] = elem.subdomain_id();
       for (unsigned int n = 0; n != elem.n_nodes(); ++n)
-        h_element_node_ids(cast_int<unsigned int>(elem_index), n) =
+        h_element_node_ids(elem_index_uint, n) =
           libmesh_map_find(cache->node_lookup, elem.node_id(n));
+
+      for (unsigned int s = 0; s != elem.n_sides(); ++s)
+        {
+          const auto side_nodes = elem.nodes_on_side(s);
+          h_element_side_types(elem_index_uint, s) = elem.side_type(s);
+          h_element_side_n_nodes(elem_index_uint, s) =
+            cast_int<unsigned int>(side_nodes.size());
+          for (auto local_side_node_index : index_range(side_nodes))
+            h_element_side_local_nodes(elem_index_uint,
+                                       s,
+                                       cast_int<unsigned int>(local_side_node_index)) =
+              side_nodes[local_side_node_index];
+        }
+
+      for (unsigned int edge = 0; edge != elem.n_edges(); ++edge)
+        h_element_edge_positive_orientations(elem_index_uint, edge) =
+          elem.positive_edge_orientation(edge) ? 1 : 0;
+
+      for (unsigned int face = 0; face != elem.n_faces(); ++face)
+        h_element_face_positive_orientations(elem_index_uint, face) =
+          elem.positive_face_orientation(face) ? 1 : 0;
     }
 
   cache->node_ids_dual.modify_host();
@@ -137,6 +215,14 @@ MeshBase::get_kokkos_geometry_cache() const
   cache->element_types_dual.modify_host();
   cache->element_mapping_types_dual.modify_host();
   cache->element_n_nodes_dual.modify_host();
+  cache->element_n_sides_dual.modify_host();
+  cache->element_n_edges_dual.modify_host();
+  cache->element_n_faces_dual.modify_host();
+  cache->element_side_types_dual.modify_host();
+  cache->element_side_n_nodes_dual.modify_host();
+  cache->element_side_local_nodes_dual.modify_host();
+  cache->element_edge_positive_orientations_dual.modify_host();
+  cache->element_face_positive_orientations_dual.modify_host();
   cache->element_p_levels_dual.modify_host();
   cache->element_subdomains_dual.modify_host();
 
@@ -147,6 +233,14 @@ MeshBase::get_kokkos_geometry_cache() const
   cache->element_types_dual.sync_device();
   cache->element_mapping_types_dual.sync_device();
   cache->element_n_nodes_dual.sync_device();
+  cache->element_n_sides_dual.sync_device();
+  cache->element_n_edges_dual.sync_device();
+  cache->element_n_faces_dual.sync_device();
+  cache->element_side_types_dual.sync_device();
+  cache->element_side_n_nodes_dual.sync_device();
+  cache->element_side_local_nodes_dual.sync_device();
+  cache->element_edge_positive_orientations_dual.sync_device();
+  cache->element_face_positive_orientations_dual.sync_device();
   cache->element_p_levels_dual.sync_device();
   cache->element_subdomains_dual.sync_device();
 
@@ -157,6 +251,16 @@ MeshBase::get_kokkos_geometry_cache() const
   cache->element_types = cache->element_types_dual.view_device();
   cache->element_mapping_types = cache->element_mapping_types_dual.view_device();
   cache->element_n_nodes = cache->element_n_nodes_dual.view_device();
+  cache->element_n_sides = cache->element_n_sides_dual.view_device();
+  cache->element_n_edges = cache->element_n_edges_dual.view_device();
+  cache->element_n_faces = cache->element_n_faces_dual.view_device();
+  cache->element_side_types = cache->element_side_types_dual.view_device();
+  cache->element_side_n_nodes = cache->element_side_n_nodes_dual.view_device();
+  cache->element_side_local_nodes = cache->element_side_local_nodes_dual.view_device();
+  cache->element_edge_positive_orientations =
+    cache->element_edge_positive_orientations_dual.view_device();
+  cache->element_face_positive_orientations =
+    cache->element_face_positive_orientations_dual.view_device();
   cache->element_p_levels = cache->element_p_levels_dual.view_device();
   cache->element_subdomains = cache->element_subdomains_dual.view_device();
   _kokkos_geometry_cache = std::move(cache);

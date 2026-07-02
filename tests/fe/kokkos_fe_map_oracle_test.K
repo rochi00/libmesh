@@ -438,6 +438,7 @@ run_all_oracles()
       { libMesh::EDGE4,  "EDGE4"  },
       { libMesh::TRI3,   "TRI3"   },
       { libMesh::TRI6,   "TRI6"   },
+      { libMesh::TRI7,   "TRI7"   },
       { libMesh::QUAD4,  "QUAD4"  },
       { libMesh::QUAD8,  "QUAD8"  },
       { libMesh::QUAD9,  "QUAD9"  },

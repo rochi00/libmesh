@@ -585,11 +585,40 @@ monomial_evaluator_dim_or_zero(ElemType elem_type)
   }
 }
 
+LIBMESH_DEVICE_INLINE unsigned int
+side_hierarchic_trace_n_dofs_or_zero(ElemType elem_type,
+                                     Order order)
+{
+  if (order != FIRST)
+    return 0;
+
+  switch (elem_type)
+  {
+    case TRI6:
+    case TRI7:
+      return 6;
+
+    case QUAD8:
+    case QUAD9:
+      return 8;
+
+    default:
+      return 0;
+  }
+}
+
 LIBMESH_DEVICE_INLINE bool
 supports_shape(FEShapeKey key);
 
 LIBMESH_DEVICE_INLINE bool
 supports_vector_shape(FEShapeKey key);
+
+LIBMESH_DEVICE_INLINE bool
+supports_side_trace_shape(FEShapeKey key)
+{
+  return key.family == SIDE_HIERARCHIC &&
+         side_hierarchic_trace_n_dofs_or_zero(key.elem_type, key.order) != 0;
+}
 
 LIBMESH_DEVICE_INLINE unsigned int
 vector_component_count_or_zero(ElemType elem_type)
@@ -610,6 +639,7 @@ supports_lagrange_map_topology(ElemType topo)
     case EDGE4:
     case TRI3:
     case TRI6:
+    case TRI7:
     case QUAD4:
     case QUAD8:
     case QUAD9:
@@ -650,6 +680,8 @@ dispatch_lagrange_map_topology_or(ElemType topo,
       return op.template operator()<TRI3>();
     case TRI6:
       return op.template operator()<TRI6>();
+    case TRI7:
+      return op.template operator()<TRI7>();
     case QUAD4:
       return op.template operator()<QUAD4>();
     case QUAD8:
@@ -737,7 +769,7 @@ supports_vector_shape_deriv(FEShapeKey key)
 LIBMESH_DEVICE_INLINE bool
 supports_n_dofs(FEShapeKey key)
 {
-  return supports_shape(key) || supports_vector_shape(key);
+  return supports_shape(key) || supports_vector_shape(key) || supports_side_trace_shape(key);
 }
 
 LIBMESH_DEVICE_INLINE unsigned int
@@ -756,6 +788,9 @@ n_dofs_or_zero(FEShapeKey key)
 
     case MONOMIAL:
       return monomial_exact_n_dofs_or_zero(key.elem_type, key.order);
+
+    case SIDE_HIERARCHIC:
+      return side_hierarchic_trace_n_dofs_or_zero(key.elem_type, key.order);
 
     default:
       return 0;

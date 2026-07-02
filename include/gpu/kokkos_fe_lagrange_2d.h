@@ -1,6 +1,6 @@
 // Kokkos FEEvaluator specializations for 2-D Lagrange elements.
 //
-// Covers TRI3, TRI6, QUAD4, QUAD8, QUAD9.
+// Covers TRI3, TRI6, TRI7, QUAD4, QUAD8, QUAD9.
 // Reference-element coordinate conventions (libMesh-compatible):
 //   Tri:   xi >= 0, eta >= 0, xi+eta <= 1  (unit triangle)
 //   Quad:  (xi, eta) in [-1,1]²
@@ -67,6 +67,28 @@ struct FEEvaluator<libMesh::LAGRANGE, libMesh::TRI6>
   {
     return make_vector(libMesh::detail::fe_lagrange_tri6_shape_deriv(i, 0, xi, eta),
                        libMesh::detail::fe_lagrange_tri6_shape_deriv(i, 1, xi, eta),
+                       0.0);
+  }
+#endif
+};
+
+template <>
+struct FEEvaluator<libMesh::LAGRANGE, libMesh::TRI7>
+{
+  static constexpr unsigned int n_dofs() { return 7; }
+
+#ifdef LIBMESH_HAVE_KOKKOS
+  LIBMESH_DEVICE_INLINE static Real
+  shape(unsigned int i, Real xi, Real eta, Real /*zeta*/)
+  {
+    return libMesh::detail::fe_lagrange_tri7_shape(i, xi, eta);
+  }
+
+  LIBMESH_DEVICE_INLINE static RealVector
+  grad_shape(unsigned int i, Real xi, Real eta, Real /*zeta*/)
+  {
+    return make_vector(libMesh::detail::fe_lagrange_tri7_shape_deriv(i, 0, xi, eta),
+                       libMesh::detail::fe_lagrange_tri7_shape_deriv(i, 1, xi, eta),
                        0.0);
   }
 #endif

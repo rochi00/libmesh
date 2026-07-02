@@ -25,6 +25,7 @@
 #include "kokkos_fe_monomial.h"
 #include "libmesh/enum_elem_type.h"
 #include "libmesh/enum_fe_family.h"
+#include "libmesh/enum_order.h"
 
 namespace libMesh::Kokkos
 {
@@ -62,6 +63,27 @@ eval_lagrange_vector_shape_deriv(libMesh::ElemType topo,
                                  Real xi,
                                  Real eta,
                                  Real zeta);
+
+LIBMESH_DEVICE_INLINE unsigned int
+side_hierarchic_trace_n_dofs_per_side(libMesh::Order order);
+
+LIBMESH_DEVICE_INLINE Real
+side_hierarchic_trace_shape_2d(libMesh::ElemType parent_type,
+                               libMesh::Order order,
+                               unsigned int i,
+                               unsigned int side,
+                               bool positive_edge_orientation,
+                               Real xi,
+                               Real eta);
+
+LIBMESH_DEVICE_INLINE Real
+side_trace_shape(FEShapeKey key,
+                 unsigned int i,
+                 unsigned int side,
+                 bool positive_edge_orientation,
+                 Real xi,
+                 Real eta,
+                 Real zeta);
 
 namespace detail
 {
@@ -266,6 +288,177 @@ struct KeyedMonomialGradShapeOp
 };
 
 } // namespace detail
+
+namespace detail
+{
+
+LIBMESH_DEVICE_INLINE unsigned int
+side_hierarchic_order_value(libMesh::Order order)
+{
+  switch (order)
+  {
+    case libMesh::CONSTANT: return 0;
+    case libMesh::FIRST: return 1;
+    case libMesh::SECOND: return 2;
+    case libMesh::THIRD: return 3;
+    case libMesh::FOURTH: return 4;
+    case libMesh::FIFTH: return 5;
+    default:
+      detail::abort_unsupported("side_hierarchic_order_value(): unsupported SIDE_HIERARCHIC order");
+      return 0;
+  }
+}
+
+LIBMESH_DEVICE_INLINE Real
+hierarchic_edge_shape(libMesh::Order order, unsigned int i, Real xi)
+{
+  libmesh_assert_less(i, side_hierarchic_order_value(order) + 1);
+
+  switch (i)
+  {
+    case 0:
+      return Real(.5) * (Real(1) - xi);
+    case 1:
+      return Real(.5) * (Real(1) + xi);
+    default:
+    {
+      Real value = Real(1);
+      Real denominator = Real(1);
+
+      for (unsigned int n = 1; n <= i; ++n)
+      {
+        value *= xi;
+        denominator *= n;
+      }
+
+      return (i % 2) ? (value - xi) / denominator : (value - Real(1)) / denominator;
+    }
+  }
+}
+
+LIBMESH_DEVICE_INLINE Real
+side_hierarchic_edge_trace_shape(libMesh::Order order,
+                                 unsigned int side_i,
+                                 Real side_xi,
+                                 bool flip_side_xi)
+{
+  const unsigned int order_value = side_hierarchic_order_value(order);
+
+  if (side_i > order_value)
+    return Real(0);
+
+  if (order_value == 0)
+    return Real(1);
+
+  const bool flip = (side_i < 2 || side_i % 2) && flip_side_xi;
+  return hierarchic_edge_shape(order, side_i, flip ? -side_xi : side_xi);
+}
+
+} // namespace detail
+
+LIBMESH_DEVICE_INLINE unsigned int
+side_hierarchic_trace_n_dofs_per_side(libMesh::Order order)
+{
+  return detail::side_hierarchic_order_value(order) + 1;
+}
+
+LIBMESH_DEVICE_INLINE Real
+side_hierarchic_trace_shape_2d(libMesh::ElemType parent_type,
+                               libMesh::Order order,
+                               unsigned int i,
+                               unsigned int side,
+                               bool positive_edge_orientation,
+                               Real xi,
+                               Real eta)
+{
+  const unsigned int dofs_per_side = side_hierarchic_trace_n_dofs_per_side(order);
+
+  if (i < side * dofs_per_side || i >= (side + 1) * dofs_per_side)
+    return Real(0);
+
+  const unsigned int side_i = i - side * dofs_per_side;
+
+  switch (parent_type)
+  {
+    case libMesh::TRI6:
+    case libMesh::TRI7:
+    {
+      const Real zeta1 = xi;
+      const Real zeta2 = eta;
+      const Real zeta0 = Real(1) - zeta1 - zeta2;
+
+      switch (side)
+      {
+        case 0:
+          return detail::side_hierarchic_edge_trace_shape(
+            order, side_i, zeta1 - zeta0, positive_edge_orientation);
+        case 1:
+          return detail::side_hierarchic_edge_trace_shape(
+            order, side_i, zeta2 - zeta1, positive_edge_orientation);
+        case 2:
+          return detail::side_hierarchic_edge_trace_shape(
+            order, side_i, zeta0 - zeta2, positive_edge_orientation);
+        default:
+          detail::abort_unsupported("side_hierarchic_trace_shape_2d(): invalid triangle side");
+          return Real(0);
+      }
+    }
+
+    case libMesh::QUAD8:
+    case libMesh::QUADSHELL8:
+    case libMesh::QUAD9:
+    case libMesh::QUADSHELL9:
+      switch (side)
+      {
+        case 0:
+          return detail::side_hierarchic_edge_trace_shape(
+            order, side_i, xi, positive_edge_orientation);
+        case 1:
+          return detail::side_hierarchic_edge_trace_shape(
+            order, side_i, eta, positive_edge_orientation);
+        case 2:
+          return detail::side_hierarchic_edge_trace_shape(
+            order, side_i, xi, !positive_edge_orientation);
+        case 3:
+          return detail::side_hierarchic_edge_trace_shape(
+            order, side_i, eta, !positive_edge_orientation);
+        default:
+          detail::abort_unsupported("side_hierarchic_trace_shape_2d(): invalid quadrilateral side");
+          return Real(0);
+      }
+
+    default:
+      detail::abort_unsupported("side_hierarchic_trace_shape_2d(): unsupported parent topology");
+      return Real(0);
+  }
+}
+
+LIBMESH_DEVICE_INLINE Real
+side_trace_shape(FEShapeKey key,
+                 unsigned int i,
+                 unsigned int side,
+                 bool positive_edge_orientation,
+                 Real xi,
+                 Real eta,
+                 Real)
+{
+  if (!supports_side_trace_shape(key))
+  {
+    detail::abort_unsupported("side_trace_shape(): unsupported trace FE key");
+    return Real(0);
+  }
+
+  switch (key.family)
+  {
+    case libMesh::SIDE_HIERARCHIC:
+      return side_hierarchic_trace_shape_2d(
+        key.elem_type, key.order, i, side, positive_edge_orientation, xi, eta);
+
+    default:
+      detail::abort_unsupported("side_trace_shape(): unsupported trace FE family");
+      return Real(0);
+  }
+}
 
 // ── On-device helpers: element class -> spatial dimension ─────────────────────
 

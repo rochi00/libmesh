@@ -9,6 +9,7 @@
 #include "kokkos_fe_shape_oracle_test.K"
 #include "kokkos_fe_side_trace_oracle_test.K"
 #include "kokkos_fe_types_oracle_test.K"
+#include "kokkos_hdg_assembly_oracle_test.K"
 #include "kokkos_quadrature_oracle_test.K"
 
 namespace libMeshTest
@@ -34,6 +35,7 @@ run_all_oracles(const char * argv0)
   total_fail += libMeshTest::KokkosFEPermutedMapOracle::run_all_oracles();
   total_fail += libMeshTest::KokkosFEReconstructionOracle::run_all_oracles();
   total_fail += libMeshTest::KokkosFESideTraceOracle::run_all_oracles();
+  total_fail += libMeshTest::KokkosHDGAssemblyOracle::run_all_oracles();
   total_fail += libMeshTest::KokkosFEQuadratureOracle::run_all_oracles();
   total_fail += libMeshTest::KokkosFEContractOracle::run_all_oracles(argv0);
 

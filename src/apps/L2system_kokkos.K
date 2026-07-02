@@ -1347,7 +1347,7 @@ run_kokkos_hilbert_bucket_value_batch(const KokkosHilbertHomogeneousBucket & buc
 
 template <typename GoalAccess, typename NodeCoordinateStorage, typename ElemNodeIdStorage>
 bool
-try_kokkos_hilbert_bucket_value_batch(const KokkosPetscAssemblyPlan & const_plan,
+kokkos_hilbert_bucket_value_batch(const KokkosPetscAssemblyPlan & const_plan,
                                       const NodeCoordinateStorage & node_coordinates,
                                       const ElemNodeIdStorage & element_node_ids,
                                       KokkosPetscAssemblyPlan & plan,
@@ -1441,7 +1441,7 @@ assemble_kokkos_petsc_global_system(
 
       const auto assemble_with_goal = [&](auto goal_access, const char * bucket_name)
       {
-        if (!try_kokkos_hilbert_bucket_value_batch(
+        if (!kokkos_hilbert_bucket_value_batch(
                 plan, node_coordinates, element_node_ids, plan, sys.hilbert_order(), goal_access))
           libMesh::Kokkos::detail::run_hilbert_system_value_batch<kokkos_hilbert_max_dofs>(
               node_coordinates,
@@ -1674,7 +1674,7 @@ HilbertSystem::needs_exact_kokkos_fem_goal_context()
 }
 
 bool
-HilbertSystem::try_exact_kokkos_analytic_goal_host_assembly(FEMContext & c,
+HilbertSystem::kokkos_exact_analytic_goal_host_assembly(FEMContext & c,
                                                             const bool request_jacobian,
                                                             DenseSubVector<Number> & F,
                                                             DenseSubMatrix<Number> & K)
@@ -1725,7 +1725,7 @@ HilbertSystem::ensure_kokkos_fem_goal_func()
 }
 
 bool
-HilbertSystem::try_exact_kokkos_fem_goal_host_assembly(FEMContext & c,
+HilbertSystem::kokkos_exact_fem_goal_host_assembly(FEMContext & c,
                                                        const bool request_jacobian,
                                                        DenseSubVector<Number> & F,
                                                        DenseSubMatrix<Number> & K)
@@ -1788,7 +1788,7 @@ HilbertSystem::ensure_kokkos_petsc_plan(bool * rebuilt)
 }
 
 bool
-HilbertSystem::try_kokkos_element_assembly(FEMContext & c,
+HilbertSystem::kokkos_element_assembly(FEMContext & c,
                                            const bool request_jacobian,
                                            DenseSubVector<Number> & F,
                                            DenseSubMatrix<Number> & K)
@@ -1841,7 +1841,7 @@ HilbertSystem::try_kokkos_element_assembly(FEMContext & c,
 
 #if defined(LIBMESH_HAVE_PETSC)
 bool
-HilbertSystem::try_kokkos_petsc_solve()
+HilbertSystem::kokkos_petsc_solve()
 {
   LOG_SCOPE("L2Kokkos::solve", "HilbertSystem");
   KokkosProfilingRegion kokkos_region("L2Kokkos::solve");

@@ -182,20 +182,20 @@ private:
   ensure_kokkos_fem_goal_func();
   void reset_kokkos_goal_cache();
   bool needs_exact_kokkos_fem_goal_context();
-  bool try_exact_kokkos_analytic_goal_host_assembly(libMesh::FEMContext & c,
+  bool kokkos_exact_analytic_goal_host_assembly(libMesh::FEMContext & c,
                                                     bool request_jacobian,
                                                     libMesh::DenseSubVector<libMesh::Number> & F,
                                                     libMesh::DenseSubMatrix<libMesh::Number> & K);
-  bool try_exact_kokkos_fem_goal_host_assembly(libMesh::FEMContext & c,
+  bool kokkos_exact_fem_goal_host_assembly(libMesh::FEMContext & c,
                                                bool request_jacobian,
                                                libMesh::DenseSubVector<libMesh::Number> & F,
                                                libMesh::DenseSubMatrix<libMesh::Number> & K);
-  bool try_kokkos_element_assembly(libMesh::FEMContext & c,
+  bool kokkos_element_assembly(libMesh::FEMContext & c,
                                    bool request_jacobian,
                                    libMesh::DenseSubVector<libMesh::Number> & F,
                                    libMesh::DenseSubMatrix<libMesh::Number> & K);
   libMesh::KokkosPetscAssemblyPlan * ensure_kokkos_petsc_plan(bool * rebuilt = nullptr);
-  bool try_kokkos_petsc_solve();
+  bool kokkos_petsc_solve();
 #else
   void reset_kokkos_goal_cache() {}
   bool needs_exact_kokkos_fem_goal_context() { return false; }

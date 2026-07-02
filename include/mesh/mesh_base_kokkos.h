@@ -39,6 +39,14 @@ struct MeshBase::KokkosGeometryCache
   using elem_type_dual_view = ::Kokkos::DualView<ElemType *, memory_space>;
   using elem_mapping_type_dual_view = ::Kokkos::DualView<ElemMappingType *, memory_space>;
   using elem_n_nodes_dual_view = ::Kokkos::DualView<unsigned int *, memory_space>;
+  using elem_n_sides_dual_view = ::Kokkos::DualView<unsigned int *, memory_space>;
+  using elem_n_edges_dual_view = ::Kokkos::DualView<unsigned int *, memory_space>;
+  using elem_n_faces_dual_view = ::Kokkos::DualView<unsigned int *, memory_space>;
+  using elem_side_type_dual_view = ::Kokkos::DualView<ElemType **, memory_space>;
+  using elem_side_n_nodes_dual_view = ::Kokkos::DualView<unsigned int **, memory_space>;
+  using elem_side_local_node_dual_view = ::Kokkos::DualView<unsigned int ***, memory_space>;
+  using elem_edge_orientation_dual_view = ::Kokkos::DualView<unsigned char **, memory_space>;
+  using elem_face_orientation_dual_view = ::Kokkos::DualView<unsigned char **, memory_space>;
   using elem_p_level_dual_view = ::Kokkos::DualView<unsigned int *, memory_space>;
   using elem_subdomain_dual_view = ::Kokkos::DualView<subdomain_id_type *, memory_space>;
   using node_id_view = ::Kokkos::View<dof_id_type *, memory_space>;
@@ -48,6 +56,14 @@ struct MeshBase::KokkosGeometryCache
   using elem_type_view = ::Kokkos::View<ElemType *, memory_space>;
   using elem_mapping_type_view = ::Kokkos::View<ElemMappingType *, memory_space>;
   using elem_n_nodes_view = ::Kokkos::View<unsigned int *, memory_space>;
+  using elem_n_sides_view = ::Kokkos::View<unsigned int *, memory_space>;
+  using elem_n_edges_view = ::Kokkos::View<unsigned int *, memory_space>;
+  using elem_n_faces_view = ::Kokkos::View<unsigned int *, memory_space>;
+  using elem_side_type_view = ::Kokkos::View<ElemType **, memory_space>;
+  using elem_side_n_nodes_view = ::Kokkos::View<unsigned int **, memory_space>;
+  using elem_side_local_node_view = ::Kokkos::View<unsigned int ***, memory_space>;
+  using elem_edge_orientation_view = ::Kokkos::View<unsigned char **, memory_space>;
+  using elem_face_orientation_view = ::Kokkos::View<unsigned char **, memory_space>;
   using elem_p_level_view = ::Kokkos::View<unsigned int *, memory_space>;
   using elem_subdomain_view = ::Kokkos::View<subdomain_id_type *, memory_space>;
 
@@ -58,6 +74,14 @@ struct MeshBase::KokkosGeometryCache
   elem_type_dual_view element_types_dual;
   elem_mapping_type_dual_view element_mapping_types_dual;
   elem_n_nodes_dual_view element_n_nodes_dual;
+  elem_n_sides_dual_view element_n_sides_dual;
+  elem_n_edges_dual_view element_n_edges_dual;
+  elem_n_faces_dual_view element_n_faces_dual;
+  elem_side_type_dual_view element_side_types_dual;
+  elem_side_n_nodes_dual_view element_side_n_nodes_dual;
+  elem_side_local_node_dual_view element_side_local_nodes_dual;
+  elem_edge_orientation_dual_view element_edge_positive_orientations_dual;
+  elem_face_orientation_dual_view element_face_positive_orientations_dual;
   elem_p_level_dual_view element_p_levels_dual;
   elem_subdomain_dual_view element_subdomains_dual;
   node_id_view node_ids;
@@ -67,6 +91,14 @@ struct MeshBase::KokkosGeometryCache
   elem_type_view element_types;
   elem_mapping_type_view element_mapping_types;
   elem_n_nodes_view element_n_nodes;
+  elem_n_sides_view element_n_sides;
+  elem_n_edges_view element_n_edges;
+  elem_n_faces_view element_n_faces;
+  elem_side_type_view element_side_types;
+  elem_side_n_nodes_view element_side_n_nodes;
+  elem_side_local_node_view element_side_local_nodes;
+  elem_edge_orientation_view element_edge_positive_orientations;
+  elem_face_orientation_view element_face_positive_orientations;
   elem_p_level_view element_p_levels;
   elem_subdomain_view element_subdomains;
   std::vector<dof_id_type> host_node_ids;
@@ -79,6 +111,10 @@ struct MeshBase::KokkosGeometryCache
   std::unordered_map<dof_id_type, unsigned int> node_lookup;
   std::unordered_map<dof_id_type, unsigned int> element_lookup;
   unsigned int max_nodes = 0;
+  unsigned int max_sides = 0;
+  unsigned int max_edges = 0;
+  unsigned int max_faces = 0;
+  unsigned int max_side_nodes = 0;
 };
 
 } // namespace libMesh

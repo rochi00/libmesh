@@ -316,12 +316,12 @@ run_all_oracles(const char * argv0)
     { "map_shape_rational", true },
     { "grad_map_shape_rational", true },
     { "face_normal_parent_dim2", true },
-    { "face_jacobian_prism20_tri7", true },
-    { "face_jacobian_prism21_tri7", true },
-    { "face_jacobian_pyramid18_tri7", true },
-    { "map_face_qp_to_parent_prism20_tri7", true },
-    { "map_face_qp_to_parent_prism21_tri7", true },
-    { "map_face_qp_to_parent_pyramid18_tri7", true }
+    { "face_jacobian_prism20_tri7", false },
+    { "face_jacobian_prism21_tri7", false },
+    { "face_jacobian_pyramid18_tri7", false },
+    { "map_face_qp_to_parent_prism20_tri7", false },
+    { "map_face_qp_to_parent_prism21_tri7", false },
+    { "map_face_qp_to_parent_pyramid18_tri7", false }
   };
 
   int total_fail = 0;

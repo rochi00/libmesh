@@ -8,8 +8,12 @@
 //      libMesh::FEInterface::n_dofs().
 //   D. n_dofs(FEShapeKey) for Kokkos-supported MONOMIAL keys against
 //      libMesh::FEInterface::n_dofs().
-//   E. supports_shape()/supports_grad_shape()/supports_n_dofs() agree on the
-//      current Kokkos evaluator support boundary.
+//   E. n_dofs(FEShapeKey) for Kokkos-supported SIDE_HIERARCHIC trace keys
+//      against libMesh::FEInterface::n_dofs().
+//   F. supports_* predicates agree on the current Kokkos evaluator support
+//      boundary, including trace-only SIDE_HIERARCHIC keys.
+//   G. MeshBase::KokkosGeometryCache side/edge/face metadata against Elem
+//      oracles.
 //
 // Returns 0 on success, non-zero on failure.
 
@@ -19,10 +23,16 @@
 #include "libmesh/fe_interface.h"
 #include "libmesh/fe_type.h"
 #include "libmesh/libmesh.h"
+#include "libmesh/mesh.h"
+#include "libmesh/mesh_base.h"
+#include "libmesh/mesh_base_kokkos.h"
+#include "libmesh/mesh_generation.h"
+#include "libmesh/utility.h"
 
 #include "libmesh/enum_elem_type.h"
 #include "libmesh/enum_fe_family.h"
 #include "libmesh/enum_order.h"
+#include "timpi/communicator.h"
 
 // Avoid conflicting complex operators between CUDA and PETSc
 #define PETSC_SKIP_CXX_COMPLEX_FIX 1
@@ -347,7 +357,52 @@ test_n_dofs_monomial()
 }
 
 // ---------------------------------------------------------------------------
-// Test 5: support predicates agree on the Kokkos evaluator boundary.
+// Test 5: n_dofs() for Kokkos-supported SIDE_HIERARCHIC trace keys against
+// FEInterface.
+// ---------------------------------------------------------------------------
+static int
+test_n_dofs_side_hierarchic()
+{
+  using libMesh::Kokkos::FEShapeKey;
+
+  static const FEShapeKey keys[] = {
+    { libMesh::SIDE_HIERARCHIC, libMesh::TRI6,  libMesh::FIRST },
+    { libMesh::SIDE_HIERARCHIC, libMesh::TRI7,  libMesh::FIRST },
+    { libMesh::SIDE_HIERARCHIC, libMesh::QUAD8, libMesh::FIRST },
+    { libMesh::SIDE_HIERARCHIC, libMesh::QUAD9, libMesh::FIRST }
+  };
+  constexpr int n_cases = sizeof(keys) / sizeof(keys[0]);
+
+  Kokkos::View<n_dof_case *> d_cases(std::string("side_hierarchic_cases"), n_cases);
+  {
+    auto h = Kokkos::create_mirror_view(d_cases);
+    for (int i = 0; i < n_cases; ++i)
+    {
+      h(i).key = keys[i];
+      h(i).expected = host_n_dofs_oracle(keys[i]);
+    }
+    Kokkos::deep_copy(d_cases, h);
+  }
+
+  Kokkos::View<int> d_fail(std::string("side_hierarchic_fail"));
+  Kokkos::deep_copy(d_fail, 0);
+
+  Kokkos::parallel_for(
+    n_cases,
+    KOKKOS_LAMBDA(int i) {
+      using namespace libMesh::Kokkos;
+      if (n_dofs(d_cases(i).key) != d_cases(i).expected)
+        Kokkos::atomic_add(&d_fail(), 1);
+    });
+  Kokkos::fence();
+
+  int fail = 0;
+  Kokkos::deep_copy(fail, d_fail);
+  return fail;
+}
+
+// ---------------------------------------------------------------------------
+// Test 6: support predicates agree on the Kokkos evaluator boundary.
 // ---------------------------------------------------------------------------
 static int
 test_support_contract()
@@ -418,6 +473,172 @@ test_support_contract()
 
   int fail = 0;
   Kokkos::deep_copy(fail, d_fail);
+
+  static const support_case trace_cases[] = {
+    { { libMesh::SIDE_HIERARCHIC, libMesh::TRI6,  libMesh::FIRST  }, true  },
+    { { libMesh::SIDE_HIERARCHIC, libMesh::TRI7,  libMesh::FIRST  }, true  },
+    { { libMesh::SIDE_HIERARCHIC, libMesh::QUAD8, libMesh::FIRST  }, true  },
+    { { libMesh::SIDE_HIERARCHIC, libMesh::QUAD9, libMesh::FIRST  }, true  },
+    { { libMesh::SIDE_HIERARCHIC, libMesh::TRI6,  libMesh::SECOND }, false },
+    { { libMesh::SIDE_HIERARCHIC, libMesh::TRI3,  libMesh::FIRST  }, false }
+  };
+  constexpr int n_trace_cases = sizeof(trace_cases) / sizeof(trace_cases[0]);
+
+  Kokkos::View<support_case *> d_trace_cases(std::string("trace_support_cases"),
+                                             n_trace_cases);
+  {
+    auto h = Kokkos::create_mirror_view(d_trace_cases);
+    for (int i = 0; i < n_trace_cases; ++i)
+      h(i) = trace_cases[i];
+    Kokkos::deep_copy(d_trace_cases, h);
+  }
+
+  Kokkos::deep_copy(d_fail, 0);
+  Kokkos::parallel_for(
+    n_trace_cases,
+    KOKKOS_LAMBDA(int i) {
+      using namespace libMesh::Kokkos;
+
+      const bool trace_supported = supports_side_trace_shape(d_trace_cases(i).key);
+      const bool ndofs_supported = supports_n_dofs(d_trace_cases(i).key);
+
+      if (trace_supported != d_trace_cases(i).expected ||
+          ndofs_supported != d_trace_cases(i).expected ||
+          supports_shape(d_trace_cases(i).key) ||
+          supports_grad_shape(d_trace_cases(i).key))
+        Kokkos::atomic_add(&d_fail(), 1);
+    });
+  Kokkos::fence();
+
+  int trace_fail = 0;
+  Kokkos::deep_copy(trace_fail, d_fail);
+  fail += trace_fail;
+
+  return fail;
+}
+
+// ---------------------------------------------------------------------------
+// Test 7: Kokkos geometry cache side metadata against libMesh Elem.
+// ---------------------------------------------------------------------------
+static int
+check_geometry_cache_side_metadata(const libMesh::MeshBase & mesh)
+{
+  const auto & cache = mesh.get_kokkos_geometry_cache();
+
+  auto h_n_sides =
+    Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), cache.element_n_sides);
+  auto h_n_edges =
+    Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), cache.element_n_edges);
+  auto h_n_faces =
+    Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), cache.element_n_faces);
+  auto h_side_types =
+    Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), cache.element_side_types);
+  auto h_side_n_nodes =
+    Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), cache.element_side_n_nodes);
+  auto h_side_local_nodes =
+    Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), cache.element_side_local_nodes);
+  auto h_edge_orientations = Kokkos::create_mirror_view_and_copy(
+    Kokkos::HostSpace(), cache.element_edge_positive_orientations);
+  auto h_face_orientations = Kokkos::create_mirror_view_and_copy(
+    Kokkos::HostSpace(), cache.element_face_positive_orientations);
+
+  int fail = 0;
+
+  for (std::size_t elem_index = 0; elem_index != cache.host_element_ids.size(); ++elem_index)
+    {
+      const libMesh::Elem & elem = *mesh.query_elem_ptr(cache.host_element_ids[elem_index]);
+
+      if (h_n_sides(elem_index) != elem.n_sides() ||
+          h_n_edges(elem_index) != elem.n_edges() ||
+          h_n_faces(elem_index) != elem.n_faces())
+        ++fail;
+
+      for (unsigned int side = 0; side != elem.n_sides(); ++side)
+        {
+          const auto side_nodes = elem.nodes_on_side(side);
+
+          if (h_side_types(elem_index, side) != elem.side_type(side) ||
+              h_side_n_nodes(elem_index, side) != side_nodes.size())
+            ++fail;
+
+          for (std::size_t n = 0; n != side_nodes.size(); ++n)
+            if (h_side_local_nodes(elem_index, side, n) != side_nodes[n])
+              ++fail;
+
+          for (unsigned int n = libMesh::cast_int<unsigned int>(side_nodes.size());
+               n != cache.max_side_nodes;
+               ++n)
+            if (h_side_local_nodes(elem_index, side, n) != libMesh::invalid_uint)
+              ++fail;
+        }
+
+      for (unsigned int side = elem.n_sides(); side != cache.max_sides; ++side)
+        {
+          if (h_side_types(elem_index, side) != libMesh::INVALID_ELEM ||
+              h_side_n_nodes(elem_index, side) != 0)
+            ++fail;
+
+          for (unsigned int n = 0; n != cache.max_side_nodes; ++n)
+            if (h_side_local_nodes(elem_index, side, n) != libMesh::invalid_uint)
+              ++fail;
+        }
+
+      for (unsigned int edge = 0; edge != elem.n_edges(); ++edge)
+        if (static_cast<bool>(h_edge_orientations(elem_index, edge)) !=
+            elem.positive_edge_orientation(edge))
+          ++fail;
+
+      for (unsigned int edge = elem.n_edges(); edge != cache.max_edges; ++edge)
+        if (h_edge_orientations(elem_index, edge) != 0)
+          ++fail;
+
+      for (unsigned int face = 0; face != elem.n_faces(); ++face)
+        if (static_cast<bool>(h_face_orientations(elem_index, face)) !=
+            elem.positive_face_orientation(face))
+          ++fail;
+
+      for (unsigned int face = elem.n_faces(); face != cache.max_faces; ++face)
+        if (h_face_orientations(elem_index, face) != 0)
+          ++fail;
+    }
+
+  return fail;
+}
+
+static int
+test_geometry_cache_side_metadata()
+{
+  libMesh::Parallel::Communicator comm(libMesh::GLOBAL_COMM_WORLD);
+  int fail = 0;
+
+#if LIBMESH_DIM >= 2
+  {
+    libMesh::Mesh mesh(comm, 2);
+    libMesh::MeshTools::Generation::build_square(
+      mesh, 1, 1, 0., 1., 0., 1., libMesh::TRI6);
+    mesh.prepare_for_use();
+    fail += check_geometry_cache_side_metadata(mesh);
+  }
+#endif
+
+#if LIBMESH_DIM >= 3
+  {
+    libMesh::Mesh mesh(comm, 3);
+    libMesh::MeshTools::Generation::build_cube(
+      mesh, 1, 1, 1, 0., 1., 0., 1., 0., 1., libMesh::HEX27);
+    mesh.prepare_for_use();
+    fail += check_geometry_cache_side_metadata(mesh);
+  }
+
+  {
+    libMesh::Mesh mesh(comm, 3);
+    libMesh::MeshTools::Generation::build_cube(
+      mesh, 1, 1, 1, 0., 1., 0., 1., 0., 1., libMesh::TET10);
+    mesh.prepare_for_use();
+    fail += check_geometry_cache_side_metadata(mesh);
+  }
+#endif
+
   return fail;
 }
 
@@ -447,8 +668,18 @@ run_all_oracles()
     total_fail += f;
   }
   {
+    const int f = test_n_dofs_side_hierarchic();
+    std::printf("[trace_ndofs_oracle]       %s  (%d failures)\n", f ? "FAIL" : "PASS", f);
+    total_fail += f;
+  }
+  {
     const int f = test_support_contract();
     std::printf("[support_contract_oracle]  %s  (%d failures)\n", f ? "FAIL" : "PASS", f);
+    total_fail += f;
+  }
+  {
+    const int f = test_geometry_cache_side_metadata();
+    std::printf("[geometry_cache_oracle]   %s  (%d failures)\n", f ? "FAIL" : "PASS", f);
     total_fail += f;
   }
 
