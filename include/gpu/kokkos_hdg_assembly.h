@@ -2350,10 +2350,6 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
         const HDGElementConstView<DofStorage> elem_lm_dofs_1{lm_dofs_1, elem};
         const HDGElementConstView<DofStorage> elem_other_u_dofs_1{other_u_dofs_1, elem};
         const HDGElementConstView<DofStorage> elem_other_lm_dofs_1{other_lm_dofs_1, elem};
-        const HDGElementView<BlockStorage> elem_blocks_0{blocks_0, elem};
-        const HDGElementView<ResidualStorage> elem_residual_0{residual_0, elem};
-        const HDGElementView<BlockStorage> elem_blocks_1{blocks_1, elem};
-        const HDGElementView<ResidualStorage> elem_residual_1{residual_1, elem};
         ScratchRealView volume_scratch(team.team_scratch(0), volume_scratch_size);
         ScratchRealView face_scratch(team.team_scratch(0), face_scratch_size);
 
@@ -2444,16 +2440,16 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                                [&](const int raw_i)
                                {
                                  const unsigned int i = static_cast<unsigned int>(raw_i);
-                                 elem_blocks_0(i) = Real(0);
-                                 elem_blocks_1(i) = Real(0);
+                                 blocks_0(elem, i) = Real(0);
+                                 blocks_1(elem, i) = Real(0);
                                });
         if (assemble_residual)
           ::Kokkos::parallel_for(::Kokkos::TeamThreadRange(team, residual_n_dofs),
                                  [&](const int raw_i)
                                  {
                                    const unsigned int i = static_cast<unsigned int>(raw_i);
-                                   elem_residual_0(i) = Real(0);
-                                   elem_residual_1(i) = Real(0);
+                                   residual_0(elem, i) = Real(0);
+                                   residual_1(elem, i) = Real(0);
                                  });
         team.team_barrier();
 
@@ -2576,9 +2572,9 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
               }
 
               if (c == 0)
-                elem_blocks_0(idx) += value;
+                blocks_0(elem, idx) += value;
               else
-                elem_blocks_1(idx) += value;
+                blocks_1(elem, idx) += value;
             });
         team.team_barrier();
 
@@ -2656,9 +2652,9 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                 }
 
                 if (c == 0)
-                  elem_residual_0(idx) += value;
+                  residual_0(elem, idx) += value;
                 else
-                  elem_residual_1(idx) += value;
+                  residual_1(elem, idx) += value;
               });
           team.team_barrier();
         }
@@ -2789,9 +2785,9 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                   if (is_outlet)
                   {
                     if (c == 0)
-                      elem_blocks_0(idx) += value;
+                      blocks_0(elem, idx) += value;
                     else
-                      elem_blocks_1(idx) += value;
+                      blocks_1(elem, idx) += value;
                     return;
                   }
                   const unsigned int local = idx - layout.off_Juq;
@@ -2811,9 +2807,9 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                   if (is_outlet)
                   {
                     if (c == 0)
-                      elem_blocks_0(idx) += value;
+                      blocks_0(elem, idx) += value;
                     else
-                      elem_blocks_1(idx) += value;
+                      blocks_1(elem, idx) += value;
                     return;
                   }
                   const unsigned int local = idx - layout.off_Jup;
@@ -2832,9 +2828,9 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                   if (is_dirichlet)
                   {
                     if (c == 0)
-                      elem_blocks_0(idx) += value;
+                      blocks_0(elem, idx) += value;
                     else
-                      elem_blocks_1(idx) += value;
+                      blocks_1(elem, idx) += value;
                     return;
                   }
                   const unsigned int local = idx - layout.off_Jplm;
@@ -2850,9 +2846,9 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                   if (is_dirichlet)
                   {
                     if (c == 0)
-                      elem_blocks_0(idx) += value;
+                      blocks_0(elem, idx) += value;
                     else
-                      elem_blocks_1(idx) += value;
+                      blocks_1(elem, idx) += value;
                     return;
                   }
                   const unsigned int local = idx - layout.off_Jqlm;
@@ -2871,9 +2867,9 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                   if (is_dirichlet)
                   {
                     if (c == 0)
-                      elem_blocks_0(idx) += value;
+                      blocks_0(elem, idx) += value;
                     else
-                      elem_blocks_1(idx) += value;
+                      blocks_1(elem, idx) += value;
                     return;
                   }
                   const unsigned int local = idx - layout.off_Jlmq;
@@ -2893,9 +2889,9 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                   if (is_dirichlet)
                   {
                     if (c == 0)
-                      elem_blocks_0(idx) += value;
+                      blocks_0(elem, idx) += value;
                     else
-                      elem_blocks_1(idx) += value;
+                      blocks_1(elem, idx) += value;
                     return;
                   }
                   const unsigned int local = idx - layout.off_Jlmp;
@@ -2911,9 +2907,9 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                   if (is_dirichlet)
                   {
                     if (c == 0)
-                      elem_blocks_0(idx) += value;
+                      blocks_0(elem, idx) += value;
                     else
-                      elem_blocks_1(idx) += value;
+                      blocks_1(elem, idx) += value;
                     return;
                   }
                   const unsigned int local = idx - layout.off_Jlms;
@@ -2953,9 +2949,9 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                   if (is_outlet)
                   {
                     if (c == 0)
-                      elem_blocks_0(idx) += value;
+                      blocks_0(elem, idx) += value;
                     else
-                      elem_blocks_1(idx) += value;
+                      blocks_1(elem, idx) += value;
                     return;
                   }
                   const unsigned int local = idx - layout.off_Juu;
@@ -2975,9 +2971,9 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                   if (is_outlet || is_dirichlet)
                   {
                     if (c == 0)
-                      elem_blocks_0(idx) += value;
+                      blocks_0(elem, idx) += value;
                     else
-                      elem_blocks_1(idx) += value;
+                      blocks_1(elem, idx) += value;
                     return;
                   }
                   const unsigned int local = idx - layout.off_Julm;
@@ -2994,9 +2990,9 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                 }
 
                 if (c == 0)
-                  elem_blocks_0(idx) += value;
+                  blocks_0(elem, idx) += value;
                 else
-                  elem_blocks_1(idx) += value;
+                  blocks_1(elem, idx) += value;
               });
           team.team_barrier();
 
@@ -3120,9 +3116,9 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                   }
 
                   if (c == 0)
-                    elem_residual_0(idx) += value;
+                    residual_0(elem, idx) += value;
                   else
-                    elem_residual_1(idx) += value;
+                    residual_1(elem, idx) += value;
                 });
             team.team_barrier();
           }
