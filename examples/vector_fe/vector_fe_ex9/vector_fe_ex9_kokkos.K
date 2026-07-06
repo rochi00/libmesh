@@ -269,6 +269,86 @@ struct Ex9CondensedJacobianCooPlan
   Mat target = nullptr;
 };
 
+template <typename RhsView, typename SolView>
+void
+fill_back_substitution_coo_values(DeviceBackSubstitutionPlan & plan,
+                                  const RhsView & rhs_view,
+                                  const SolView & sol_view)
+{
+  const auto layout = plan.layout;
+  const std::size_t n_entries = plan.n_elem * layout.internal_n_dofs;
+  DeviceReal1D coo_values = plan.coo_values;
+  const auto internal_ids = plan.internal_vector_ids;
+  const auto external_ids = plan.external_vector_ids;
+  const auto internal_inverse = plan.internal_inverse;
+  const auto internal_external_solve = plan.internal_external_solve;
+  const unsigned int n_internal = layout.internal_n_dofs;
+  const unsigned int n_external = layout.external_n_dofs;
+
+  Ex9KokkosTimer timer("back-substitution values kernel");
+  ::Kokkos::parallel_for(
+      "vector_fe_ex9_backwards_substitution",
+      ::Kokkos::RangePolicy<>(0, cast_int<int>(n_entries)),
+      KOKKOS_LAMBDA(const int entry) {
+        const int elem = entry / static_cast<int>(n_internal);
+        const int i = entry - elem * static_cast<int>(n_internal);
+        Real value = Real(0);
+        for (unsigned int j = 0; j != n_internal; ++j)
+          value += internal_inverse(elem, i * n_internal + j) * rhs_view(internal_ids(elem, j));
+        for (unsigned int j = 0; j != n_external; ++j)
+          value -=
+              internal_external_solve(elem, i * n_external + j) * sol_view(external_ids(elem, j));
+        coo_values(entry) = value;
+      });
+}
+
+template <typename RhsView>
+void
+fill_forward_elimination_coo_values(DeviceBackSubstitutionPlan & plan, const RhsView & rhs_view)
+{
+  const auto layout = plan.layout;
+  const std::size_t n_base_entries = plan.forward_base_n_entries;
+  const std::size_t n_entries = n_base_entries + plan.n_elem * layout.external_n_dofs;
+  DeviceReal1D coo_values = plan.forward_coo_values;
+  const auto full_blocks = plan.full_blocks;
+  const auto internal_inverse = plan.internal_inverse;
+  const auto internal_ids = plan.internal_vector_ids;
+  const auto base_ids = plan.forward_base_vector_ids;
+  const unsigned int n_internal = layout.internal_n_dofs;
+  const unsigned int n_external = layout.external_n_dofs;
+  const unsigned int n_dofs = layout.n_dofs;
+  const unsigned int external_offset = layout.off_p;
+  const std::size_t base_entries = n_base_entries;
+
+  Ex9KokkosTimer timer("forward elimination values kernel");
+  ::Kokkos::parallel_for(
+      "vector_fe_ex9_forward_elimination",
+      ::Kokkos::RangePolicy<>(0, cast_int<int>(n_entries)),
+      KOKKOS_LAMBDA(const int entry) {
+        if (static_cast<std::size_t>(entry) < base_entries)
+        {
+          coo_values(entry) = rhs_view(base_ids(entry));
+          return;
+        }
+
+        const int correction_entry = entry - static_cast<int>(base_entries);
+        const int elem = correction_entry / static_cast<int>(n_external);
+        const int i = correction_entry - elem * static_cast<int>(n_external);
+        Real value = Real(0);
+
+        for (unsigned int j = 0; j != n_internal; ++j)
+        {
+          Real solved_rhs = Real(0);
+          for (unsigned int k = 0; k != n_internal; ++k)
+            solved_rhs +=
+                internal_inverse(elem, j * n_internal + k) * rhs_view(internal_ids(elem, k));
+          value -= full_blocks(elem, (external_offset + i) * n_dofs + j) * solved_rhs;
+        }
+
+        coo_values(entry) = value;
+      });
+}
+
 struct Ex9FullBatch
 {
   Ex9FullBlockLayout layout;
@@ -1991,31 +2071,6 @@ run_device_backwards_substitution(DeviceBackSubstitutionPlan & plan,
   libmesh_assert_equal_to(plan.coo_rows.size(), n_entries);
 
   DeviceReal1D coo_values = plan.coo_values;
-  auto fill_coo_values = [&](const auto & rhs_view, const auto & sol_view)
-  {
-    const auto internal_ids = plan.internal_vector_ids;
-    const auto external_ids = plan.external_vector_ids;
-    const auto internal_inverse = plan.internal_inverse;
-    const auto internal_external_solve = plan.internal_external_solve;
-    const unsigned int n_internal = layout.internal_n_dofs;
-    const unsigned int n_external = layout.external_n_dofs;
-
-    Ex9KokkosTimer timer("back-substitution values kernel");
-    ::Kokkos::parallel_for(
-        "vector_fe_ex9_backwards_substitution",
-        ::Kokkos::RangePolicy<>(0, cast_int<int>(n_entries)),
-        KOKKOS_LAMBDA(const int entry) {
-          const int elem = entry / static_cast<int>(n_internal);
-          const int i = entry - elem * static_cast<int>(n_internal);
-          Real value = Real(0);
-          for (unsigned int j = 0; j != n_internal; ++j)
-            value += internal_inverse(elem, i * n_internal + j) * rhs_view(internal_ids(elem, j));
-          for (unsigned int j = 0; j != n_external; ++j)
-            value -=
-                internal_external_solve(elem, i * n_external + j) * sol_view(external_ids(elem, j));
-          coo_values(entry) = value;
-        });
-  };
 
   if (full_sol.comm().size() == 1)
   {
@@ -2025,7 +2080,7 @@ run_device_backwards_substitution(DeviceBackSubstitutionPlan & plan,
     PetscKokkosReadView sol_view;
     LibmeshPetscCall2(full_rhs.comm(), VecGetKokkosView(petsc_rhs->vec(), &rhs_view));
     LibmeshPetscCall2(full_sol.comm(), VecGetKokkosView(petsc_sol->vec(), &sol_view));
-    fill_coo_values(rhs_view, sol_view);
+    fill_back_substitution_coo_values(plan, rhs_view, sol_view);
     LibmeshPetscCall2(full_rhs.comm(), VecRestoreKokkosView(petsc_rhs->vec(), &rhs_view));
     LibmeshPetscCall2(full_sol.comm(), VecRestoreKokkosView(petsc_sol->vec(), &sol_view));
   }
@@ -2055,7 +2110,7 @@ run_device_backwards_substitution(DeviceBackSubstitutionPlan & plan,
 
     auto rhs_guard = plan.ghosted_rhs->make_kokkos_read_view_guard();
     auto sol_guard = plan.ghosted_sol->make_kokkos_read_view_guard();
-    fill_coo_values(rhs_guard.view(), sol_guard.view());
+    fill_back_substitution_coo_values(plan, rhs_guard.view(), sol_guard.view());
   }
 
   if (plan.coo_target != petsc_sol->vec())
@@ -2101,46 +2156,6 @@ run_device_forward_elimination(DeviceBackSubstitutionPlan & plan,
   libmesh_assert_equal_to(plan.forward_base_vector_ids.extent(0), n_base_entries);
 
   DeviceReal1D coo_values = plan.forward_coo_values;
-  auto fill_coo_values = [&](const auto & rhs_view)
-  {
-    const auto full_blocks = plan.full_blocks;
-    const auto internal_inverse = plan.internal_inverse;
-    const auto internal_ids = plan.internal_vector_ids;
-    const auto base_ids = plan.forward_base_vector_ids;
-    const unsigned int n_internal = layout.internal_n_dofs;
-    const unsigned int n_external = layout.external_n_dofs;
-    const unsigned int n_dofs = layout.n_dofs;
-    const unsigned int external_offset = layout.off_p;
-    const std::size_t base_entries = n_base_entries;
-
-    Ex9KokkosTimer timer("forward elimination values kernel");
-    ::Kokkos::parallel_for(
-        "vector_fe_ex9_forward_elimination",
-        ::Kokkos::RangePolicy<>(0, cast_int<int>(n_entries)),
-        KOKKOS_LAMBDA(const int entry) {
-          if (static_cast<std::size_t>(entry) < base_entries)
-          {
-            coo_values(entry) = rhs_view(base_ids(entry));
-            return;
-          }
-
-          const int correction_entry = entry - static_cast<int>(base_entries);
-          const int elem = correction_entry / static_cast<int>(n_external);
-          const int i = correction_entry - elem * static_cast<int>(n_external);
-          Real value = Real(0);
-
-          for (unsigned int j = 0; j != n_internal; ++j)
-          {
-            Real solved_rhs = Real(0);
-            for (unsigned int k = 0; k != n_internal; ++k)
-              solved_rhs += internal_inverse(elem, j * n_internal + k) *
-                            rhs_view(internal_ids(elem, k));
-            value -= full_blocks(elem, (external_offset + i) * n_dofs + j) * solved_rhs;
-          }
-
-          coo_values(entry) = value;
-        });
-  };
 
   if (full_rhs.comm().size() == 1)
   {
@@ -2148,7 +2163,7 @@ run_device_forward_elimination(DeviceBackSubstitutionPlan & plan,
         ::Kokkos::View<const PetscScalar *, ::Kokkos::DefaultExecutionSpace::memory_space>;
     PetscKokkosReadView rhs_view;
     LibmeshPetscCall2(full_rhs.comm(), VecGetKokkosView(petsc_full_rhs->vec(), &rhs_view));
-    fill_coo_values(rhs_view);
+    fill_forward_elimination_coo_values(plan, rhs_view);
     LibmeshPetscCall2(full_rhs.comm(), VecRestoreKokkosView(petsc_full_rhs->vec(), &rhs_view));
   }
   else
@@ -2167,7 +2182,7 @@ run_device_forward_elimination(DeviceBackSubstitutionPlan & plan,
 
     *plan.ghosted_rhs = *petsc_full_rhs;
     auto rhs_guard = plan.ghosted_rhs->make_kokkos_read_view_guard();
-    fill_coo_values(rhs_guard.view());
+    fill_forward_elimination_coo_values(plan, rhs_guard.view());
   }
 
   {
