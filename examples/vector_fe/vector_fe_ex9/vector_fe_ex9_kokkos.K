@@ -1166,6 +1166,137 @@ scatter_component_pair_into_full(const DeviceAssemblyData & u_data,
 }
 
 template <ElemType ExactTopo>
+void
+assemble_component_pair_volume_blocks_range(const DeviceAssemblyData & data,
+                                            const DeviceReal2D & u_blocks,
+                                            const DeviceReal2D & v_blocks)
+{
+  const unsigned int n_elem = data.n_elem;
+  const HDGLinearBlockLayout layout = data.layout;
+  const unsigned int n_entries = layout.off_Jplm;
+  const FEShapeKey vector_key = data.vector_key;
+  const FEShapeKey scalar_key = data.scalar_key;
+  const DeviceReal3D coords = data.coords;
+  const unsigned int n_geom_nodes = data.n_geom_nodes;
+  const DeviceReal1D xi = data.xi;
+  const DeviceReal1D eta = data.eta;
+  const DeviceReal1D zeta = data.zeta;
+  const DeviceReal1D jxw = data.jxw;
+  const unsigned int n_qp = data.n_qp;
+  const Real nu = data.problem->nu;
+
+  ::Kokkos::parallel_for(
+      "vector_fe_ex9_split_component_volume_blocks",
+      ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * 2 * n_entries)),
+      KOKKOS_LAMBDA(const int raw_entry) {
+        const unsigned int entry = static_cast<unsigned int>(raw_entry);
+        const unsigned int e = entry / (2 * n_entries);
+        const unsigned int component_entry = entry - e * 2 * n_entries;
+        const unsigned int component = component_entry / n_entries;
+        const unsigned int idx = component_entry - component * n_entries;
+        Real value = Real(0);
+
+        if (idx < layout.off_Jqu)
+        {
+          const unsigned int local = idx - layout.off_Jqq;
+          const unsigned int i = local / layout.vector_n_dofs;
+          const unsigned int j = local % layout.vector_n_dofs;
+          for (unsigned int q = 0; q != n_qp; ++q)
+          {
+            const libMesh::Kokkos::RealVector phi_i =
+                libMesh::Kokkos::vector_shape(vector_key, i, xi(q), eta(q), zeta(q));
+            const libMesh::Kokkos::RealVector phi_j =
+                libMesh::Kokkos::vector_shape(vector_key, j, xi(q), eta(q), zeta(q));
+            Real dot = Real(0);
+            for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+              dot += Kokkos::detail::component_or_zero(phi_i, d) *
+                     Kokkos::detail::component_or_zero(phi_j, d);
+            value += jxw(q) * dot;
+          }
+        }
+        else if (idx < layout.off_Juq)
+        {
+          const unsigned int local = idx - layout.off_Jqu;
+          const unsigned int i = local / layout.scalar_n_dofs;
+          const unsigned int j = local % layout.scalar_n_dofs;
+          for (unsigned int q = 0; q != n_qp; ++q)
+          {
+            const unsigned int scalar_i = i / 2;
+            const unsigned int grad_component = i - scalar_i * 2;
+            const libMesh::Kokkos::RealTensor J =
+                libMesh::Kokkos::jacobian<libMesh::LAGRANGE, ExactTopo>(
+                    Kokkos::detail::HDGElementNodeView<DeviceReal3D>{coords, e},
+                    n_geom_nodes,
+                    xi(q),
+                    eta(q),
+                    zeta(q));
+            const libMesh::Kokkos::RealTensor Jinv =
+                libMesh::Kokkos::inverse<libMesh::Kokkos::RealTensor>(J, 2);
+            const libMesh::Kokkos::RealVector grad_phys =
+                Jinv * libMesh::Kokkos::grad_shape(scalar_key, scalar_i, xi(q), eta(q), zeta(q));
+            value += jxw(q) * Kokkos::detail::component_or_zero(grad_phys, grad_component) *
+                     libMesh::Kokkos::shape(scalar_key, j, xi(q), eta(q), zeta(q));
+          }
+        }
+        else if (idx < layout.off_Jup)
+        {
+          const unsigned int local = idx - layout.off_Juq;
+          const unsigned int i = local / layout.vector_n_dofs;
+          const unsigned int j = local % layout.vector_n_dofs;
+          for (unsigned int q = 0; q != n_qp; ++q)
+          {
+            const libMesh::Kokkos::RealTensor J =
+                libMesh::Kokkos::jacobian<libMesh::LAGRANGE, ExactTopo>(
+                    Kokkos::detail::HDGElementNodeView<DeviceReal3D>{coords, e},
+                    n_geom_nodes,
+                    xi(q),
+                    eta(q),
+                    zeta(q));
+            const libMesh::Kokkos::RealTensor Jinv =
+                libMesh::Kokkos::inverse<libMesh::Kokkos::RealTensor>(J, 2);
+            const libMesh::Kokkos::RealVector grad_phys =
+                Jinv * libMesh::Kokkos::grad_shape(scalar_key, i, xi(q), eta(q), zeta(q));
+            const libMesh::Kokkos::RealVector phi_j =
+                libMesh::Kokkos::vector_shape(vector_key, j, xi(q), eta(q), zeta(q));
+            Real dot = Real(0);
+            for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+              dot += Kokkos::detail::component_or_zero(grad_phys, d) *
+                     Kokkos::detail::component_or_zero(phi_j, d);
+            value += jxw(q) * nu * dot;
+          }
+        }
+        else
+        {
+          const unsigned int local =
+              idx < layout.off_Jpu ? idx - layout.off_Jup : idx - layout.off_Jpu;
+          const unsigned int i = local / layout.scalar_n_dofs;
+          const unsigned int j = local % layout.scalar_n_dofs;
+          for (unsigned int q = 0; q != n_qp; ++q)
+          {
+            const libMesh::Kokkos::RealTensor J =
+                libMesh::Kokkos::jacobian<libMesh::LAGRANGE, ExactTopo>(
+                    Kokkos::detail::HDGElementNodeView<DeviceReal3D>{coords, e},
+                    n_geom_nodes,
+                    xi(q),
+                    eta(q),
+                    zeta(q));
+            const libMesh::Kokkos::RealTensor Jinv =
+                libMesh::Kokkos::inverse<libMesh::Kokkos::RealTensor>(J, 2);
+            const libMesh::Kokkos::RealVector grad_phys =
+                Jinv * libMesh::Kokkos::grad_shape(scalar_key, i, xi(q), eta(q), zeta(q));
+            value -= jxw(q) * Kokkos::detail::component_or_zero(grad_phys, component) *
+                     libMesh::Kokkos::shape(scalar_key, j, xi(q), eta(q), zeta(q));
+          }
+        }
+
+        if (component == 0)
+          u_blocks(e, idx) += value;
+        else
+          v_blocks(e, idx) += value;
+      });
+}
+
+template <ElemType ExactTopo>
 bool
 assemble_component_pair_into_full(const DeviceAssemblyData & u_data,
                                   const DeviceAssemblyData & v_data,
@@ -1255,7 +1386,13 @@ assemble_component_pair_into_full(const DeviceAssemblyData & u_data,
         v_residual_status,
         "vector_fe_ex9_hdg_direct_full_pair_batch",
         ex9_kokkos_team_size(),
-        assemble_residual);
+        assemble_residual,
+        false);
+  }
+
+  {
+    Ex9KokkosTimer timer("split component volume blocks kernel");
+    assemble_component_pair_volume_blocks_range<ExactTopo>(u_data, u_blocks, v_blocks);
   }
 
   int n_failures = 0;

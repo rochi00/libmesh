@@ -2300,7 +2300,8 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                                         const StatusStorage & residual_status_1,
                                         const char * const kernel_name,
                                         const unsigned int requested_team_size = 0,
-                                        const bool assemble_residual = true)
+                                        const bool assemble_residual = true,
+                                        const bool assemble_volume_blocks = true)
 {
   using ExecutionSpace = typename BlockStorage::execution_space;
   using TeamPolicy = ::Kokkos::TeamPolicy<ExecutionSpace>;
@@ -2511,72 +2512,75 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
             });
         team.team_barrier();
 
-        ::Kokkos::parallel_for(
-            ::Kokkos::TeamThreadRange(team, 2 * layout.off_Jplm),
-            [&](const int raw_component_idx)
-            {
-              const unsigned int component_idx = static_cast<unsigned int>(raw_component_idx);
-              const unsigned int c = component_idx / layout.off_Jplm;
-              const unsigned int idx = component_idx - c * layout.off_Jplm;
-              const unsigned int velocity_component = c;
-              Real value = Real(0);
+        if (assemble_volume_blocks)
+        {
+          ::Kokkos::parallel_for(
+              ::Kokkos::TeamThreadRange(team, 2 * layout.off_Jplm),
+              [&](const int raw_component_idx)
+              {
+                const unsigned int component_idx = static_cast<unsigned int>(raw_component_idx);
+                const unsigned int c = component_idx / layout.off_Jplm;
+                const unsigned int idx = component_idx - c * layout.off_Jplm;
+                const unsigned int velocity_component = c;
+                Real value = Real(0);
 
-              if (idx < layout.off_Jqu)
-              {
-                const unsigned int local = idx - layout.off_Jqq;
-                const unsigned int i = local / layout.vector_n_dofs;
-                const unsigned int j = local % layout.vector_n_dofs;
-                for (unsigned int q = 0; q != n_qpoints; ++q)
+                if (idx < layout.off_Jqu)
                 {
-                  Real dot = Real(0);
-                  for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
-                    dot += vector_phi_at(q, i, d) * vector_phi_at(q, j, d);
-                  value += jxw(q) * dot;
+                  const unsigned int local = idx - layout.off_Jqq;
+                  const unsigned int i = local / layout.vector_n_dofs;
+                  const unsigned int j = local % layout.vector_n_dofs;
+                  for (unsigned int q = 0; q != n_qpoints; ++q)
+                  {
+                    Real dot = Real(0);
+                    for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+                      dot += vector_phi_at(q, i, d) * vector_phi_at(q, j, d);
+                    value += jxw(q) * dot;
+                  }
                 }
-              }
-              else if (idx < layout.off_Juq)
-              {
-                const unsigned int local = idx - layout.off_Jqu;
-                const unsigned int i = local / layout.scalar_n_dofs;
-                const unsigned int j = local % layout.scalar_n_dofs;
-                for (unsigned int q = 0; q != n_qpoints; ++q)
+                else if (idx < layout.off_Juq)
                 {
-                  const unsigned int scalar_i = i / 2;
-                  const unsigned int component = i - scalar_i * 2;
-                  value += jxw(q) * grad_phys_at(q, scalar_i, component) *
-                           scalar_phi_at(q, j);
+                  const unsigned int local = idx - layout.off_Jqu;
+                  const unsigned int i = local / layout.scalar_n_dofs;
+                  const unsigned int j = local % layout.scalar_n_dofs;
+                  for (unsigned int q = 0; q != n_qpoints; ++q)
+                  {
+                    const unsigned int scalar_i = i / 2;
+                    const unsigned int component = i - scalar_i * 2;
+                    value += jxw(q) * grad_phys_at(q, scalar_i, component) *
+                             scalar_phi_at(q, j);
+                  }
                 }
-              }
-              else if (idx < layout.off_Jup)
-              {
-                const unsigned int local = idx - layout.off_Juq;
-                const unsigned int i = local / layout.vector_n_dofs;
-                const unsigned int j = local % layout.vector_n_dofs;
-                for (unsigned int q = 0; q != n_qpoints; ++q)
+                else if (idx < layout.off_Jup)
                 {
-                  Real dot = Real(0);
-                  for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
-                    dot += grad_phys_at(q, i, d) * vector_phi_at(q, j, d);
-                  value += jxw(q) * nu * dot;
+                  const unsigned int local = idx - layout.off_Juq;
+                  const unsigned int i = local / layout.vector_n_dofs;
+                  const unsigned int j = local % layout.vector_n_dofs;
+                  for (unsigned int q = 0; q != n_qpoints; ++q)
+                  {
+                    Real dot = Real(0);
+                    for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+                      dot += grad_phys_at(q, i, d) * vector_phi_at(q, j, d);
+                    value += jxw(q) * nu * dot;
+                  }
                 }
-              }
-              else
-              {
-                const unsigned int local =
-                    idx < layout.off_Jpu ? idx - layout.off_Jup : idx - layout.off_Jpu;
-                const unsigned int i = local / layout.scalar_n_dofs;
-                const unsigned int j = local % layout.scalar_n_dofs;
-                for (unsigned int q = 0; q != n_qpoints; ++q)
-                  value -= jxw(q) * grad_phys_at(q, i, velocity_component) *
-                           scalar_phi_at(q, j);
-              }
+                else
+                {
+                  const unsigned int local =
+                      idx < layout.off_Jpu ? idx - layout.off_Jup : idx - layout.off_Jpu;
+                  const unsigned int i = local / layout.scalar_n_dofs;
+                  const unsigned int j = local % layout.scalar_n_dofs;
+                  for (unsigned int q = 0; q != n_qpoints; ++q)
+                    value -= jxw(q) * grad_phys_at(q, i, velocity_component) *
+                             scalar_phi_at(q, j);
+                }
 
-              if (c == 0)
-                blocks_0(elem, idx) += value;
-              else
-                blocks_1(elem, idx) += value;
-            });
-        team.team_barrier();
+                if (c == 0)
+                  blocks_0(elem, idx) += value;
+                else
+                  blocks_1(elem, idx) += value;
+              });
+          team.team_barrier();
+        }
 
         if (assemble_residual)
         {
