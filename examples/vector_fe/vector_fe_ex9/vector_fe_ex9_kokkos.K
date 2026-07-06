@@ -413,6 +413,7 @@ struct DeviceBackSubstitutionPlan
   std::vector<PetscInt> forward_coo_rows;
   DeviceReal1D forward_coo_values;
   Vec forward_coo_target = nullptr;
+  Mat condensed_mat = nullptr;
   std::vector<PetscInt> coo_rows;
   DeviceReal1D coo_values;
   Vec coo_target = nullptr;
@@ -691,6 +692,91 @@ validate_condensed_solution_on_device(const Parallel::Communicator & comm,
                            << failure_row << " actual_lhs=" << failure_actual
                            << " expected_rhs=" << failure_expected
                            << " max_error=" << max_error << " tolerance=" << tolerance
+                           << " relative_tolerance=" << relative_tolerance
+                           << " absolute_tolerance=" << absolute_tolerance);
+}
+
+template <typename SolView>
+void
+validate_petsc_condensed_solution_on_device(const Parallel::Communicator & comm,
+                                            DeviceBackSubstitutionPlan & plan,
+                                            const SolView & sol_view)
+{
+  if (!ex9_kokkos_validate_condense() || comm.size() != 1)
+    return;
+
+  libmesh_assert(plan.condensed_mat);
+  libmesh_assert(plan.forward_coo_target);
+
+  const std::size_t n_base_entries = plan.forward_base_n_entries;
+  libmesh_assert_greater(n_base_entries, 0);
+  libmesh_assert_greater_equal(plan.forward_coo_rows.size(), n_base_entries);
+  libmesh_assert_equal_to(plan.forward_base_vector_ids.extent(0), n_base_entries);
+
+  DeviceReal1D reduced_solution_values("vector_fe_ex9_reduced_solution_values", n_base_entries);
+  const auto base_vector_ids = plan.forward_base_vector_ids;
+  {
+    Ex9KokkosTimer timer("PETSc condensed solve gather reduced solution kernel", false);
+    ::Kokkos::parallel_for(
+        "vector_fe_ex9_reduced_solution_values",
+        ::Kokkos::RangePolicy<>(0, cast_int<int>(n_base_entries)),
+        KOKKOS_LAMBDA(const int entry) {
+          reduced_solution_values(entry) = sol_view(base_vector_ids(entry));
+        });
+  }
+
+  auto h_reduced_solution =
+      ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), reduced_solution_values);
+
+  Vec reduced_solution = nullptr;
+  Vec residual = nullptr;
+  LibmeshPetscCall2(comm, VecDuplicate(plan.forward_coo_target, &reduced_solution));
+  LibmeshPetscCall2(comm, VecDuplicate(plan.forward_coo_target, &residual));
+  LibmeshPetscCall2(comm, VecZeroEntries(reduced_solution));
+  LibmeshPetscCall2(comm,
+                    VecSetValues(reduced_solution,
+                                 cast_int<PetscInt>(n_base_entries),
+                                 plan.forward_coo_rows.data(),
+                                 h_reduced_solution.data(),
+                                 INSERT_VALUES));
+  LibmeshPetscCall2(comm, VecAssemblyBegin(reduced_solution));
+  LibmeshPetscCall2(comm, VecAssemblyEnd(reduced_solution));
+
+  {
+    Ex9KokkosTimer timer("PETSc condensed solve residual MatMult", false);
+    LibmeshPetscCall2(comm, MatMult(plan.condensed_mat, reduced_solution, residual));
+  }
+  LibmeshPetscCall2(comm, VecAXPY(residual, PetscScalar(-1), plan.forward_coo_target));
+
+  PetscReal residual_norm = 0;
+  PetscReal rhs_norm = 0;
+  LibmeshPetscCall2(comm, VecNorm(residual, NORM_INFINITY, &residual_norm));
+  LibmeshPetscCall2(comm, VecNorm(plan.forward_coo_target, NORM_INFINITY, &rhs_norm));
+
+  const Real relative_tolerance =
+      libMesh::command_line_value("--ex9-kokkos-petsc-condensed-solve-validation-rtol",
+                                  Real(1.e-3));
+  const Real absolute_tolerance =
+      libMesh::command_line_value("--ex9-kokkos-petsc-condensed-solve-validation-atol",
+                                  Real(1.e-8));
+  const Real tolerance =
+      absolute_tolerance + relative_tolerance * (Real(1) + static_cast<Real>(rhs_norm));
+  const bool failed = static_cast<Real>(residual_norm) > tolerance;
+
+  if (comm.rank() == 0)
+    std::cout << "[ex9 kokkos diagnostic] PETSc condensed solve residual: inf_norm="
+              << static_cast<Real>(residual_norm)
+              << " rhs_inf_norm=" << static_cast<Real>(rhs_norm)
+              << " tolerance=" << tolerance << '\n';
+
+  LibmeshPetscCall2(comm, VecDestroy(&reduced_solution));
+  LibmeshPetscCall2(comm, VecDestroy(&residual));
+
+  libmesh_error_msg_if(failed,
+                       "vector_fe_ex9 Kokkos PETSc condensed solve residual mismatch: "
+                           << "residual_inf_norm=" << static_cast<Real>(residual_norm)
+                           << " rhs_inf_norm=" << static_cast<Real>(rhs_norm)
+                           << " tolerance=" << tolerance
                            << " relative_tolerance=" << relative_tolerance
                            << " absolute_tolerance=" << absolute_tolerance);
 }
@@ -4152,6 +4238,7 @@ run_device_backwards_substitution(DeviceBackSubstitutionPlan & plan,
     PetscKokkosReadView sol_view;
     LibmeshPetscCall2(full_rhs.comm(), VecGetKokkosView(petsc_rhs->vec(), &rhs_view));
     LibmeshPetscCall2(full_sol.comm(), VecGetKokkosView(petsc_sol->vec(), &sol_view));
+    validate_petsc_condensed_solution_on_device(full_sol.comm(), plan, sol_view);
     validate_condensed_solution_on_device(full_sol.comm(), plan, sol_view);
     fill_back_substitution_coo_values(plan, rhs_view, sol_view);
     LibmeshPetscCall2(full_rhs.comm(), VecRestoreKokkosView(petsc_rhs->vec(), &rhs_view));
@@ -4414,6 +4501,8 @@ add_device_condensed_jacobian_to_petsc_coo(const Ex9FullBatch & batch,
   libmesh_error_msg_if(!petsc_matrix || !is_petsc_kokkos_mat(sc.comm(), petsc_matrix->mat()),
                        "vector_fe_ex9 Kokkos static-condensation Jacobian requires PETSc "
                        "AIJKokkos reduced matrices. Run with -mat_type aijkokkos.");
+  if (batch.backsub_plan)
+    batch.backsub_plan->condensed_mat = petsc_matrix->mat();
 
   const auto layout = batch.layout;
   const std::size_t n_elem = batch.elems.size();
