@@ -243,6 +243,74 @@ ex9_mat_set_values_coo(const Parallel::Communicator & comm,
 
 template <typename ViewType>
 void
+validate_ex9_petsc_vec_coo_values(const Parallel::Communicator & comm,
+                                  Vec vec,
+                                  const std::vector<PetscInt> & rows,
+                                  const ViewType & values,
+                                  const char * label)
+{
+  if (!ex9_kokkos_validate_condense() || comm.size() != 1)
+    return;
+
+  Ex9KokkosTimer timer(label, false);
+  auto host_values = ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), values);
+
+  std::vector<std::pair<PetscInt, Real>> expected_by_row;
+  expected_by_row.reserve(rows.size());
+  for (std::size_t i = 0; i != rows.size(); ++i)
+    expected_by_row.emplace_back(rows[i], host_values(i));
+  std::sort(expected_by_row.begin(),
+            expected_by_row.end(),
+            [](const auto & a, const auto & b) { return a.first < b.first; });
+
+  std::vector<PetscInt> unique_rows;
+  std::vector<Real> expected_values;
+  for (const auto & [row, value] : expected_by_row)
+  {
+    if (unique_rows.empty() || unique_rows.back() != row)
+    {
+      unique_rows.push_back(row);
+      expected_values.push_back(value);
+    }
+    else
+      expected_values.back() += value;
+  }
+
+  std::vector<PetscScalar> actual_values(unique_rows.size());
+  LibmeshPetscCall2(
+      comm, VecGetValues(vec, cast_int<PetscInt>(unique_rows.size()), unique_rows.data(), actual_values.data()));
+
+  Real max_reference = Real(0);
+  Real max_error = Real(0);
+  std::size_t failure = 0;
+  for (std::size_t i = 0; i != unique_rows.size(); ++i)
+  {
+    const Real actual = static_cast<Real>(actual_values[i]);
+    const Real expected = expected_values[i];
+    const Real reference = std::max(std::abs(actual), std::abs(expected));
+    const Real error = std::abs(actual - expected);
+    if (reference > max_reference)
+      max_reference = reference;
+    if (error > max_error)
+    {
+      max_error = error;
+      failure = i;
+    }
+  }
+
+  const Real tolerance = Real(1.e-8) * (Real(1) + max_reference);
+  libmesh_error_msg_if(max_error > tolerance,
+                       "vector_fe_ex9 Kokkos " << label
+                                               << " mismatch: row=" << unique_rows[failure]
+                                               << " actual="
+                                               << static_cast<Real>(actual_values[failure])
+                                               << " expected=" << expected_values[failure]
+                                               << " max_error=" << max_error
+                                               << " tolerance=" << tolerance);
+}
+
+template <typename ViewType>
+void
 copy_vector_to_view(const std::vector<Real> & values, const ViewType & view)
 {
   auto host = ::Kokkos::create_mirror_view(view);
@@ -4118,6 +4186,16 @@ run_device_forward_elimination(DeviceBackSubstitutionPlan & plan,
   {
     Ex9KokkosTimer timer("VecSetValuesCOO forward elimination", false);
     ex9_vec_set_values_coo(reduced_rhs.comm(), petsc_reduced_rhs->vec(), coo_values, ADD_VALUES);
+  }
+  if (ex9_kokkos_validate_condense())
+  {
+    Ex9KokkosTimer timer("reduced RHS close before validation", false);
+    reduced_rhs.close();
+    validate_ex9_petsc_vec_coo_values(reduced_rhs.comm(),
+                                      petsc_reduced_rhs->vec(),
+                                      plan.forward_coo_rows,
+                                      coo_values,
+                                      "reduced RHS COO validation");
   }
 
   return true;
