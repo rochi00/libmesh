@@ -125,11 +125,9 @@ bool
 ex9_kokkos_host_coo_values()
 {
   static const bool enabled = []() {
-    const bool device_values_are_not_host_accessible =
-        !::Kokkos::SpaceAccessibility<::Kokkos::HostSpace,
-                                      typename ::Kokkos::DefaultExecutionSpace::memory_space>::accessible;
-    return libMesh::command_line_value("--ex9-kokkos-host-coo-values",
-                                       device_values_are_not_host_accessible ? 1 : 0) != 0;
+    // PETSc Kokkos COO assembly is fed by device-resident value buffers.  Keep the
+    // host copy path as an explicit debugging escape hatch only.
+    return libMesh::command_line_value("--ex9-kokkos-host-coo-values", 0) != 0;
   }();
 
   return enabled;
