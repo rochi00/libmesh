@@ -109,14 +109,6 @@ ex9_kokkos_timers_enabled()
   return enabled;
 }
 
-unsigned int
-ex9_kokkos_team_size()
-{
-  static const unsigned int team_size =
-      libMesh::command_line_value("--ex9-kokkos-team-size", 0u);
-  return team_size;
-}
-
 class Ex9KokkosTimer
 {
 public:
@@ -2435,71 +2427,13 @@ assemble_component_pair_into_full(const DeviceAssemblyData & u_data,
   DeviceInt1D v_residual_status = v_work.residual_status;
 
   {
-    Ex9KokkosTimer timer("direct full component kernel");
-    Kokkos::detail::assemble_hdg_linear_batch_boundary_pair<ExactTopo>(
-        u_data.vector_key,
-        u_data.scalar_key,
-        u_data.lm_key,
-        u_data.layout,
-        u_data.coords,
-        n_elem,
-        u_data.n_geom_nodes,
-        u_data.xi,
-        u_data.eta,
-        u_data.zeta,
-        u_data.jxw,
-        u_data.scalar_forcing,
-        v_data.scalar_forcing,
-        u_data.pressure_forcing,
-        u_data.n_qp,
-        u_data.parent_xi,
-        u_data.parent_eta,
-        u_data.parent_zeta,
-        u_data.side_jxw,
-        u_data.normal_x,
-        u_data.normal_y,
-        u_data.normal_z,
-        u_data.orientations,
-        u_data.side_types,
-        u_data.dirichlet_component,
-        v_data.dirichlet_component,
-        u_data.dirichlet_vdotn,
-        u_data.n_sides,
-        u_data.n_side_qp,
-        u_data.problem->nu,
-        Real(1),
-        true,
-        u_dofs.q_dofs,
-        u_dofs.u_dofs,
-        u_dofs.lm_dofs,
-        u_dofs.other_u_dofs,
-        u_dofs.other_lm_dofs,
-        v_dofs.q_dofs,
-        v_dofs.u_dofs,
-        u_dofs.p_dofs,
-        v_dofs.lm_dofs,
-        v_dofs.other_u_dofs,
-        v_dofs.other_lm_dofs,
-        u_blocks,
-        u_residual,
-        v_blocks,
-        v_residual,
-        full_blocks,
-        false,
-        full_layout.n_dofs,
-        full_layout.off_u,
-        full_layout.off_v,
-        full_layout.off_lm_u,
-        full_layout.off_lm_v,
-        u_condense_status,
-        u_residual_status,
-        v_condense_status,
-        v_residual_status,
-        "vector_fe_ex9_hdg_direct_full_pair_batch",
-        ex9_kokkos_team_size(),
-        false,
-        false,
-        false);
+    Ex9KokkosTimer timer("component block/status zero");
+    ::Kokkos::deep_copy(u_blocks, Real(0));
+    ::Kokkos::deep_copy(v_blocks, Real(0));
+    ::Kokkos::deep_copy(u_condense_status, 0);
+    ::Kokkos::deep_copy(u_residual_status, 0);
+    ::Kokkos::deep_copy(v_condense_status, 0);
+    ::Kokkos::deep_copy(v_residual_status, 0);
   }
 
   if (assemble_residual)
