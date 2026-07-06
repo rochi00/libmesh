@@ -470,11 +470,14 @@ struct ComponentDofViews
 struct ComponentBatchWork
 {
   ComponentBatchWork(const DeviceAssemblyData & data)
-    : condense_status("vector_fe_ex9_hdg_condense_status", data.n_elem),
+    : blocks("vector_fe_ex9_hdg_component_blocks", data.n_elem, data.layout.n_entries),
+      residual("vector_fe_ex9_hdg_component_residual", data.n_elem, data.residual_n_dofs),
+      condense_status("vector_fe_ex9_hdg_condense_status", data.n_elem),
       residual_status("vector_fe_ex9_hdg_residual_status", data.n_elem)
   {
   }
 
+  DeviceReal2D blocks, residual;
   DeviceInt1D condense_status, residual_status;
 };
 
@@ -976,140 +979,191 @@ gather_ex9_dofs_on_device(const Ex9DeviceAssemblyData & data,
       });
 }
 
-struct Ex9MappedComponentBlockView
+LIBMESH_DEVICE_INLINE unsigned int
+ex9_component_full_block_offset(const Ex9FullBlockLayout full,
+                                const HDGLinearBlockLayout component,
+                                const unsigned int full_q_offset,
+                                const unsigned int full_u_offset,
+                                const unsigned int full_lm_offset,
+                                const unsigned int idx)
 {
-  using execution_space = DeviceReal2D::execution_space;
-  using reference_type = DeviceReal2D::reference_type;
+  unsigned int row = 0;
+  unsigned int col = 0;
 
-  DeviceReal2D full_blocks;
-  Ex9FullBlockLayout full;
-  HDGLinearBlockLayout component;
-  unsigned int full_q_offset = 0;
-  unsigned int full_u_offset = 0;
-  unsigned int full_lm_offset = 0;
-
-  LIBMESH_DEVICE_INLINE reference_type operator()(const unsigned int e,
-                                                  const unsigned int idx) const
+  if (idx < component.off_Jqu)
   {
-    unsigned int row = 0;
-    unsigned int col = 0;
-
-    if (idx < component.off_Jqu)
-    {
-      const unsigned int local = idx - component.off_Jqq;
-      row = full_q_offset + local / component.vector_n_dofs;
-      col = full_q_offset + local % component.vector_n_dofs;
-    }
-    else if (idx < component.off_Juq)
-    {
-      const unsigned int local = idx - component.off_Jqu;
-      row = full_q_offset + local / component.scalar_n_dofs;
-      col = full_u_offset + local % component.scalar_n_dofs;
-    }
-    else if (idx < component.off_Jup)
-    {
-      const unsigned int local = idx - component.off_Juq;
-      row = full_u_offset + local / component.vector_n_dofs;
-      col = full_q_offset + local % component.vector_n_dofs;
-    }
-    else if (idx < component.off_Jpu)
-    {
-      const unsigned int local = idx - component.off_Jup;
-      row = full_u_offset + local / component.scalar_n_dofs;
-      col = full.off_p + local % component.scalar_n_dofs;
-    }
-    else if (idx < component.off_Jplm)
-    {
-      const unsigned int local = idx - component.off_Jpu;
-      row = full.off_p + local / component.scalar_n_dofs;
-      col = full_u_offset + local % component.scalar_n_dofs;
-    }
-    else if (idx < component.off_Jqlm)
-    {
-      const unsigned int local = idx - component.off_Jplm;
-      row = full.off_p + local / component.lm_n_dofs;
-      col = full_lm_offset + local % component.lm_n_dofs;
-    }
-    else if (idx < component.off_Jlmq)
-    {
-      const unsigned int local = idx - component.off_Jqlm;
-      row = full_q_offset + local / component.lm_n_dofs;
-      col = full_lm_offset + local % component.lm_n_dofs;
-    }
-    else if (idx < component.off_Jlmp)
-    {
-      const unsigned int local = idx - component.off_Jlmq;
-      row = full_lm_offset + local / component.vector_n_dofs;
-      col = full_q_offset + local % component.vector_n_dofs;
-    }
-    else if (idx < component.off_Jlms)
-    {
-      const unsigned int local = idx - component.off_Jlmp;
-      row = full_lm_offset + local / component.scalar_n_dofs;
-      col = full.off_p + local % component.scalar_n_dofs;
-    }
-    else if (idx < component.off_Jlmlm)
-    {
-      const unsigned int local = idx - component.off_Jlms;
-      row = full_lm_offset + local / component.scalar_n_dofs;
-      col = full_u_offset + local % component.scalar_n_dofs;
-    }
-    else if (idx < component.off_Juu)
-    {
-      const unsigned int local = idx - component.off_Jlmlm;
-      row = full_lm_offset + local / component.lm_n_dofs;
-      col = full_lm_offset + local % component.lm_n_dofs;
-    }
-    else if (idx < component.off_Julm)
-    {
-      const unsigned int local = idx - component.off_Juu;
-      row = full_u_offset + local / component.scalar_n_dofs;
-      col = full_u_offset + local % component.scalar_n_dofs;
-    }
-    else
-    {
-      const unsigned int local = idx - component.off_Julm;
-      row = full_u_offset + local / component.lm_n_dofs;
-      col = full_lm_offset + local % component.lm_n_dofs;
-    }
-
-    return full_blocks(e, row * full.n_dofs + col);
+    const unsigned int local = idx - component.off_Jqq;
+    row = full_q_offset + local / component.vector_n_dofs;
+    col = full_q_offset + local % component.vector_n_dofs;
   }
-};
+  else if (idx < component.off_Juq)
+  {
+    const unsigned int local = idx - component.off_Jqu;
+    row = full_q_offset + local / component.scalar_n_dofs;
+    col = full_u_offset + local % component.scalar_n_dofs;
+  }
+  else if (idx < component.off_Jup)
+  {
+    const unsigned int local = idx - component.off_Juq;
+    row = full_u_offset + local / component.vector_n_dofs;
+    col = full_q_offset + local % component.vector_n_dofs;
+  }
+  else if (idx < component.off_Jpu)
+  {
+    const unsigned int local = idx - component.off_Jup;
+    row = full_u_offset + local / component.scalar_n_dofs;
+    col = full.off_p + local % component.scalar_n_dofs;
+  }
+  else if (idx < component.off_Jplm)
+  {
+    const unsigned int local = idx - component.off_Jpu;
+    row = full.off_p + local / component.scalar_n_dofs;
+    col = full_u_offset + local % component.scalar_n_dofs;
+  }
+  else if (idx < component.off_Jqlm)
+  {
+    const unsigned int local = idx - component.off_Jplm;
+    row = full.off_p + local / component.lm_n_dofs;
+    col = full_lm_offset + local % component.lm_n_dofs;
+  }
+  else if (idx < component.off_Jlmq)
+  {
+    const unsigned int local = idx - component.off_Jqlm;
+    row = full_q_offset + local / component.lm_n_dofs;
+    col = full_lm_offset + local % component.lm_n_dofs;
+  }
+  else if (idx < component.off_Jlmp)
+  {
+    const unsigned int local = idx - component.off_Jlmq;
+    row = full_lm_offset + local / component.vector_n_dofs;
+    col = full_q_offset + local % component.vector_n_dofs;
+  }
+  else if (idx < component.off_Jlms)
+  {
+    const unsigned int local = idx - component.off_Jlmp;
+    row = full_lm_offset + local / component.scalar_n_dofs;
+    col = full.off_p + local % component.scalar_n_dofs;
+  }
+  else if (idx < component.off_Jlmlm)
+  {
+    const unsigned int local = idx - component.off_Jlms;
+    row = full_lm_offset + local / component.scalar_n_dofs;
+    col = full_u_offset + local % component.scalar_n_dofs;
+  }
+  else if (idx < component.off_Juu)
+  {
+    const unsigned int local = idx - component.off_Jlmlm;
+    row = full_lm_offset + local / component.lm_n_dofs;
+    col = full_lm_offset + local % component.lm_n_dofs;
+  }
+  else if (idx < component.off_Julm)
+  {
+    const unsigned int local = idx - component.off_Juu;
+    row = full_u_offset + local / component.scalar_n_dofs;
+    col = full_u_offset + local % component.scalar_n_dofs;
+  }
+  else
+  {
+    const unsigned int local = idx - component.off_Julm;
+    row = full_u_offset + local / component.lm_n_dofs;
+    col = full_lm_offset + local % component.lm_n_dofs;
+  }
 
-struct Ex9MappedComponentResidualView
+  return row * full.n_dofs + col;
+}
+
+LIBMESH_DEVICE_INLINE unsigned int
+ex9_component_full_residual_offset(const Ex9FullBlockLayout full,
+                                   const HDGLinearBlockLayout component,
+                                   const unsigned int full_q_offset,
+                                   const unsigned int full_u_offset,
+                                   const unsigned int full_lm_offset,
+                                   const unsigned int idx)
 {
-  using execution_space = DeviceReal2D::execution_space;
-  using reference_type = DeviceReal2D::reference_type;
+  const unsigned int cq = 0;
+  const unsigned int cu = cq + component.vector_n_dofs;
+  const unsigned int cp = cu + component.scalar_n_dofs;
+  const unsigned int clm = cp + component.scalar_n_dofs;
 
-  DeviceReal2D full_residual;
-  Ex9FullBlockLayout full;
-  HDGLinearBlockLayout component;
-  unsigned int full_q_offset = 0;
-  unsigned int full_u_offset = 0;
-  unsigned int full_lm_offset = 0;
+  if (idx < cu)
+    return full_q_offset + idx - cq;
+  if (idx < cp)
+    return full_u_offset + idx - cu;
+  if (idx < clm)
+    return full.off_p + idx - cp;
+  return full_lm_offset + idx - clm;
+}
 
-  LIBMESH_DEVICE_INLINE reference_type operator()(const unsigned int e,
-                                                  const unsigned int idx) const
-  {
-    const unsigned int cq = 0;
-    const unsigned int cu = cq + component.vector_n_dofs;
-    const unsigned int cp = cu + component.scalar_n_dofs;
-    const unsigned int clm = cp + component.scalar_n_dofs;
-    unsigned int full_idx = 0;
+void
+scatter_component_pair_into_full(const DeviceAssemblyData & u_data,
+                                 const DeviceAssemblyData & v_data,
+                                 const Ex9FullBlockLayout full_layout,
+                                 const DeviceReal2D & u_blocks,
+                                 const DeviceReal2D & u_residual,
+                                 const DeviceReal2D & v_blocks,
+                                 const DeviceReal2D & v_residual,
+                                 const DeviceReal2D & full_blocks,
+                                 const DeviceReal2D & full_residual,
+                                 const bool assemble_residual)
+{
+  const unsigned int n_elem = u_data.n_elem;
+  const auto component_layout = u_data.layout;
+  const unsigned int n_entries = component_layout.n_entries;
+  const unsigned int residual_n_dofs = u_data.residual_n_dofs;
 
-    if (idx < cu)
-      full_idx = full_q_offset + idx - cq;
-    else if (idx < cp)
-      full_idx = full_u_offset + idx - cu;
-    else if (idx < clm)
-      full_idx = full.off_p + idx - cp;
-    else
-      full_idx = full_lm_offset + idx - clm;
+  ::Kokkos::parallel_for(
+      "vector_fe_ex9_scatter_component_blocks_to_full",
+      ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * n_entries)),
+      KOKKOS_LAMBDA(const int raw_entry) {
+        const unsigned int entry = static_cast<unsigned int>(raw_entry);
+        const unsigned int e = entry / n_entries;
+        const unsigned int idx = entry - e * n_entries;
+        const unsigned int u_full_idx =
+            ex9_component_full_block_offset(full_layout,
+                                            component_layout,
+                                            full_layout.off_qu,
+                                            full_layout.off_u,
+                                            full_layout.off_lm_u,
+                                            idx);
+        const unsigned int v_full_idx =
+            ex9_component_full_block_offset(full_layout,
+                                            component_layout,
+                                            full_layout.off_qv,
+                                            full_layout.off_v,
+                                            full_layout.off_lm_v,
+                                            idx);
+        full_blocks(e, u_full_idx) += u_blocks(e, idx);
+        full_blocks(e, v_full_idx) += v_blocks(e, idx);
+      });
 
-    return full_residual(e, full_idx);
-  }
-};
+  if (!assemble_residual)
+    return;
+
+  ::Kokkos::parallel_for(
+      "vector_fe_ex9_scatter_component_residual_to_full",
+      ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * residual_n_dofs)),
+      KOKKOS_LAMBDA(const int raw_entry) {
+        const unsigned int entry = static_cast<unsigned int>(raw_entry);
+        const unsigned int e = entry / residual_n_dofs;
+        const unsigned int idx = entry - e * residual_n_dofs;
+        const unsigned int u_full_idx =
+            ex9_component_full_residual_offset(full_layout,
+                                               component_layout,
+                                               full_layout.off_qu,
+                                               full_layout.off_u,
+                                               full_layout.off_lm_u,
+                                               idx);
+        const unsigned int v_full_idx =
+            ex9_component_full_residual_offset(full_layout,
+                                               component_layout,
+                                               full_layout.off_qv,
+                                               full_layout.off_v,
+                                               full_layout.off_lm_v,
+                                               idx);
+        full_residual(e, u_full_idx) += u_residual(e, idx);
+        full_residual(e, v_full_idx) += v_residual(e, idx);
+      });
+}
 
 template <ElemType ExactTopo>
 bool
@@ -1129,14 +1183,10 @@ assemble_component_pair_into_full(const DeviceAssemblyData & u_data,
   libmesh_error_msg_if(v_data.n_elem != n_elem || v_data.layout.n_entries != u_data.layout.n_entries,
                        "vector_fe_ex9 direct Kokkos HDG assembly received inconsistent batches.");
 
-  Ex9MappedComponentBlockView u_blocks{
-      full_blocks, full_layout, u_data.layout, full_layout.off_qu, full_layout.off_u, full_layout.off_lm_u};
-  Ex9MappedComponentBlockView v_blocks{
-      full_blocks, full_layout, v_data.layout, full_layout.off_qv, full_layout.off_v, full_layout.off_lm_v};
-  Ex9MappedComponentResidualView u_residual{
-      full_residual, full_layout, u_data.layout, full_layout.off_qu, full_layout.off_u, full_layout.off_lm_u};
-  Ex9MappedComponentResidualView v_residual{
-      full_residual, full_layout, v_data.layout, full_layout.off_qv, full_layout.off_v, full_layout.off_lm_v};
+  DeviceReal2D u_blocks = u_work.blocks;
+  DeviceReal2D v_blocks = v_work.blocks;
+  DeviceReal2D u_residual = u_work.residual;
+  DeviceReal2D v_residual = v_work.residual;
   DeviceInt1D u_condense_status = u_work.condense_status;
   DeviceInt1D u_residual_status = u_work.residual_status;
   DeviceInt1D v_condense_status = v_work.condense_status;
@@ -1223,7 +1273,20 @@ assemble_component_pair_into_full(const DeviceAssemblyData & u_data,
   }
 
   if (!n_failures)
+  {
+    Ex9KokkosTimer timer("scatter component blocks to full");
+    scatter_component_pair_into_full(u_data,
+                                     v_data,
+                                     full_layout,
+                                     u_blocks,
+                                     u_residual,
+                                     v_blocks,
+                                     v_residual,
+                                     full_blocks,
+                                     full_residual,
+                                     assemble_residual);
     return true;
+  }
 
   auto h_u_condense_status = ::Kokkos::create_mirror_view(u_condense_status);
   auto h_u_residual_status = ::Kokkos::create_mirror_view(u_residual_status);
