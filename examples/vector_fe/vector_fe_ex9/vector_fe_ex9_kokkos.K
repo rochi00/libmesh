@@ -1526,7 +1526,7 @@ condense_ex9_full_on_device(const Ex9FullBlockLayout layout,
 
 void
 check_ex9_full_condense_status(const Ex9FullBatch & full,
-                               const HDGLinearBlockLayout component_layout,
+                               const DeviceAssemblyData & component_data,
                                const DeviceReal2D & full_blocks,
                                const DeviceReal2D & u_blocks,
                                const DeviceReal2D & v_blocks,
@@ -1568,14 +1568,69 @@ check_ex9_full_condense_status(const Ex9FullBatch & full,
 
   if (ex9_kokkos_timers_enabled())
   {
+    const HDGLinearBlockLayout component_layout = component_data.layout;
+    DeviceReal1D basis_diagnostics("vector_fe_ex9_basis_diagnostics", 8);
+    DeviceReal2D write_marker("vector_fe_ex9_write_marker", 1, component_layout.n_entries);
+    {
+      Ex9KokkosTimer timer("full condense independent Jqq diagnostics kernel");
+      const FEShapeKey vector_key = component_data.vector_key;
+      const DeviceReal1D xi = component_data.xi;
+      const DeviceReal1D eta = component_data.eta;
+      const DeviceReal1D zeta = component_data.zeta;
+      const DeviceReal1D jxw = component_data.jxw;
+      const unsigned int n_qp = component_data.n_qp;
+      ::Kokkos::parallel_for(
+          "vector_fe_ex9_independent_jqq_diagnostics",
+          ::Kokkos::RangePolicy<>(0, 1),
+          KOKKOS_LAMBDA(const int) {
+            Real jqq00 = Real(0);
+            Real q0_phi0_norm2 = Real(0);
+            Real q0_phi0_component0 = Real(0);
+            Real q0_phi0_component1 = Real(0);
+            Real q0_jxw = n_qp ? jxw(0) : Real(0);
+
+            for (unsigned int q = 0; q != n_qp; ++q)
+            {
+              const libMesh::Kokkos::RealVector phi0 =
+                  libMesh::Kokkos::vector_shape(vector_key, 0, xi(q), eta(q), zeta(q));
+              Real dot = Real(0);
+              for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+                dot += Kokkos::detail::component_or_zero(phi0, d) *
+                       Kokkos::detail::component_or_zero(phi0, d);
+              jqq00 += jxw(q) * dot;
+
+              if (q == 0)
+              {
+                q0_phi0_norm2 = dot;
+                q0_phi0_component0 = Kokkos::detail::component_or_zero(phi0, 0);
+                q0_phi0_component1 = Kokkos::detail::component_or_zero(phi0, 1);
+              }
+            }
+
+            basis_diagnostics(0) = jqq00;
+            basis_diagnostics(1) = q0_phi0_norm2;
+            basis_diagnostics(2) = q0_jxw;
+            basis_diagnostics(3) = q0_phi0_component0;
+            basis_diagnostics(4) = q0_phi0_component1;
+            basis_diagnostics(5) = static_cast<Real>(vector_component_count_or_zero(vector_key.elem_type));
+            basis_diagnostics(6) = static_cast<Real>(supports_vector_shape(vector_key) ? 1 : 0);
+            write_marker(0, 0) = Real(123.25);
+            basis_diagnostics(7) = write_marker(0, 0);
+          });
+    }
+
     auto h_full_blocks = ::Kokkos::create_mirror_view(full_blocks);
     auto h_u_blocks = ::Kokkos::create_mirror_view(u_blocks);
     auto h_v_blocks = ::Kokkos::create_mirror_view(v_blocks);
+    auto h_basis_diagnostics = ::Kokkos::create_mirror_view(basis_diagnostics);
+    auto h_write_marker = ::Kokkos::create_mirror_view(write_marker);
     {
       Ex9KokkosTimer timer("full condense block diagnostics copy");
       ::Kokkos::deep_copy(h_full_blocks, full_blocks);
       ::Kokkos::deep_copy(h_u_blocks, u_blocks);
       ::Kokkos::deep_copy(h_v_blocks, v_blocks);
+      ::Kokkos::deep_copy(h_basis_diagnostics, basis_diagnostics);
+      ::Kokkos::deep_copy(h_write_marker, write_marker);
     }
 
     for (std::size_t e = 0; e != full.elems.size(); ++e)
@@ -1633,6 +1688,15 @@ check_ex9_full_condense_status(const Ex9FullBatch & full,
                   << " off_Jqu=" << component_layout.off_Jqu
                   << " off_Juq=" << component_layout.off_Juq
                   << " off_Jup=" << component_layout.off_Jup << '\n';
+        std::cout << "[ex9 kokkos diagnostic] independent Jqq00="
+                  << h_basis_diagnostics(0) << " q0_phi0_norm2=" << h_basis_diagnostics(1)
+                  << " q0_jxw=" << h_basis_diagnostics(2)
+                  << " q0_phi0_component0=" << h_basis_diagnostics(3)
+                  << " q0_phi0_component1=" << h_basis_diagnostics(4)
+                  << " vector_components=" << h_basis_diagnostics(5)
+                  << " supports_vector_shape=" << h_basis_diagnostics(6)
+                  << " simple_marker=" << h_basis_diagnostics(7)
+                  << " copied_marker=" << h_write_marker(0, 0) << '\n';
 
         std::cout << "[ex9 kokkos diagnostic] full pivot row first " << n_full_cols
                   << " cols:";
@@ -1937,7 +2001,7 @@ make_ex9_full_batch(const Ex9DeviceAssemblyData & data,
   full.backsub_plan->internal_inverse = internal_inverse;
   full.backsub_plan->internal_external_solve = internal_external_solve;
   check_ex9_full_condense_status(full,
-                                 u_data.layout,
+                                 u_data,
                                  device_blocks,
                                  u_work.blocks,
                                  v_work.blocks,
