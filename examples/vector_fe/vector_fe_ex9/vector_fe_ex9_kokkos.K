@@ -208,14 +208,25 @@ make_ex9_full_block_layout(const unsigned int q_n_dofs,
   layout.off_p = layout.off_v + scalar_n_dofs;
   layout.off_lm_u = layout.off_p + scalar_n_dofs;
   layout.off_lm_v = layout.off_lm_u + lm_n_dofs;
-  layout.external_off_lm_u = layout.external_off_p + scalar_n_dofs;
+  layout.external_off_lm_u = 0;
   layout.external_off_lm_v = layout.external_off_lm_u + lm_n_dofs;
+  layout.external_off_p = layout.external_off_lm_v + lm_n_dofs;
   layout.internal_n_dofs = 2 * q_n_dofs + 2 * scalar_n_dofs;
   layout.external_n_dofs = scalar_n_dofs + 2 * lm_n_dofs;
   layout.n_dofs = layout.internal_n_dofs + layout.external_n_dofs;
   layout.n_entries = layout.n_dofs * layout.n_dofs;
   layout.condensed_n_entries = layout.external_n_dofs * layout.external_n_dofs;
   return layout;
+}
+
+LIBMESH_DEVICE_INLINE unsigned int
+ex9_external_full_offset(const Ex9FullBlockLayout layout, const unsigned int external_i)
+{
+  if (external_i < layout.external_off_lm_v)
+    return layout.off_lm_u + external_i - layout.external_off_lm_u;
+  if (external_i < layout.external_off_p)
+    return layout.off_lm_v + external_i - layout.external_off_lm_v;
+  return layout.off_p + external_i - layout.external_off_p;
 }
 
 struct DeviceBackSubstitutionPlan
@@ -309,7 +320,6 @@ fill_forward_elimination_coo_values(DeviceBackSubstitutionPlan & plan, const Rhs
   const unsigned int n_internal = layout.internal_n_dofs;
   const unsigned int n_external = layout.external_n_dofs;
   const unsigned int n_dofs = layout.n_dofs;
-  const unsigned int external_offset = layout.off_p;
   const std::size_t base_entries = n_base_entries;
 
   Ex9KokkosTimer timer("forward elimination values kernel");
@@ -334,7 +344,8 @@ fill_forward_elimination_coo_values(DeviceBackSubstitutionPlan & plan, const Rhs
           for (unsigned int k = 0; k != n_internal; ++k)
             solved_rhs +=
                 internal_inverse(elem, j * n_internal + k) * rhs_view(internal_ids(elem, k));
-          value -= full_blocks(elem, (external_offset + i) * n_dofs + j) * solved_rhs;
+          value -= full_blocks(elem, ex9_external_full_offset(layout, i) * n_dofs + j) *
+                   solved_rhs;
         }
 
         coo_values(entry) = value;
@@ -2641,7 +2652,7 @@ condense_ex9_full_on_device(const Ex9FullBlockLayout layout,
           }
           for (unsigned int j = 0; j != n_external; ++j)
             aug_blocks[i * max_cols + n_internal + j] =
-                blocks(e, i * layout.n_dofs + layout.off_p + j);
+                blocks(e, i * layout.n_dofs + ex9_external_full_offset(layout, j));
         }
 
         block_status(e) = 0;
@@ -2731,10 +2742,11 @@ condense_ex9_full_on_device(const Ex9FullBlockLayout layout,
         for (unsigned int i = 0; i != n_external; ++i)
           for (unsigned int j = 0; j != n_external; ++j)
           {
-            Real value = blocks(e, (layout.off_p + i) * layout.n_dofs + layout.off_p + j);
+            const unsigned int full_i = ex9_external_full_offset(layout, i);
+            const unsigned int full_j = ex9_external_full_offset(layout, j);
+            Real value = blocks(e, full_i * layout.n_dofs + full_j);
             for (unsigned int k = 0; k != n_internal; ++k)
-              value -= blocks(e, (layout.off_p + i) * layout.n_dofs + k) *
-                       block_solve[k * max_external + j];
+              value -= blocks(e, full_i * layout.n_dofs + k) * block_solve[k * max_external + j];
             condensed_blocks(e, i * n_external + j) = value;
           }
       });
@@ -2979,11 +2991,11 @@ make_ex9_backsubstitution_plan(const Ex9DeviceAssemblyData & data)
 
     external_indices[e].reserve(data.layout.external_n_dofs);
     external_indices[e].insert(
-        external_indices[e].end(), data.p_indices[e].begin(), data.p_indices[e].end());
-    external_indices[e].insert(
         external_indices[e].end(), data.lm_u_indices[e].begin(), data.lm_u_indices[e].end());
     external_indices[e].insert(
         external_indices[e].end(), data.lm_v_indices[e].begin(), data.lm_v_indices[e].end());
+    external_indices[e].insert(
+        external_indices[e].end(), data.p_indices[e].begin(), data.p_indices[e].end());
     libmesh_assert_equal_to(external_indices[e].size(), data.layout.external_n_dofs);
   }
 
@@ -3454,11 +3466,11 @@ ex9_external_indices(const Ex9FullBatch & batch, const std::size_t e)
   std::vector<dof_id_type> external_indices;
   external_indices.reserve(layout.external_n_dofs);
   external_indices.insert(
-      external_indices.end(), batch.p_indices[e].begin(), batch.p_indices[e].end());
-  external_indices.insert(
       external_indices.end(), batch.lm_u_indices[e].begin(), batch.lm_u_indices[e].end());
   external_indices.insert(
       external_indices.end(), batch.lm_v_indices[e].begin(), batch.lm_v_indices[e].end());
+  external_indices.insert(
+      external_indices.end(), batch.p_indices[e].begin(), batch.p_indices[e].end());
   libmesh_assert_equal_to(external_indices.size(), layout.external_n_dofs);
   return external_indices;
 }
@@ -3579,7 +3591,7 @@ run_device_backwards_substitution(DeviceBackSubstitutionPlan & plan,
   {
     Ex9KokkosTimer timer("VecSetValuesCOO back-substitution", false);
     LibmeshPetscCall2(full_sol.comm(),
-                      VecSetValuesCOO(petsc_sol->vec(), coo_values.data(), INSERT_VALUES));
+                      VecSetValuesCOO(petsc_sol->vec(), coo_values.data(), ADD_VALUES));
   }
   {
     Ex9KokkosTimer timer("full solution close after back-substitution", false);
