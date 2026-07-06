@@ -2529,144 +2529,147 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
             });
         team.team_barrier();
 
-        auto assemble_component_volume = [&](const unsigned int c)
-        {
-          const unsigned int velocity_component = c;
-          ::Kokkos::parallel_for(
-              ::Kokkos::TeamThreadRange(team, layout.off_Jplm),
-              [&](const int raw_idx)
+        ::Kokkos::parallel_for(
+            ::Kokkos::TeamThreadRange(team, 2 * layout.off_Jplm),
+            [&](const int raw_component_idx)
+            {
+              const unsigned int component_idx = static_cast<unsigned int>(raw_component_idx);
+              const unsigned int c = component_idx / layout.off_Jplm;
+              const unsigned int idx = component_idx - c * layout.off_Jplm;
+              const unsigned int velocity_component = c;
+              Real value = Real(0);
+
+              if (idx < layout.off_Jqu)
               {
-                const unsigned int idx = static_cast<unsigned int>(raw_idx);
+                const unsigned int local = idx - layout.off_Jqq;
+                const unsigned int i = local / layout.vector_n_dofs;
+                const unsigned int j = local % layout.vector_n_dofs;
+                for (unsigned int q = 0; q != n_qpoints; ++q)
+                {
+                  Real dot = Real(0);
+                  for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+                    dot += vector_phi_at(q, i, d) * vector_phi_at(q, j, d);
+                  value += jxw(q) * dot;
+                }
+              }
+              else if (idx < layout.off_Juq)
+              {
+                const unsigned int local = idx - layout.off_Jqu;
+                const unsigned int i = local / layout.scalar_n_dofs;
+                const unsigned int j = local % layout.scalar_n_dofs;
+                for (unsigned int q = 0; q != n_qpoints; ++q)
+                {
+                  const unsigned int scalar_i = i / 2;
+                  const unsigned int component = i - scalar_i * 2;
+                  value += jxw(q) * grad_phys_at(q, scalar_i, component) *
+                           scalar_phi_at(q, j);
+                }
+              }
+              else if (idx < layout.off_Jup)
+              {
+                const unsigned int local = idx - layout.off_Juq;
+                const unsigned int i = local / layout.vector_n_dofs;
+                const unsigned int j = local % layout.vector_n_dofs;
+                for (unsigned int q = 0; q != n_qpoints; ++q)
+                {
+                  Real dot = Real(0);
+                  for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+                    dot += grad_phys_at(q, i, d) * vector_phi_at(q, j, d);
+                  value += jxw(q) * nu * dot;
+                }
+              }
+              else
+              {
+                const unsigned int local =
+                    idx < layout.off_Jpu ? idx - layout.off_Jup : idx - layout.off_Jpu;
+                const unsigned int i = local / layout.scalar_n_dofs;
+                const unsigned int j = local % layout.scalar_n_dofs;
+                for (unsigned int q = 0; q != n_qpoints; ++q)
+                  value -= jxw(q) * grad_phys_at(q, i, velocity_component) *
+                           scalar_phi_at(q, j);
+              }
+
+              add_elem_block(c, idx, value);
+            });
+        team.team_barrier();
+
+        if (assemble_residual)
+        {
+          const unsigned int volume_residual_n_dofs =
+              layout.vector_n_dofs + 2 * layout.scalar_n_dofs;
+          ::Kokkos::parallel_for(
+              ::Kokkos::TeamThreadRange(team, 2 * volume_residual_n_dofs),
+              [&](const int raw_component_idx)
+              {
+                const unsigned int component_idx = static_cast<unsigned int>(raw_component_idx);
+                const unsigned int c = component_idx / volume_residual_n_dofs;
+                const unsigned int idx = component_idx - c * volume_residual_n_dofs;
+                const unsigned int velocity_component = c;
                 Real value = Real(0);
 
-                if (idx < layout.off_Jqu)
+                if (idx < u0)
                 {
-                  const unsigned int local = idx - layout.off_Jqq;
-                  const unsigned int i = local / layout.vector_n_dofs;
-                  const unsigned int j = local % layout.vector_n_dofs;
-                  for (unsigned int q = 0; q != n_qpoints; ++q)
-                  {
-                    Real dot = Real(0);
-                    for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
-                      dot += vector_phi_at(q, i, d) * vector_phi_at(q, j, d);
-                    value += jxw(q) * dot;
-                  }
-                }
-                else if (idx < layout.off_Juq)
-                {
-                  const unsigned int local = idx - layout.off_Jqu;
-                  const unsigned int i = local / layout.scalar_n_dofs;
-                  const unsigned int j = local % layout.scalar_n_dofs;
+                  const unsigned int i = idx;
                   for (unsigned int q = 0; q != n_qpoints; ++q)
                   {
                     const unsigned int scalar_i = i / 2;
                     const unsigned int component = i - scalar_i * 2;
-                    value += jxw(q) * grad_phys_at(q, scalar_i, component) *
-                             scalar_phi_at(q, j);
+                    Real phi_dot_q = Real(0);
+                    for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+                      phi_dot_q += vector_phi_at(q, i, d) * q_value_at(c, q, d);
+
+                    value += jxw(q) *
+                             (phi_dot_q + grad_phys_at(q, scalar_i, component) *
+                                              u_value_at(c, q));
                   }
                 }
-                else if (idx < layout.off_Jup)
+                else if (idx < p0)
                 {
-                  const unsigned int local = idx - layout.off_Juq;
-                  const unsigned int i = local / layout.vector_n_dofs;
-                  const unsigned int j = local % layout.vector_n_dofs;
+                  const unsigned int i = idx - u0;
                   for (unsigned int q = 0; q != n_qpoints; ++q)
                   {
-                    Real dot = Real(0);
+                    Real grad_dot_stress = Real(0);
                     for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
-                      dot += grad_phys_at(q, i, d) * vector_phi_at(q, j, d);
-                    value += jxw(q) * nu * dot;
+                    {
+                      Real stress_component = nu * q_value_at(c, q, d);
+                      if (d == velocity_component)
+                        stress_component -= p_value_at(q);
+                      grad_dot_stress += grad_phys_at(q, i, d) * stress_component;
+                    }
+                    const Real active_u = u_value_at(c, q);
+                    const Real other_u = other_u_value_at(c, q);
+                    const RealVector convective_flux =
+                        include_convection
+                            ? hdg_velocity_from_components(active_u, other_u, velocity_component) *
+                                  active_u
+                            : RealVector();
+                    Real grad_dot_convective_flux = Real(0);
+                    for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+                      grad_dot_convective_flux +=
+                          grad_phys_at(q, i, d) * component_or_zero(convective_flux, d);
+                    const Real forcing =
+                        c == 0 ? scalar_forcing_0(elem, q) : scalar_forcing_1(elem, q);
+
+                    value += jxw(q) * (grad_dot_stress - grad_dot_convective_flux -
+                                       scalar_phi_at(q, i) * forcing);
                   }
                 }
                 else
                 {
-                  const unsigned int local =
-                      idx < layout.off_Jpu ? idx - layout.off_Jup : idx - layout.off_Jpu;
-                  const unsigned int i = local / layout.scalar_n_dofs;
-                  const unsigned int j = local % layout.scalar_n_dofs;
+                  const unsigned int i = idx - p0;
                   for (unsigned int q = 0; q != n_qpoints; ++q)
+                  {
                     value -= jxw(q) * grad_phys_at(q, i, velocity_component) *
-                             scalar_phi_at(q, j);
+                             u_value_at(c, q);
+                    if (velocity_component == 0)
+                      value -= jxw(q) * scalar_phi_at(q, i) * pressure_forcing(elem, q);
+                  }
                 }
 
-                add_elem_block(c, idx, value);
+                add_elem_resid(c, idx, value);
               });
           team.team_barrier();
-
-          if (assemble_residual)
-            ::Kokkos::parallel_for(
-                ::Kokkos::TeamThreadRange(team, layout.vector_n_dofs + 2 * layout.scalar_n_dofs),
-                [&](const int raw_idx)
-                {
-                  const unsigned int idx = static_cast<unsigned int>(raw_idx);
-                  Real value = Real(0);
-
-                  if (idx < u0)
-                  {
-                    const unsigned int i = idx;
-                    for (unsigned int q = 0; q != n_qpoints; ++q)
-                    {
-                      const unsigned int scalar_i = i / 2;
-                      const unsigned int component = i - scalar_i * 2;
-                      Real phi_dot_q = Real(0);
-                      for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
-                        phi_dot_q += vector_phi_at(q, i, d) * q_value_at(c, q, d);
-
-                      value += jxw(q) *
-                               (phi_dot_q + grad_phys_at(q, scalar_i, component) *
-                                                u_value_at(c, q));
-                    }
-                  }
-                  else if (idx < p0)
-                  {
-                    const unsigned int i = idx - u0;
-                    for (unsigned int q = 0; q != n_qpoints; ++q)
-                    {
-                      Real grad_dot_stress = Real(0);
-                      for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
-                      {
-                        Real stress_component = nu * q_value_at(c, q, d);
-                        if (d == velocity_component)
-                          stress_component -= p_value_at(q);
-                        grad_dot_stress += grad_phys_at(q, i, d) * stress_component;
-                      }
-                      const Real active_u = u_value_at(c, q);
-                      const Real other_u = other_u_value_at(c, q);
-                      const RealVector convective_flux =
-                          include_convection
-                              ? hdg_velocity_from_components(active_u, other_u, velocity_component) *
-                                    active_u
-                              : RealVector();
-                      Real grad_dot_convective_flux = Real(0);
-                      for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
-                        grad_dot_convective_flux +=
-                            grad_phys_at(q, i, d) * component_or_zero(convective_flux, d);
-                      const Real forcing =
-                          c == 0 ? scalar_forcing_0(elem, q) : scalar_forcing_1(elem, q);
-
-                      value += jxw(q) * (grad_dot_stress - grad_dot_convective_flux -
-                                         scalar_phi_at(q, i) * forcing);
-                    }
-                  }
-                  else
-                  {
-                    const unsigned int i = idx - p0;
-                    for (unsigned int q = 0; q != n_qpoints; ++q)
-                    {
-                      value -= jxw(q) * grad_phys_at(q, i, velocity_component) *
-                               u_value_at(c, q);
-                      if (velocity_component == 0)
-                        value -= jxw(q) * scalar_phi_at(q, i) * pressure_forcing(elem, q);
-                    }
-                  }
-
-                  add_elem_resid(c, idx, value);
-                });
-          team.team_barrier();
-        };
-
-        assemble_component_volume(0);
-        assemble_component_volume(1);
+        }
 
         if (add_full_convective_jacobian && include_convection)
         {
@@ -2777,325 +2780,327 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
               });
           team.team_barrier();
 
-          auto assemble_component_side = [&](const unsigned int c)
-          {
-            const unsigned int velocity_component = c;
-            ::Kokkos::parallel_for(
-                ::Kokkos::TeamThreadRange(team, layout.n_entries - layout.off_Juq),
-                [&](const int raw_face_idx)
+          const unsigned int side_block_n_entries = layout.n_entries - layout.off_Juq;
+          ::Kokkos::parallel_for(
+              ::Kokkos::TeamThreadRange(team, 2 * side_block_n_entries),
+              [&](const int raw_component_idx)
+              {
+                const unsigned int component_idx = static_cast<unsigned int>(raw_component_idx);
+                const unsigned int c = component_idx / side_block_n_entries;
+                const unsigned int idx =
+                    component_idx - c * side_block_n_entries + layout.off_Juq;
+                const unsigned int velocity_component = c;
+                Real value = Real(0);
+
+                if (idx < layout.off_Jup)
                 {
-                  const unsigned int idx =
-                      static_cast<unsigned int>(raw_face_idx) + layout.off_Juq;
+                  if (is_outlet)
+                  {
+                    add_elem_block(c, idx, value);
+                    return;
+                  }
+                  const unsigned int local = idx - layout.off_Juq;
+                  const unsigned int i = local / layout.vector_n_dofs;
+                  const unsigned int j = local % layout.vector_n_dofs;
+                  for (unsigned int q = 0; q != n_side_qpoints; ++q)
+                  {
+                    Real vector_normal = Real(0);
+                    for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+                      vector_normal += face_vector_phi_at(q, j, d) * face_normal_at(q, d);
+                    value -= side_jxw(elem, side, q) * nu *
+                             face_scalar_phi_at(q, i) * vector_normal;
+                  }
+                }
+                else if (idx < layout.off_Jpu)
+                {
+                  if (is_outlet)
+                  {
+                    add_elem_block(c, idx, value);
+                    return;
+                  }
+                  const unsigned int local = idx - layout.off_Jup;
+                  const unsigned int i = local / layout.scalar_n_dofs;
+                  const unsigned int j = local % layout.scalar_n_dofs;
+                  for (unsigned int q = 0; q != n_side_qpoints; ++q)
+                    value += side_jxw(elem, side, q) * face_scalar_phi_at(q, i) *
+                             face_scalar_phi_at(q, j) *
+                             face_normal_at(q, velocity_component);
+                }
+                else if (idx < layout.off_Jplm)
+                {
+                }
+                else if (idx < layout.off_Jqlm)
+                {
+                  if (is_dirichlet)
+                  {
+                    add_elem_block(c, idx, value);
+                    return;
+                  }
+                  const unsigned int local = idx - layout.off_Jplm;
+                  const unsigned int i = local / layout.lm_n_dofs;
+                  const unsigned int j = local % layout.lm_n_dofs;
+                  for (unsigned int q = 0; q != n_side_qpoints; ++q)
+                    value += side_jxw(elem, side, q) * face_scalar_phi_at(q, i) *
+                             face_trace_phi_at(q, j) *
+                             face_normal_at(q, velocity_component);
+                }
+                else if (idx < layout.off_Jlmq)
+                {
+                  if (is_dirichlet)
+                  {
+                    add_elem_block(c, idx, value);
+                    return;
+                  }
+                  const unsigned int local = idx - layout.off_Jqlm;
+                  const unsigned int i = local / layout.lm_n_dofs;
+                  const unsigned int j = local % layout.lm_n_dofs;
+                  for (unsigned int q = 0; q != n_side_qpoints; ++q)
+                  {
+                    Real vector_normal = Real(0);
+                    for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+                      vector_normal += face_vector_phi_at(q, i, d) * face_normal_at(q, d);
+                    value -= side_jxw(elem, side, q) * vector_normal * face_trace_phi_at(q, j);
+                  }
+                }
+                else if (idx < layout.off_Jlmp)
+                {
+                  if (is_dirichlet)
+                  {
+                    add_elem_block(c, idx, value);
+                    return;
+                  }
+                  const unsigned int local = idx - layout.off_Jlmq;
+                  const unsigned int i = local / layout.vector_n_dofs;
+                  const unsigned int j = local % layout.vector_n_dofs;
+                  for (unsigned int q = 0; q != n_side_qpoints; ++q)
+                  {
+                    Real vector_normal = Real(0);
+                    for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+                      vector_normal += face_vector_phi_at(q, j, d) * face_normal_at(q, d);
+                    value -= side_jxw(elem, side, q) * nu *
+                             face_trace_phi_at(q, i) * vector_normal;
+                  }
+                }
+                else if (idx < layout.off_Jlms)
+                {
+                  if (is_dirichlet)
+                  {
+                    add_elem_block(c, idx, value);
+                    return;
+                  }
+                  const unsigned int local = idx - layout.off_Jlmp;
+                  const unsigned int i = local / layout.scalar_n_dofs;
+                  const unsigned int j = local % layout.scalar_n_dofs;
+                  for (unsigned int q = 0; q != n_side_qpoints; ++q)
+                    value += side_jxw(elem, side, q) * face_trace_phi_at(q, i) *
+                             face_scalar_phi_at(q, j) *
+                             face_normal_at(q, velocity_component);
+                }
+                else if (idx < layout.off_Jlmlm)
+                {
+                  if (is_dirichlet)
+                  {
+                    add_elem_block(c, idx, value);
+                    return;
+                  }
+                  const unsigned int local = idx - layout.off_Jlms;
+                  const unsigned int i = local / layout.scalar_n_dofs;
+                  const unsigned int j = local % layout.scalar_n_dofs;
+                  for (unsigned int q = 0; q != n_side_qpoints; ++q)
+                  {
+                    Real normal_norm2 = Real(0);
+                    for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+                      normal_norm2 += face_normal_at(q, d) * face_normal_at(q, d);
+                    value += side_jxw(elem, side, q) * face_trace_phi_at(q, i) * tau *
+                             face_scalar_phi_at(q, j) * normal_norm2;
+                  }
+                }
+                else if (idx < layout.off_Juu)
+                {
+                  const unsigned int local = idx - layout.off_Jlmlm;
+                  const unsigned int i = local / layout.lm_n_dofs;
+                  const unsigned int j = local % layout.lm_n_dofs;
+                  for (unsigned int q = 0; q != n_side_qpoints; ++q)
+                  {
+                    if (is_dirichlet)
+                    {
+                      value -= side_jxw(elem, side, q) * face_trace_phi_at(q, i) *
+                               face_trace_phi_at(q, j);
+                      continue;
+                    }
+                    Real normal_norm2 = Real(0);
+                    for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+                      normal_norm2 += face_normal_at(q, d) * face_normal_at(q, d);
+                    value -= side_jxw(elem, side, q) * face_trace_phi_at(q, i) * tau *
+                             face_trace_phi_at(q, j) * normal_norm2;
+                  }
+                }
+                else if (idx < layout.off_Julm)
+                {
+                  if (is_outlet)
+                  {
+                    add_elem_block(c, idx, value);
+                    return;
+                  }
+                  const unsigned int local = idx - layout.off_Juu;
+                  const unsigned int i = local / layout.scalar_n_dofs;
+                  const unsigned int j = local % layout.scalar_n_dofs;
+                  for (unsigned int q = 0; q != n_side_qpoints; ++q)
+                  {
+                    Real normal_norm2 = Real(0);
+                    for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+                      normal_norm2 += face_normal_at(q, d) * face_normal_at(q, d);
+                    value += side_jxw(elem, side, q) * face_scalar_phi_at(q, i) * tau *
+                             face_scalar_phi_at(q, j) * normal_norm2;
+                  }
+                }
+                else
+                {
+                  if (is_outlet || is_dirichlet)
+                  {
+                    add_elem_block(c, idx, value);
+                    return;
+                  }
+                  const unsigned int local = idx - layout.off_Julm;
+                  const unsigned int i = local / layout.lm_n_dofs;
+                  const unsigned int j = local % layout.lm_n_dofs;
+                  for (unsigned int q = 0; q != n_side_qpoints; ++q)
+                  {
+                    Real normal_norm2 = Real(0);
+                    for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+                      normal_norm2 += face_normal_at(q, d) * face_normal_at(q, d);
+                    value -= side_jxw(elem, side, q) * face_scalar_phi_at(q, i) * tau *
+                             face_trace_phi_at(q, j) * normal_norm2;
+                  }
+                }
+
+                add_elem_block(c, idx, value);
+              });
+          team.team_barrier();
+
+          if (assemble_residual)
+          {
+            ::Kokkos::parallel_for(
+                ::Kokkos::TeamThreadRange(team, 2 * residual_n_dofs),
+                [&](const int raw_component_idx)
+                {
+                  const unsigned int component_idx = static_cast<unsigned int>(raw_component_idx);
+                  const unsigned int c = component_idx / residual_n_dofs;
+                  const unsigned int idx = component_idx - c * residual_n_dofs;
+                  const unsigned int velocity_component = c;
                   Real value = Real(0);
 
-                  if (idx < layout.off_Jup)
+                  if (idx < u0)
                   {
-                    if (is_outlet)
-                    {
-                      add_elem_block(c, idx, value);
-                      return;
-                    }
-                    const unsigned int local = idx - layout.off_Juq;
-                    const unsigned int i = local / layout.vector_n_dofs;
-                    const unsigned int j = local % layout.vector_n_dofs;
+                    const unsigned int i = idx;
                     for (unsigned int q = 0; q != n_side_qpoints; ++q)
                     {
-                      Real vector_normal = Real(0);
-                      for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
-                        vector_normal += face_vector_phi_at(q, j, d) * face_normal_at(q, d);
-                      value -= side_jxw(elem, side, q) * nu *
-                               face_scalar_phi_at(q, i) * vector_normal;
-                    }
-                  }
-                  else if (idx < layout.off_Jpu)
-                  {
-                    if (is_outlet)
-                    {
-                      add_elem_block(c, idx, value);
-                      return;
-                    }
-                    const unsigned int local = idx - layout.off_Jup;
-                    const unsigned int i = local / layout.scalar_n_dofs;
-                    const unsigned int j = local % layout.scalar_n_dofs;
-                    for (unsigned int q = 0; q != n_side_qpoints; ++q)
-                      value += side_jxw(elem, side, q) * face_scalar_phi_at(q, i) *
-                               face_scalar_phi_at(q, j) *
-                               face_normal_at(q, velocity_component);
-                  }
-                  else if (idx < layout.off_Jplm)
-                  {
-                  }
-                  else if (idx < layout.off_Jqlm)
-                  {
-                    if (is_dirichlet)
-                    {
-                      add_elem_block(c, idx, value);
-                      return;
-                    }
-                    const unsigned int local = idx - layout.off_Jplm;
-                    const unsigned int i = local / layout.lm_n_dofs;
-                    const unsigned int j = local % layout.lm_n_dofs;
-                    for (unsigned int q = 0; q != n_side_qpoints; ++q)
-                      value += side_jxw(elem, side, q) * face_scalar_phi_at(q, i) *
-                               face_trace_phi_at(q, j) *
-                               face_normal_at(q, velocity_component);
-                  }
-                  else if (idx < layout.off_Jlmq)
-                  {
-                    if (is_dirichlet)
-                    {
-                      add_elem_block(c, idx, value);
-                      return;
-                    }
-                    const unsigned int local = idx - layout.off_Jqlm;
-                    const unsigned int i = local / layout.lm_n_dofs;
-                    const unsigned int j = local % layout.lm_n_dofs;
-                    for (unsigned int q = 0; q != n_side_qpoints; ++q)
-                    {
+                      const Real boundary_value =
+                          is_dirichlet
+                              ? (c == 0 ? dirichlet_component_0(elem, side, q)
+                                        : dirichlet_component_1(elem, side, q))
+                              : face_lm_value_at(c, q);
                       Real vector_normal = Real(0);
                       for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
                         vector_normal += face_vector_phi_at(q, i, d) * face_normal_at(q, d);
-                      value -= side_jxw(elem, side, q) * vector_normal * face_trace_phi_at(q, j);
+                      value -= side_jxw(elem, side, q) * vector_normal * boundary_value;
                     }
                   }
-                  else if (idx < layout.off_Jlmp)
+                  else if (idx < p0)
                   {
-                    if (is_dirichlet)
-                    {
-                      add_elem_block(c, idx, value);
-                      return;
-                    }
-                    const unsigned int local = idx - layout.off_Jlmq;
-                    const unsigned int i = local / layout.vector_n_dofs;
-                    const unsigned int j = local % layout.vector_n_dofs;
-                    for (unsigned int q = 0; q != n_side_qpoints; ++q)
-                    {
-                      Real vector_normal = Real(0);
-                      for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
-                        vector_normal += face_vector_phi_at(q, j, d) * face_normal_at(q, d);
-                      value -= side_jxw(elem, side, q) * nu *
-                               face_trace_phi_at(q, i) * vector_normal;
-                    }
-                  }
-                  else if (idx < layout.off_Jlms)
-                  {
-                    if (is_dirichlet)
-                    {
-                      add_elem_block(c, idx, value);
-                      return;
-                    }
-                    const unsigned int local = idx - layout.off_Jlmp;
-                    const unsigned int i = local / layout.scalar_n_dofs;
-                    const unsigned int j = local % layout.scalar_n_dofs;
-                    for (unsigned int q = 0; q != n_side_qpoints; ++q)
-                      value += side_jxw(elem, side, q) * face_trace_phi_at(q, i) *
-                               face_scalar_phi_at(q, j) *
-                               face_normal_at(q, velocity_component);
-                  }
-                  else if (idx < layout.off_Jlmlm)
-                  {
-                    if (is_dirichlet)
-                    {
-                      add_elem_block(c, idx, value);
-                      return;
-                    }
-                    const unsigned int local = idx - layout.off_Jlms;
-                    const unsigned int i = local / layout.scalar_n_dofs;
-                    const unsigned int j = local % layout.scalar_n_dofs;
+                    const unsigned int i = idx - u0;
                     for (unsigned int q = 0; q != n_side_qpoints; ++q)
                     {
                       Real normal_norm2 = Real(0);
+                      Real q_normal = Real(0);
                       for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
-                        normal_norm2 += face_normal_at(q, d) * face_normal_at(q, d);
-                      value += side_jxw(elem, side, q) * face_trace_phi_at(q, i) * tau *
-                               face_scalar_phi_at(q, j) * normal_norm2;
-                    }
-                  }
-                  else if (idx < layout.off_Juu)
-                  {
-                    const unsigned int local = idx - layout.off_Jlmlm;
-                    const unsigned int i = local / layout.lm_n_dofs;
-                    const unsigned int j = local % layout.lm_n_dofs;
-                    for (unsigned int q = 0; q != n_side_qpoints; ++q)
-                    {
-                      if (is_dirichlet)
                       {
-                        value -= side_jxw(elem, side, q) * face_trace_phi_at(q, i) *
-                                 face_trace_phi_at(q, j);
-                        continue;
-                      }
-                      Real normal_norm2 = Real(0);
-                      for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
                         normal_norm2 += face_normal_at(q, d) * face_normal_at(q, d);
-                      value -= side_jxw(elem, side, q) * face_trace_phi_at(q, i) * tau *
-                               face_trace_phi_at(q, j) * normal_norm2;
+                        q_normal += face_q_value_at(c, q, d) * face_normal_at(q, d);
+                      }
+                      const Real u_value = face_u_value_at(c, q);
+                      const Real p_value = face_p_value_at(q);
+                      const Real lm_value = face_lm_value_at(c, q);
+                      const Real other_lm_value = face_other_lm_value_at(c, q);
+                      const Real boundary_value =
+                          is_dirichlet
+                              ? (c == 0 ? dirichlet_component_0(elem, side, q)
+                                        : dirichlet_component_1(elem, side, q))
+                              : lm_value;
+                      const Real advective_vdotn =
+                          velocity_component == 0
+                              ? face_normal_at(q, 0) * lm_value +
+                                    face_normal_at(q, 1) * other_lm_value
+                              : face_normal_at(q, 0) * other_lm_value +
+                                    face_normal_at(q, 1) * lm_value;
+                      const Real advective_flux =
+                          !include_convection ? Real(0)
+                          : is_dirichlet      ? dirichlet_vdotn(elem, side, q) * boundary_value
+                                              : advective_vdotn * lm_value;
+                      const Real linear_flux =
+                          is_outlet ? Real(0)
+                                    : -nu * q_normal +
+                                          p_value * face_normal_at(q, velocity_component) +
+                                          tau * (u_value - boundary_value) * normal_norm2;
+                      value += side_jxw(elem, side, q) * face_scalar_phi_at(q, i) *
+                               (linear_flux + advective_flux);
                     }
                   }
-                  else if (idx < layout.off_Julm)
+                  else if (idx < lm0)
                   {
-                    if (is_outlet)
-                    {
-                      add_elem_block(c, idx, value);
-                      return;
-                    }
-                    const unsigned int local = idx - layout.off_Juu;
-                    const unsigned int i = local / layout.scalar_n_dofs;
-                    const unsigned int j = local % layout.scalar_n_dofs;
+                    const unsigned int i = idx - p0;
                     for (unsigned int q = 0; q != n_side_qpoints; ++q)
                     {
-                      Real normal_norm2 = Real(0);
-                      for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
-                        normal_norm2 += face_normal_at(q, d) * face_normal_at(q, d);
-                      value += side_jxw(elem, side, q) * face_scalar_phi_at(q, i) * tau *
-                               face_scalar_phi_at(q, j) * normal_norm2;
+                      const Real boundary_value =
+                          is_dirichlet
+                              ? (c == 0 ? dirichlet_component_0(elem, side, q)
+                                        : dirichlet_component_1(elem, side, q))
+                              : face_lm_value_at(c, q);
+                      value += side_jxw(elem, side, q) * face_scalar_phi_at(q, i) *
+                               boundary_value * face_normal_at(q, velocity_component);
                     }
                   }
                   else
                   {
-                    if (is_outlet || is_dirichlet)
-                    {
-                      add_elem_block(c, idx, value);
-                      return;
-                    }
-                    const unsigned int local = idx - layout.off_Julm;
-                    const unsigned int i = local / layout.lm_n_dofs;
-                    const unsigned int j = local % layout.lm_n_dofs;
+                    const unsigned int i = idx - lm0;
                     for (unsigned int q = 0; q != n_side_qpoints; ++q)
                     {
+                      const Real phi_i = face_trace_phi_at(q, i);
+                      if (is_dirichlet)
+                      {
+                        value -= side_jxw(elem, side, q) * phi_i * face_lm_value_at(c, q);
+                        continue;
+                      }
+
                       Real normal_norm2 = Real(0);
+                      Real q_normal = Real(0);
                       for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+                      {
                         normal_norm2 += face_normal_at(q, d) * face_normal_at(q, d);
-                      value -= side_jxw(elem, side, q) * face_scalar_phi_at(q, i) * tau *
-                               face_trace_phi_at(q, j) * normal_norm2;
+                        q_normal += face_q_value_at(c, q, d) * face_normal_at(q, d);
+                      }
+                      const Real lm_value = face_lm_value_at(c, q);
+                      const Real other_lm_value = face_other_lm_value_at(c, q);
+                      const Real advective_vdotn =
+                          velocity_component == 0
+                              ? face_normal_at(q, 0) * lm_value +
+                                    face_normal_at(q, 1) * other_lm_value
+                              : face_normal_at(q, 0) * other_lm_value +
+                                    face_normal_at(q, 1) * lm_value;
+                      const Real advective_flux =
+                          (!include_convection || is_outlet) ? Real(0) : advective_vdotn * lm_value;
+                      value += side_jxw(elem, side, q) * phi_i *
+                               (-nu * q_normal +
+                                face_p_value_at(q) * face_normal_at(q, velocity_component) +
+                                tau * (face_u_value_at(c, q) - lm_value) * normal_norm2 +
+                                advective_flux);
                     }
                   }
 
-                  add_elem_block(c, idx, value);
+                  add_elem_resid(c, idx, value);
                 });
             team.team_barrier();
-
-            if (assemble_residual)
-              ::Kokkos::parallel_for(
-                  ::Kokkos::TeamThreadRange(team, residual_n_dofs),
-                  [&](const int raw_idx)
-                  {
-                    const unsigned int idx = static_cast<unsigned int>(raw_idx);
-                    Real value = Real(0);
-
-                    if (idx < u0)
-                    {
-                      const unsigned int i = idx;
-                      for (unsigned int q = 0; q != n_side_qpoints; ++q)
-                      {
-                        const Real boundary_value =
-                            is_dirichlet
-                                ? (c == 0 ? dirichlet_component_0(elem, side, q)
-                                          : dirichlet_component_1(elem, side, q))
-                                : face_lm_value_at(c, q);
-                        Real vector_normal = Real(0);
-                        for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
-                          vector_normal += face_vector_phi_at(q, i, d) * face_normal_at(q, d);
-                        value -= side_jxw(elem, side, q) * vector_normal * boundary_value;
-                      }
-                    }
-                    else if (idx < p0)
-                    {
-                      const unsigned int i = idx - u0;
-                      for (unsigned int q = 0; q != n_side_qpoints; ++q)
-                      {
-                        Real normal_norm2 = Real(0);
-                        Real q_normal = Real(0);
-                        for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
-                        {
-                          normal_norm2 += face_normal_at(q, d) * face_normal_at(q, d);
-                          q_normal += face_q_value_at(c, q, d) * face_normal_at(q, d);
-                        }
-                        const Real u_value = face_u_value_at(c, q);
-                        const Real p_value = face_p_value_at(q);
-                        const Real lm_value = face_lm_value_at(c, q);
-                        const Real other_lm_value = face_other_lm_value_at(c, q);
-                        const Real boundary_value =
-                            is_dirichlet
-                                ? (c == 0 ? dirichlet_component_0(elem, side, q)
-                                          : dirichlet_component_1(elem, side, q))
-                                : lm_value;
-                        const Real advective_vdotn =
-                            velocity_component == 0
-                                ? face_normal_at(q, 0) * lm_value +
-                                      face_normal_at(q, 1) * other_lm_value
-                                : face_normal_at(q, 0) * other_lm_value +
-                                      face_normal_at(q, 1) * lm_value;
-                        const Real advective_flux =
-                            !include_convection ? Real(0)
-                            : is_dirichlet      ? dirichlet_vdotn(elem, side, q) * boundary_value
-                                                : advective_vdotn * lm_value;
-                        const Real linear_flux =
-                            is_outlet ? Real(0)
-                                      : -nu * q_normal +
-                                            p_value * face_normal_at(q, velocity_component) +
-                                            tau * (u_value - boundary_value) * normal_norm2;
-                        value += side_jxw(elem, side, q) * face_scalar_phi_at(q, i) *
-                                 (linear_flux + advective_flux);
-                      }
-                    }
-                    else if (idx < lm0)
-                    {
-                      const unsigned int i = idx - p0;
-                      for (unsigned int q = 0; q != n_side_qpoints; ++q)
-                      {
-                        const Real boundary_value =
-                            is_dirichlet
-                                ? (c == 0 ? dirichlet_component_0(elem, side, q)
-                                          : dirichlet_component_1(elem, side, q))
-                                : face_lm_value_at(c, q);
-                        value += side_jxw(elem, side, q) * face_scalar_phi_at(q, i) *
-                                 boundary_value * face_normal_at(q, velocity_component);
-                      }
-                    }
-                    else
-                    {
-                      const unsigned int i = idx - lm0;
-                      for (unsigned int q = 0; q != n_side_qpoints; ++q)
-                      {
-                        const Real phi_i = face_trace_phi_at(q, i);
-                        if (is_dirichlet)
-                        {
-                          value -= side_jxw(elem, side, q) * phi_i * face_lm_value_at(c, q);
-                          continue;
-                        }
-
-                        Real normal_norm2 = Real(0);
-                        Real q_normal = Real(0);
-                        for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
-                        {
-                          normal_norm2 += face_normal_at(q, d) * face_normal_at(q, d);
-                          q_normal += face_q_value_at(c, q, d) * face_normal_at(q, d);
-                        }
-                        const Real lm_value = face_lm_value_at(c, q);
-                        const Real other_lm_value = face_other_lm_value_at(c, q);
-                        const Real advective_vdotn =
-                            velocity_component == 0
-                                ? face_normal_at(q, 0) * lm_value +
-                                      face_normal_at(q, 1) * other_lm_value
-                                : face_normal_at(q, 0) * other_lm_value +
-                                      face_normal_at(q, 1) * lm_value;
-                        const Real advective_flux =
-                            (!include_convection || is_outlet) ? Real(0) : advective_vdotn * lm_value;
-                        value += side_jxw(elem, side, q) * phi_i *
-                                 (-nu * q_normal +
-                                  face_p_value_at(q) * face_normal_at(q, velocity_component) +
-                                  tau * (face_u_value_at(c, q) - lm_value) * normal_norm2 +
-                                  advective_flux);
-                      }
-                    }
-
-                    add_elem_resid(c, idx, value);
-                  });
-            team.team_barrier();
-          };
-
-          assemble_component_side(0);
-          assemble_component_side(1);
+          }
 
           if (add_full_convective_jacobian && include_convection && !is_dirichlet)
           {
