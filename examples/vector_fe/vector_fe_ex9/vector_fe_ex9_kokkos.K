@@ -45,6 +45,12 @@
 #include "libmesh/mesh_base_kokkos.h"
 
 #include <Kokkos_Core.hpp>
+#if __has_include(<KokkosBatched_Gesv.hpp>)
+#include <KokkosBatched_Gesv.hpp>
+#define LIBMESH_EX9_HAVE_KOKKOS_BATCHED_GESV 1
+#else
+#define LIBMESH_EX9_HAVE_KOKKOS_BATCHED_GESV 0
+#endif
 #endif
 
 #include <algorithm>
@@ -102,11 +108,47 @@ constexpr unsigned int ex9_kokkos_max_side_qp = 8;
 constexpr unsigned int ex9_kokkos_max_scalar_dofs = 8;
 constexpr unsigned int ex9_kokkos_max_lm_dofs = 12;
 
+enum Ex9CondenseSolver : int
+{
+  ex9_condense_solver_full_pivot = 0,
+  ex9_condense_solver_kokkos_batched_gesv = 1
+};
+
 bool
 ex9_kokkos_timers_enabled()
 {
   static const bool enabled = libMesh::on_command_line("--ex9-kokkos-timers");
   return enabled;
+}
+
+int
+ex9_kokkos_condense_solver()
+{
+  static const int solver = []() {
+    std::string value =
+        libMesh::command_line_value("--ex9-kokkos-condense-solver", std::string("full_pivot"));
+    if (libMesh::on_command_line("--ex9-kokkos-condense-solver"))
+      value = libMesh::command_line_next("--ex9-kokkos-condense-solver", value);
+
+    if (value == "full_pivot" || value == "full-pivot")
+      return static_cast<int>(ex9_condense_solver_full_pivot);
+
+    if (value == "kokkos_batched_gesv" || value == "kokkos-batched-gesv" ||
+        value == "kokkos_batched" || value == "kokkos-batched")
+    {
+#if LIBMESH_EX9_HAVE_KOKKOS_BATCHED_GESV
+      return static_cast<int>(ex9_condense_solver_kokkos_batched_gesv);
+#else
+      libmesh_error_msg("vector_fe_ex9 Kokkos requested --ex9-kokkos-condense-solver="
+                        << value << ", but KokkosBatched_Gesv.hpp is not available.");
+#endif
+    }
+
+    libmesh_error_msg("Unsupported vector_fe_ex9 Kokkos condensation solver '" << value << "'. "
+                      "Use full_pivot or kokkos_batched_gesv.");
+  }();
+
+  return solver;
 }
 
 class Ex9KokkosTimer
@@ -2597,6 +2639,7 @@ template <typename BlockStorage, typename CondensedStorage, typename StatusStora
 void
 condense_ex9_full_on_device(const Ex9FullBlockLayout layout,
                             const unsigned int n_elem,
+                            const int condense_solver,
                             const BlockStorage & blocks,
                             const CondensedStorage & condensed_blocks,
                             const CondensedStorage & internal_inverse,
@@ -2641,6 +2684,11 @@ condense_ex9_full_on_device(const Ex9FullBlockLayout layout,
         Real aug_blocks[max_internal * max_cols];
         Real aug_inverse[max_internal * max_internal];
         Real block_solve[max_internal * max_external];
+        Real work_solution[max_internal];
+        unsigned int col_perm[max_internal];
+
+        for (unsigned int i = 0; i != n_internal; ++i)
+          col_perm[i] = i;
 
         for (unsigned int i = 0; i != n_internal; ++i)
         {
@@ -2655,85 +2703,175 @@ condense_ex9_full_on_device(const Ex9FullBlockLayout layout,
                 blocks(e, i * layout.n_dofs + ex9_external_full_offset(layout, j));
         }
 
-        block_status(e) = 0;
-        for (unsigned int k = 0; k != n_internal; ++k)
+        bool solved_with_batched = false;
+#if LIBMESH_EX9_HAVE_KOKKOS_BATCHED_GESV
+        if (condense_solver == static_cast<int>(ex9_condense_solver_kokkos_batched_gesv))
         {
-          unsigned int pivot_row = k;
-          Real pivot_abs = Kokkos::detail::abs_real(aug_blocks[k * max_cols + k]);
-          for (unsigned int r = k + 1; r != n_internal; ++r)
+          using MatrixView =
+              ::Kokkos::View<Real **, ::Kokkos::LayoutRight, ::Kokkos::MemoryTraits<::Kokkos::Unmanaged>>;
+          using VectorView = ::Kokkos::View<Real *, ::Kokkos::MemoryTraits<::Kokkos::Unmanaged>>;
+          Real batched_matrix[max_internal * max_internal];
+          Real batched_tmp[max_internal * (max_internal + 4)];
+          Real batched_rhs[max_internal];
+          bool batched_failed = false;
+
+          block_status(e) = 0;
+          for (unsigned int rhs = 0; rhs != n_external; ++rhs)
           {
-            const Real candidate = Kokkos::detail::abs_real(aug_blocks[r * max_cols + k]);
-            if (candidate > pivot_abs)
+            for (unsigned int r = 0; r != n_internal; ++r)
             {
-              pivot_abs = candidate;
-              pivot_row = r;
+              batched_rhs[r] = aug_blocks[r * max_cols + n_internal + rhs];
+              for (unsigned int c = 0; c != n_internal; ++c)
+                batched_matrix[r * n_internal + c] = aug_blocks[r * max_cols + c];
+            }
+            MatrixView A(batched_matrix, n_internal, n_internal);
+            MatrixView tmp(batched_tmp, n_internal, n_internal + 4);
+            VectorView x(work_solution, n_internal);
+            VectorView y(batched_rhs, n_internal);
+            const int info =
+                KokkosBatched::SerialGesv<KokkosBatched::Gesv::StaticPivoting>::invoke(A, x, y, tmp);
+            if (info)
+            {
+              batched_failed = true;
+              break;
+            }
+            for (unsigned int r = 0; r != n_internal; ++r)
+              block_solve[r * max_external + rhs] = work_solution[r];
+          }
+
+          for (unsigned int rhs = 0; !batched_failed && rhs != n_internal; ++rhs)
+          {
+            for (unsigned int r = 0; r != n_internal; ++r)
+            {
+              batched_rhs[r] = r == rhs ? Real(1) : Real(0);
+              for (unsigned int c = 0; c != n_internal; ++c)
+                batched_matrix[r * n_internal + c] = aug_blocks[r * max_cols + c];
+            }
+            MatrixView A(batched_matrix, n_internal, n_internal);
+            MatrixView tmp(batched_tmp, n_internal, n_internal + 4);
+            VectorView x(work_solution, n_internal);
+            VectorView y(batched_rhs, n_internal);
+            const int info =
+                KokkosBatched::SerialGesv<KokkosBatched::Gesv::StaticPivoting>::invoke(A, x, y, tmp);
+            if (info)
+            {
+              batched_failed = true;
+              break;
+            }
+            for (unsigned int r = 0; r != n_internal; ++r)
+              internal_inverse(e, r * n_internal + rhs) = work_solution[r];
+          }
+
+          solved_with_batched = !batched_failed;
+        }
+#endif
+
+        if (!solved_with_batched)
+        {
+          block_status(e) = 0;
+          for (unsigned int k = 0; k != n_internal; ++k)
+          {
+            unsigned int pivot_row = k;
+            unsigned int pivot_col = k;
+            Real pivot_abs = Real(0);
+            for (unsigned int r = k; r != n_internal; ++r)
+              for (unsigned int c = k; c != n_internal; ++c)
+              {
+                const Real candidate = Kokkos::detail::abs_real(aug_blocks[r * max_cols + c]);
+                if (candidate > pivot_abs)
+                {
+                  pivot_abs = candidate;
+                  pivot_row = r;
+                  pivot_col = c;
+                }
+              }
+
+            if (pivot_abs <= Real(1.e-20))
+            {
+              block_status(e) = 1;
+              failure_pivot(e) = static_cast<int>(k);
+              failure_pivot_abs(e) = pivot_abs;
+              failure_initial_diag(e) = blocks(e, k * layout.n_dofs + k);
+              Real row_abs = Real(0);
+              for (unsigned int c = 0; c != n_internal; ++c)
+              {
+                const Real candidate = Kokkos::detail::abs_real(blocks(e, k * layout.n_dofs + c));
+                if (candidate > row_abs)
+                  row_abs = candidate;
+              }
+              failure_initial_row_abs(e) = row_abs;
+              return;
+            }
+
+            if (pivot_row != k)
+              for (unsigned int c = 0; c != n_internal + n_external; ++c)
+              {
+                const Real tmp = aug_blocks[k * max_cols + c];
+                aug_blocks[k * max_cols + c] = aug_blocks[pivot_row * max_cols + c];
+                aug_blocks[pivot_row * max_cols + c] = tmp;
+              }
+            if (pivot_row != k)
+              for (unsigned int c = 0; c != n_internal; ++c)
+              {
+                const Real tmp = aug_inverse[k * max_internal + c];
+                aug_inverse[k * max_internal + c] = aug_inverse[pivot_row * max_internal + c];
+                aug_inverse[pivot_row * max_internal + c] = tmp;
+              }
+
+            if (pivot_col != k)
+            {
+              for (unsigned int r = 0; r != n_internal; ++r)
+              {
+                const Real tmp = aug_blocks[r * max_cols + k];
+                aug_blocks[r * max_cols + k] = aug_blocks[r * max_cols + pivot_col];
+                aug_blocks[r * max_cols + pivot_col] = tmp;
+              }
+              const unsigned int tmp = col_perm[k];
+              col_perm[k] = col_perm[pivot_col];
+              col_perm[pivot_col] = tmp;
+            }
+
+            const Real pivot = aug_blocks[k * max_cols + k];
+            for (unsigned int r = k + 1; r != n_internal; ++r)
+            {
+              const Real factor = aug_blocks[r * max_cols + k] / pivot;
+              aug_blocks[r * max_cols + k] = Real(0);
+
+              for (unsigned int c = k + 1; c != n_internal + n_external; ++c)
+                aug_blocks[r * max_cols + c] -= factor * aug_blocks[k * max_cols + c];
+              for (unsigned int c = 0; c != n_internal; ++c)
+                aug_inverse[r * max_internal + c] -= factor * aug_inverse[k * max_internal + c];
             }
           }
 
-          if (pivot_abs <= Real(1.e-20))
+          for (unsigned int rhs = 0; rhs != n_external; ++rhs)
           {
-            block_status(e) = 1;
-            failure_pivot(e) = static_cast<int>(k);
-            failure_pivot_abs(e) = pivot_abs;
-            failure_initial_diag(e) = blocks(e, k * layout.n_dofs + k);
-            Real row_abs = Real(0);
-            for (unsigned int c = 0; c != n_internal; ++c)
+            for (unsigned int rr = n_internal; rr != 0; --rr)
             {
-              const Real candidate = Kokkos::detail::abs_real(blocks(e, k * layout.n_dofs + c));
-              if (candidate > row_abs)
-                row_abs = candidate;
+              const unsigned int r = rr - 1;
+              Real value = aug_blocks[r * max_cols + n_internal + rhs];
+              for (unsigned int c = r + 1; c != n_internal; ++c)
+                value -= aug_blocks[r * max_cols + c] * work_solution[c];
+              work_solution[r] = value / aug_blocks[r * max_cols + r];
             }
-            failure_initial_row_abs(e) = row_abs;
-            return;
+            for (unsigned int r = 0; r != n_internal; ++r)
+              block_solve[col_perm[r] * max_external + rhs] = work_solution[r];
           }
 
-          if (pivot_row != k)
-            for (unsigned int c = 0; c != n_internal + n_external; ++c)
-            {
-              const Real tmp = aug_blocks[k * max_cols + c];
-              aug_blocks[k * max_cols + c] = aug_blocks[pivot_row * max_cols + c];
-              aug_blocks[pivot_row * max_cols + c] = tmp;
-            }
-          if (pivot_row != k)
-            for (unsigned int c = 0; c != n_internal; ++c)
-            {
-              const Real tmp = aug_inverse[k * max_internal + c];
-              aug_inverse[k * max_internal + c] = aug_inverse[pivot_row * max_internal + c];
-              aug_inverse[pivot_row * max_internal + c] = tmp;
-            }
-
-          const Real pivot = aug_blocks[k * max_cols + k];
-          for (unsigned int r = k + 1; r != n_internal; ++r)
+          for (unsigned int rhs = 0; rhs != n_internal; ++rhs)
           {
-            const Real factor = aug_blocks[r * max_cols + k] / pivot;
-            aug_blocks[r * max_cols + k] = Real(0);
-
-            for (unsigned int c = k + 1; c != n_internal + n_external; ++c)
-              aug_blocks[r * max_cols + c] -= factor * aug_blocks[k * max_cols + c];
-            for (unsigned int c = 0; c != n_internal; ++c)
-              aug_inverse[r * max_internal + c] -= factor * aug_inverse[k * max_internal + c];
+            for (unsigned int rr = n_internal; rr != 0; --rr)
+            {
+              const unsigned int r = rr - 1;
+              Real value = aug_inverse[r * max_internal + rhs];
+              for (unsigned int c = r + 1; c != n_internal; ++c)
+                value -= aug_blocks[r * max_cols + c] * work_solution[c];
+              work_solution[r] = value / aug_blocks[r * max_cols + r];
+            }
+            for (unsigned int r = 0; r != n_internal; ++r)
+              internal_inverse(e, col_perm[r] * n_internal + rhs) = work_solution[r];
           }
         }
-
-        for (unsigned int rhs = 0; rhs != n_external; ++rhs)
-          for (unsigned int rr = n_internal; rr != 0; --rr)
-          {
-            const unsigned int r = rr - 1;
-            Real value = aug_blocks[r * max_cols + n_internal + rhs];
-            for (unsigned int c = r + 1; c != n_internal; ++c)
-              value -= aug_blocks[r * max_cols + c] * block_solve[c * max_external + rhs];
-            block_solve[r * max_external + rhs] = value / aug_blocks[r * max_cols + r];
-          }
-
-        for (unsigned int rhs = 0; rhs != n_internal; ++rhs)
-          for (unsigned int rr = n_internal; rr != 0; --rr)
-          {
-            const unsigned int r = rr - 1;
-            Real value = aug_inverse[r * max_internal + rhs];
-            for (unsigned int c = r + 1; c != n_internal; ++c)
-              value -= aug_blocks[r * max_cols + c] * internal_inverse(e, c * n_internal + rhs);
-            internal_inverse(e, r * n_internal + rhs) = value / aug_blocks[r * max_cols + r];
-          }
 
         for (unsigned int i = 0; i != n_internal; ++i)
           for (unsigned int j = 0; j != n_external; ++j)
@@ -3212,6 +3350,7 @@ make_ex9_full_batch(const Ex9DeviceAssemblyData & data,
     Ex9KokkosTimer timer("full static condensation kernel");
     condense_ex9_full_on_device(data.layout,
                                 data.n_elem,
+                                ex9_kokkos_condense_solver(),
                                 device_blocks,
                                 condensed_blocks,
                                 internal_inverse,
