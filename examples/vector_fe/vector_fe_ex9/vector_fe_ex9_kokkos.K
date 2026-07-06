@@ -581,6 +581,120 @@ validate_back_substitution_values_on_device(DeviceBackSubstitutionPlan & plan,
                     << " tolerance=" << tolerance);
 }
 
+template <typename SolView>
+void
+validate_condensed_solution_on_device(const Parallel::Communicator & comm,
+                                      DeviceBackSubstitutionPlan & plan,
+                                      const SolView & sol_view)
+{
+  if (!ex9_kokkos_validate_condense() || comm.size() != 1)
+    return;
+
+  const auto layout = plan.layout;
+  const std::size_t n_base_entries = plan.forward_base_n_entries;
+  const std::size_t n_entries = plan.n_elem * layout.external_n_dofs;
+  libmesh_assert_equal_to(plan.forward_coo_rows.size(), n_base_entries + n_entries);
+  libmesh_assert_equal_to(plan.forward_coo_values.extent(0), n_base_entries + n_entries);
+
+  DeviceReal1D condensed_lhs("vector_fe_ex9_condensed_solution_lhs", n_entries);
+  const auto full_blocks = plan.full_blocks;
+  const auto internal_external_solve = plan.internal_external_solve;
+  const auto external_ids = plan.external_vector_ids;
+  const unsigned int n_internal = layout.internal_n_dofs;
+  const unsigned int n_external = layout.external_n_dofs;
+  const unsigned int n_dofs = layout.n_dofs;
+
+  {
+    Ex9KokkosTimer timer("condensed solve consistency values kernel", false);
+    ::Kokkos::parallel_for(
+        "vector_fe_ex9_condensed_solution_lhs",
+        ::Kokkos::RangePolicy<>(0, cast_int<int>(n_entries)),
+        KOKKOS_LAMBDA(const int entry) {
+          const int elem = entry / static_cast<int>(n_external);
+          const int i = entry - elem * static_cast<int>(n_external);
+          const unsigned int full_i = ex9_external_full_offset(layout, i);
+
+          Real value = Real(0);
+          for (unsigned int j = 0; j != n_external; ++j)
+          {
+            const unsigned int full_j = ex9_external_full_offset(layout, j);
+            Real schur_ij = full_blocks(elem, full_i * n_dofs + full_j);
+            for (unsigned int k = 0; k != n_internal; ++k)
+              schur_ij -= full_blocks(elem, full_i * n_dofs + k) *
+                          internal_external_solve(elem, k * n_external + j);
+            value += schur_ij * sol_view(external_ids(elem, j));
+          }
+          condensed_lhs(entry) = value;
+        });
+  }
+
+  auto h_lhs = ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), condensed_lhs);
+  auto h_rhs =
+      ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), plan.forward_coo_values);
+
+  std::unordered_map<PetscInt, Real> expected_rhs;
+  std::unordered_map<PetscInt, Real> actual_lhs;
+  expected_rhs.reserve(plan.forward_coo_rows.size());
+  actual_lhs.reserve(n_entries);
+
+  for (std::size_t i = 0; i != plan.forward_coo_rows.size(); ++i)
+    expected_rhs[plan.forward_coo_rows[i]] += h_rhs(i);
+
+  for (std::size_t i = 0; i != n_entries; ++i)
+    actual_lhs[plan.forward_coo_rows[n_base_entries + i]] += h_lhs(i);
+
+  Real max_reference = Real(0);
+  Real max_error = Real(0);
+  PetscInt failure_row = 0;
+  Real failure_actual = Real(0);
+  Real failure_expected = Real(0);
+
+  for (const auto & [row, expected] : expected_rhs)
+  {
+    const auto actual_it = actual_lhs.find(row);
+    const Real actual = actual_it == actual_lhs.end() ? Real(0) : actual_it->second;
+    const Real reference = std::max(std::abs(actual), std::abs(expected));
+    const Real error = std::abs(actual - expected);
+    if (reference > max_reference)
+      max_reference = reference;
+    if (error > max_error)
+    {
+      max_error = error;
+      failure_row = row;
+      failure_actual = actual;
+      failure_expected = expected;
+    }
+  }
+
+  for (const auto & [row, actual] : actual_lhs)
+    if (!expected_rhs.count(row))
+    {
+      const Real error = std::abs(actual);
+      if (error > max_error)
+      {
+        max_error = error;
+        failure_row = row;
+        failure_actual = actual;
+        failure_expected = Real(0);
+      }
+      if (error > max_reference)
+        max_reference = error;
+    }
+
+  const Real relative_tolerance =
+      libMesh::command_line_value("--ex9-kokkos-condensed-solve-validation-rtol", Real(1.e-3));
+  const Real absolute_tolerance =
+      libMesh::command_line_value("--ex9-kokkos-condensed-solve-validation-atol", Real(1.e-8));
+  const Real tolerance = absolute_tolerance + relative_tolerance * (Real(1) + max_reference);
+  libmesh_error_msg_if(max_error > tolerance,
+                       "vector_fe_ex9 Kokkos condensed solve consistency mismatch: row="
+                           << failure_row << " actual_lhs=" << failure_actual
+                           << " expected_rhs=" << failure_expected
+                           << " max_error=" << max_error << " tolerance=" << tolerance
+                           << " relative_tolerance=" << relative_tolerance
+                           << " absolute_tolerance=" << absolute_tolerance);
+}
+
 template <typename RhsView>
 void
 fill_forward_elimination_coo_values(DeviceBackSubstitutionPlan & plan, const RhsView & rhs_view)
@@ -4038,6 +4152,7 @@ run_device_backwards_substitution(DeviceBackSubstitutionPlan & plan,
     PetscKokkosReadView sol_view;
     LibmeshPetscCall2(full_rhs.comm(), VecGetKokkosView(petsc_rhs->vec(), &rhs_view));
     LibmeshPetscCall2(full_sol.comm(), VecGetKokkosView(petsc_sol->vec(), &sol_view));
+    validate_condensed_solution_on_device(full_sol.comm(), plan, sol_view);
     fill_back_substitution_coo_values(plan, rhs_view, sol_view);
     LibmeshPetscCall2(full_rhs.comm(), VecRestoreKokkosView(petsc_rhs->vec(), &rhs_view));
     LibmeshPetscCall2(full_sol.comm(), VecRestoreKokkosView(petsc_sol->vec(), &sol_view));
