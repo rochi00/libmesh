@@ -2240,9 +2240,9 @@ assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
         }
 
         if (component == 0)
-          u_blocks(e, idx) += value;
+          ::Kokkos::atomic_add(&u_blocks(e, idx), value);
         else
-          v_blocks(e, idx) += value;
+          ::Kokkos::atomic_add(&v_blocks(e, idx), value);
       });
 }
 
@@ -2792,9 +2792,9 @@ assemble_component_pair_side_residual_range(const DeviceAssemblyData & u_data,
         }
 
         if (component == 0)
-          u_residual(e, idx) += value;
+          ::Kokkos::atomic_add(&u_residual(e, idx), value);
         else
-          v_residual(e, idx) += value;
+          ::Kokkos::atomic_add(&v_residual(e, idx), value);
       });
 }
 
