@@ -3645,7 +3645,7 @@ run_device_backwards_substitution(DeviceBackSubstitutionPlan & plan,
   {
     Ex9KokkosTimer timer("VecSetValuesCOO back-substitution", false);
     LibmeshPetscCall2(full_sol.comm(),
-                      VecSetValuesCOO(petsc_sol->vec(), coo_values.data(), ADD_VALUES));
+                      VecSetValuesCOO(petsc_sol->vec(), coo_values.data(), INSERT_VALUES));
   }
   {
     Ex9KokkosTimer timer("full solution close after back-substitution", false);
