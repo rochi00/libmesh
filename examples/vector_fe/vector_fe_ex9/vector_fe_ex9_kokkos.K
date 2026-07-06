@@ -1526,6 +1526,10 @@ condense_ex9_full_on_device(const Ex9FullBlockLayout layout,
 
 void
 check_ex9_full_condense_status(const Ex9FullBatch & full,
+                               const HDGLinearBlockLayout component_layout,
+                               const DeviceReal2D & full_blocks,
+                               const DeviceReal2D & u_blocks,
+                               const DeviceReal2D & v_blocks,
                                const DeviceInt1D & condense_status,
                                const DeviceInt1D & failure_pivot,
                                const DeviceReal1D & failure_pivot_abs,
@@ -1560,6 +1564,109 @@ check_ex9_full_condense_status(const Ex9FullBatch & full,
     ::Kokkos::deep_copy(h_failure_pivot_abs, failure_pivot_abs);
     ::Kokkos::deep_copy(h_failure_initial_diag, failure_initial_diag);
     ::Kokkos::deep_copy(h_failure_initial_row_abs, failure_initial_row_abs);
+  }
+
+  if (ex9_kokkos_timers_enabled())
+  {
+    auto h_full_blocks = ::Kokkos::create_mirror_view(full_blocks);
+    auto h_u_blocks = ::Kokkos::create_mirror_view(u_blocks);
+    auto h_v_blocks = ::Kokkos::create_mirror_view(v_blocks);
+    {
+      Ex9KokkosTimer timer("full condense block diagnostics copy");
+      ::Kokkos::deep_copy(h_full_blocks, full_blocks);
+      ::Kokkos::deep_copy(h_u_blocks, u_blocks);
+      ::Kokkos::deep_copy(h_v_blocks, v_blocks);
+    }
+
+    for (std::size_t e = 0; e != full.elems.size(); ++e)
+      if (h_condense_status(e))
+      {
+        const unsigned int row = static_cast<unsigned int>(h_failure_pivot(e) < 0 ?
+                                                               0 :
+                                                               h_failure_pivot(e));
+        const unsigned int n_full_cols = std::min(full.layout.n_dofs, 12u);
+        const unsigned int n_internal_cols = std::min(full.layout.internal_n_dofs, 12u);
+        const unsigned int n_component_q_cols = std::min(component_layout.vector_n_dofs, 12u);
+        const unsigned int component_q_row = std::min(row, component_layout.vector_n_dofs - 1);
+        Real full_row_abs = Real(0);
+        Real u_component_row_abs = Real(0);
+        Real v_component_row_abs = Real(0);
+        for (unsigned int c = 0; c != full.layout.internal_n_dofs; ++c)
+        {
+          const Real candidate =
+              Kokkos::detail::abs_real(h_full_blocks(e, row * full.layout.n_dofs + c));
+          if (candidate > full_row_abs)
+            full_row_abs = candidate;
+        }
+        for (unsigned int c = 0; c != component_layout.vector_n_dofs; ++c)
+        {
+          const Real u_candidate = Kokkos::detail::abs_real(
+              h_u_blocks(e,
+                         component_layout.off_Jqq +
+                             component_q_row * component_layout.vector_n_dofs + c));
+          const Real v_candidate = Kokkos::detail::abs_real(
+              h_v_blocks(e,
+                         component_layout.off_Jqq +
+                             component_q_row * component_layout.vector_n_dofs + c));
+          if (u_candidate > u_component_row_abs)
+            u_component_row_abs = u_candidate;
+          if (v_candidate > v_component_row_abs)
+            v_component_row_abs = v_candidate;
+        }
+
+        std::cout << "[ex9 kokkos diagnostic] condense failure elem=" << full.elems[e]->id()
+                  << " local_elem=" << e << " pivot_row=" << row
+                  << " full_row_abs=" << full_row_abs
+                  << " u_component_jqq_row_abs=" << u_component_row_abs
+                  << " v_component_jqq_row_abs=" << v_component_row_abs << '\n';
+        std::cout << "[ex9 kokkos diagnostic] full layout n_dofs=" << full.layout.n_dofs
+                  << " internal=" << full.layout.internal_n_dofs
+                  << " external=" << full.layout.external_n_dofs
+                  << " off_qu=" << full.layout.off_qu << " off_qv=" << full.layout.off_qv
+                  << " off_u=" << full.layout.off_u << " off_v=" << full.layout.off_v
+                  << " off_p=" << full.layout.off_p << " off_lm_u=" << full.layout.off_lm_u
+                  << " off_lm_v=" << full.layout.off_lm_v << '\n';
+        std::cout << "[ex9 kokkos diagnostic] component layout vector="
+                  << component_layout.vector_n_dofs << " scalar=" << component_layout.scalar_n_dofs
+                  << " lm=" << component_layout.lm_n_dofs
+                  << " off_Jqq=" << component_layout.off_Jqq
+                  << " off_Jqu=" << component_layout.off_Jqu
+                  << " off_Juq=" << component_layout.off_Juq
+                  << " off_Jup=" << component_layout.off_Jup << '\n';
+
+        std::cout << "[ex9 kokkos diagnostic] full pivot row first " << n_full_cols
+                  << " cols:";
+        for (unsigned int c = 0; c != n_full_cols; ++c)
+          std::cout << ' ' << h_full_blocks(e, row * full.layout.n_dofs + c);
+        std::cout << '\n';
+
+        std::cout << "[ex9 kokkos diagnostic] full row 0 internal first " << n_internal_cols
+                  << " cols:";
+        for (unsigned int c = 0; c != n_internal_cols; ++c)
+          std::cout << ' ' << h_full_blocks(e, c);
+        std::cout << '\n';
+
+        std::cout << "[ex9 kokkos diagnostic] u component Jqq row " << component_q_row
+                  << " first " << n_component_q_cols << " cols:";
+        for (unsigned int c = 0; c != n_component_q_cols; ++c)
+          std::cout << ' '
+                    << h_u_blocks(
+                           e,
+                           component_layout.off_Jqq +
+                               component_q_row * component_layout.vector_n_dofs + c);
+        std::cout << '\n';
+
+        std::cout << "[ex9 kokkos diagnostic] v component Jqq row " << component_q_row
+                  << " first " << n_component_q_cols << " cols:";
+        for (unsigned int c = 0; c != n_component_q_cols; ++c)
+          std::cout << ' '
+                    << h_v_blocks(
+                           e,
+                           component_layout.off_Jqq +
+                               component_q_row * component_layout.vector_n_dofs + c);
+        std::cout << '\n';
+        break;
+      }
   }
 
   for (std::size_t e = 0; e != full.elems.size(); ++e)
@@ -1830,6 +1937,10 @@ make_ex9_full_batch(const Ex9DeviceAssemblyData & data,
   full.backsub_plan->internal_inverse = internal_inverse;
   full.backsub_plan->internal_external_solve = internal_external_solve;
   check_ex9_full_condense_status(full,
+                                 u_data.layout,
+                                 device_blocks,
+                                 u_work.blocks,
+                                 v_work.blocks,
                                  condense_status,
                                  failure_pivot,
                                  failure_pivot_abs,
