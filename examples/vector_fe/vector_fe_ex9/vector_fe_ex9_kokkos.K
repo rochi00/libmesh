@@ -3538,6 +3538,11 @@ run_device_backwards_substitution(DeviceBackSubstitutionPlan & plan,
 
   DeviceReal1D coo_values = plan.coo_values;
 
+  {
+    Ex9KokkosTimer timer("full solution close before back-substitution", false);
+    full_sol.close();
+  }
+
   if (full_sol.comm().size() == 1)
   {
     using PetscKokkosReadView =
