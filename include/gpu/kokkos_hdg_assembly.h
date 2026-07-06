@@ -2301,7 +2301,8 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                                         const char * const kernel_name,
                                         const unsigned int requested_team_size = 0,
                                         const bool assemble_residual = true,
-                                        const bool assemble_volume_blocks = true)
+                                        const bool assemble_volume_blocks = true,
+                                        const bool assemble_side_blocks = true)
 {
   using ExecutionSpace = typename BlockStorage::execution_space;
   using TeamPolicy = ::Kokkos::TeamPolicy<ExecutionSpace>;
@@ -2772,8 +2773,10 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
               });
           team.team_barrier();
 
-          const unsigned int side_block_n_entries = layout.n_entries - layout.off_Juq;
-          ::Kokkos::parallel_for(
+          if (assemble_side_blocks)
+          {
+            const unsigned int side_block_n_entries = layout.n_entries - layout.off_Juq;
+            ::Kokkos::parallel_for(
               ::Kokkos::TeamThreadRange(team, 2 * side_block_n_entries),
               [&](const int raw_component_idx)
               {
@@ -2998,7 +3001,8 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                 else
                   blocks_1(elem, idx) += value;
               });
-          team.team_barrier();
+            team.team_barrier();
+          }
 
           if (assemble_residual)
           {

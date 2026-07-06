@@ -1296,6 +1296,341 @@ assemble_component_pair_volume_blocks_range(const DeviceAssemblyData & data,
       });
 }
 
+void
+assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
+                                          const DeviceReal2D & u_blocks,
+                                          const DeviceReal2D & v_blocks)
+{
+  const unsigned int n_elem = data.n_elem;
+  const HDGLinearBlockLayout layout = data.layout;
+  const unsigned int n_entries = layout.n_entries - layout.off_Juq;
+  const FEShapeKey vector_key = data.vector_key;
+  const FEShapeKey scalar_key = data.scalar_key;
+  const FEShapeKey lm_key = data.lm_key;
+  const DeviceReal3D parent_xi = data.parent_xi;
+  const DeviceReal3D parent_eta = data.parent_eta;
+  const DeviceReal3D parent_zeta = data.parent_zeta;
+  const DeviceReal3D side_jxw = data.side_jxw;
+  const DeviceReal3D normal_x = data.normal_x;
+  const DeviceReal3D normal_y = data.normal_y;
+  const DeviceReal3D normal_z = data.normal_z;
+  const DeviceUChar2D orientations = data.orientations;
+  const DeviceInt2D side_types = data.side_types;
+  const unsigned int n_sides = data.n_sides;
+  const unsigned int n_side_qp = data.n_side_qp;
+  const Real nu = data.problem->nu;
+  const Real tau = Real(1);
+
+  ::Kokkos::parallel_for(
+      "vector_fe_ex9_split_component_side_blocks",
+      ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * n_sides * 2 * n_entries)),
+      KOKKOS_LAMBDA(const int raw_entry) {
+        const unsigned int entry = static_cast<unsigned int>(raw_entry);
+        const unsigned int entries_per_elem = n_sides * 2 * n_entries;
+        const unsigned int e = entry / entries_per_elem;
+        const unsigned int elem_entry = entry - e * entries_per_elem;
+        const unsigned int side = elem_entry / (2 * n_entries);
+        const unsigned int side_entry = elem_entry - side * 2 * n_entries;
+        const unsigned int component = side_entry / n_entries;
+        const unsigned int idx = side_entry - component * n_entries + layout.off_Juq;
+        const unsigned int velocity_component = component;
+        const bool positive_edge_orientation = static_cast<bool>(orientations(e, side));
+        const int side_type = side_types(e, side);
+        const bool is_outlet = side_type == Kokkos::detail::hdg_linear_side_outlet;
+        const bool is_dirichlet = side_type == Kokkos::detail::hdg_linear_side_dirichlet;
+        Real value = Real(0);
+
+        if (idx < layout.off_Jup)
+        {
+          if (!is_outlet)
+          {
+            const unsigned int local = idx - layout.off_Juq;
+            const unsigned int i = local / layout.vector_n_dofs;
+            const unsigned int j = local % layout.vector_n_dofs;
+            for (unsigned int q = 0; q != n_side_qp; ++q)
+            {
+              const Real px = parent_xi(e, side, q);
+              const Real py = parent_eta(e, side, q);
+              const Real pz = parent_zeta(e, side, q);
+              const libMesh::Kokkos::RealVector phi_j =
+                  libMesh::Kokkos::vector_shape(vector_key, j, px, py, pz);
+              Real vector_normal = Kokkos::detail::component_or_zero(phi_j, 0) *
+                                   normal_x(e, side, q);
+#if LIBMESH_DIM > 1
+              vector_normal += Kokkos::detail::component_or_zero(phi_j, 1) *
+                               normal_y(e, side, q);
+#endif
+#if LIBMESH_DIM > 2
+              vector_normal += Kokkos::detail::component_or_zero(phi_j, 2) *
+                               normal_z(e, side, q);
+#endif
+              value -= side_jxw(e, side, q) * nu *
+                       libMesh::Kokkos::shape(scalar_key, i, px, py, pz) * vector_normal;
+            }
+          }
+        }
+        else if (idx < layout.off_Jpu)
+        {
+          if (!is_outlet)
+          {
+            const unsigned int local = idx - layout.off_Jup;
+            const unsigned int i = local / layout.scalar_n_dofs;
+            const unsigned int j = local % layout.scalar_n_dofs;
+            for (unsigned int q = 0; q != n_side_qp; ++q)
+            {
+              const Real px = parent_xi(e, side, q);
+              const Real py = parent_eta(e, side, q);
+              const Real pz = parent_zeta(e, side, q);
+              const Real normal_component =
+                  velocity_component == 0 ? normal_x(e, side, q)
+#if LIBMESH_DIM > 1
+                                          : normal_y(e, side, q)
+#else
+                                          : Real(0)
+#endif
+                  ;
+              value += side_jxw(e, side, q) *
+                       libMesh::Kokkos::shape(scalar_key, i, px, py, pz) *
+                       libMesh::Kokkos::shape(scalar_key, j, px, py, pz) * normal_component;
+            }
+          }
+        }
+        else if (idx < layout.off_Jplm)
+        {
+        }
+        else if (idx < layout.off_Jqlm)
+        {
+          if (!is_dirichlet)
+          {
+            const unsigned int local = idx - layout.off_Jplm;
+            const unsigned int i = local / layout.lm_n_dofs;
+            const unsigned int j = local % layout.lm_n_dofs;
+            for (unsigned int q = 0; q != n_side_qp; ++q)
+            {
+              const Real px = parent_xi(e, side, q);
+              const Real py = parent_eta(e, side, q);
+              const Real pz = parent_zeta(e, side, q);
+              const Real normal_component =
+                  velocity_component == 0 ? normal_x(e, side, q)
+#if LIBMESH_DIM > 1
+                                          : normal_y(e, side, q)
+#else
+                                          : Real(0)
+#endif
+                  ;
+              value += side_jxw(e, side, q) *
+                       libMesh::Kokkos::shape(scalar_key, i, px, py, pz) *
+                       libMesh::Kokkos::side_trace_shape(
+                           lm_key, j, side, positive_edge_orientation, px, py, pz) *
+                       normal_component;
+            }
+          }
+        }
+        else if (idx < layout.off_Jlmq)
+        {
+          if (!is_dirichlet)
+          {
+            const unsigned int local = idx - layout.off_Jqlm;
+            const unsigned int i = local / layout.lm_n_dofs;
+            const unsigned int j = local % layout.lm_n_dofs;
+            for (unsigned int q = 0; q != n_side_qp; ++q)
+            {
+              const Real px = parent_xi(e, side, q);
+              const Real py = parent_eta(e, side, q);
+              const Real pz = parent_zeta(e, side, q);
+              const libMesh::Kokkos::RealVector phi_i =
+                  libMesh::Kokkos::vector_shape(vector_key, i, px, py, pz);
+              Real vector_normal = Kokkos::detail::component_or_zero(phi_i, 0) *
+                                   normal_x(e, side, q);
+#if LIBMESH_DIM > 1
+              vector_normal += Kokkos::detail::component_or_zero(phi_i, 1) *
+                               normal_y(e, side, q);
+#endif
+#if LIBMESH_DIM > 2
+              vector_normal += Kokkos::detail::component_or_zero(phi_i, 2) *
+                               normal_z(e, side, q);
+#endif
+              value -= side_jxw(e, side, q) * vector_normal *
+                       libMesh::Kokkos::side_trace_shape(
+                           lm_key, j, side, positive_edge_orientation, px, py, pz);
+            }
+          }
+        }
+        else if (idx < layout.off_Jlmp)
+        {
+          if (!is_dirichlet)
+          {
+            const unsigned int local = idx - layout.off_Jlmq;
+            const unsigned int i = local / layout.vector_n_dofs;
+            const unsigned int j = local % layout.vector_n_dofs;
+            for (unsigned int q = 0; q != n_side_qp; ++q)
+            {
+              const Real px = parent_xi(e, side, q);
+              const Real py = parent_eta(e, side, q);
+              const Real pz = parent_zeta(e, side, q);
+              const libMesh::Kokkos::RealVector phi_j =
+                  libMesh::Kokkos::vector_shape(vector_key, j, px, py, pz);
+              Real vector_normal = Kokkos::detail::component_or_zero(phi_j, 0) *
+                                   normal_x(e, side, q);
+#if LIBMESH_DIM > 1
+              vector_normal += Kokkos::detail::component_or_zero(phi_j, 1) *
+                               normal_y(e, side, q);
+#endif
+#if LIBMESH_DIM > 2
+              vector_normal += Kokkos::detail::component_or_zero(phi_j, 2) *
+                               normal_z(e, side, q);
+#endif
+              value -= side_jxw(e, side, q) * nu *
+                       libMesh::Kokkos::side_trace_shape(
+                           lm_key, i, side, positive_edge_orientation, px, py, pz) *
+                       vector_normal;
+            }
+          }
+        }
+        else if (idx < layout.off_Jlms)
+        {
+          if (!is_dirichlet)
+          {
+            const unsigned int local = idx - layout.off_Jlmp;
+            const unsigned int i = local / layout.scalar_n_dofs;
+            const unsigned int j = local % layout.scalar_n_dofs;
+            for (unsigned int q = 0; q != n_side_qp; ++q)
+            {
+              const Real px = parent_xi(e, side, q);
+              const Real py = parent_eta(e, side, q);
+              const Real pz = parent_zeta(e, side, q);
+              const Real normal_component =
+                  velocity_component == 0 ? normal_x(e, side, q)
+#if LIBMESH_DIM > 1
+                                          : normal_y(e, side, q)
+#else
+                                          : Real(0)
+#endif
+                  ;
+              value += side_jxw(e, side, q) *
+                       libMesh::Kokkos::side_trace_shape(
+                           lm_key, i, side, positive_edge_orientation, px, py, pz) *
+                       libMesh::Kokkos::shape(scalar_key, j, px, py, pz) * normal_component;
+            }
+          }
+        }
+        else if (idx < layout.off_Jlmlm)
+        {
+          if (!is_dirichlet)
+          {
+            const unsigned int local = idx - layout.off_Jlms;
+            const unsigned int i = local / layout.scalar_n_dofs;
+            const unsigned int j = local % layout.scalar_n_dofs;
+            for (unsigned int q = 0; q != n_side_qp; ++q)
+            {
+              const Real px = parent_xi(e, side, q);
+              const Real py = parent_eta(e, side, q);
+              const Real pz = parent_zeta(e, side, q);
+              Real normal_norm2 = normal_x(e, side, q) * normal_x(e, side, q);
+#if LIBMESH_DIM > 1
+              normal_norm2 += normal_y(e, side, q) * normal_y(e, side, q);
+#endif
+#if LIBMESH_DIM > 2
+              normal_norm2 += normal_z(e, side, q) * normal_z(e, side, q);
+#endif
+              value += side_jxw(e, side, q) *
+                       libMesh::Kokkos::side_trace_shape(
+                           lm_key, i, side, positive_edge_orientation, px, py, pz) *
+                       tau * libMesh::Kokkos::shape(scalar_key, j, px, py, pz) * normal_norm2;
+            }
+          }
+        }
+        else if (idx < layout.off_Juu)
+        {
+          const unsigned int local = idx - layout.off_Jlmlm;
+          const unsigned int i = local / layout.lm_n_dofs;
+          const unsigned int j = local % layout.lm_n_dofs;
+          for (unsigned int q = 0; q != n_side_qp; ++q)
+          {
+            const Real px = parent_xi(e, side, q);
+            const Real py = parent_eta(e, side, q);
+            const Real pz = parent_zeta(e, side, q);
+            const Real trace_i =
+                libMesh::Kokkos::side_trace_shape(
+                    lm_key, i, side, positive_edge_orientation, px, py, pz);
+            const Real trace_j =
+                libMesh::Kokkos::side_trace_shape(
+                    lm_key, j, side, positive_edge_orientation, px, py, pz);
+            if (is_dirichlet)
+            {
+              value -= side_jxw(e, side, q) * trace_i * trace_j;
+              continue;
+            }
+            Real normal_norm2 = normal_x(e, side, q) * normal_x(e, side, q);
+#if LIBMESH_DIM > 1
+            normal_norm2 += normal_y(e, side, q) * normal_y(e, side, q);
+#endif
+#if LIBMESH_DIM > 2
+            normal_norm2 += normal_z(e, side, q) * normal_z(e, side, q);
+#endif
+            value -= side_jxw(e, side, q) * trace_i * tau * trace_j * normal_norm2;
+          }
+        }
+        else if (idx < layout.off_Julm)
+        {
+          if (!is_outlet)
+          {
+            const unsigned int local = idx - layout.off_Juu;
+            const unsigned int i = local / layout.scalar_n_dofs;
+            const unsigned int j = local % layout.scalar_n_dofs;
+            for (unsigned int q = 0; q != n_side_qp; ++q)
+            {
+              const Real px = parent_xi(e, side, q);
+              const Real py = parent_eta(e, side, q);
+              const Real pz = parent_zeta(e, side, q);
+              Real normal_norm2 = normal_x(e, side, q) * normal_x(e, side, q);
+#if LIBMESH_DIM > 1
+              normal_norm2 += normal_y(e, side, q) * normal_y(e, side, q);
+#endif
+#if LIBMESH_DIM > 2
+              normal_norm2 += normal_z(e, side, q) * normal_z(e, side, q);
+#endif
+              value += side_jxw(e, side, q) *
+                       libMesh::Kokkos::shape(scalar_key, i, px, py, pz) * tau *
+                       libMesh::Kokkos::shape(scalar_key, j, px, py, pz) * normal_norm2;
+            }
+          }
+        }
+        else
+        {
+          if (!is_outlet && !is_dirichlet)
+          {
+            const unsigned int local = idx - layout.off_Julm;
+            const unsigned int i = local / layout.lm_n_dofs;
+            const unsigned int j = local % layout.lm_n_dofs;
+            for (unsigned int q = 0; q != n_side_qp; ++q)
+            {
+              const Real px = parent_xi(e, side, q);
+              const Real py = parent_eta(e, side, q);
+              const Real pz = parent_zeta(e, side, q);
+              Real normal_norm2 = normal_x(e, side, q) * normal_x(e, side, q);
+#if LIBMESH_DIM > 1
+              normal_norm2 += normal_y(e, side, q) * normal_y(e, side, q);
+#endif
+#if LIBMESH_DIM > 2
+              normal_norm2 += normal_z(e, side, q) * normal_z(e, side, q);
+#endif
+              value -= side_jxw(e, side, q) *
+                       libMesh::Kokkos::shape(scalar_key, i, px, py, pz) * tau *
+                       libMesh::Kokkos::side_trace_shape(
+                           lm_key, j, side, positive_edge_orientation, px, py, pz) *
+                       normal_norm2;
+            }
+          }
+        }
+
+        if (component == 0)
+          u_blocks(e, idx) += value;
+        else
+          v_blocks(e, idx) += value;
+      });
+}
+
 template <ElemType ExactTopo>
 bool
 assemble_component_pair_into_full(const DeviceAssemblyData & u_data,
@@ -1387,12 +1722,17 @@ assemble_component_pair_into_full(const DeviceAssemblyData & u_data,
         "vector_fe_ex9_hdg_direct_full_pair_batch",
         ex9_kokkos_team_size(),
         assemble_residual,
+        false,
         false);
   }
 
   {
     Ex9KokkosTimer timer("split component volume blocks kernel");
     assemble_component_pair_volume_blocks_range<ExactTopo>(u_data, u_blocks, v_blocks);
+  }
+  {
+    Ex9KokkosTimer timer("split component side blocks kernel");
+    assemble_component_pair_side_blocks_range(u_data, u_blocks, v_blocks);
   }
 
   int n_failures = 0;
