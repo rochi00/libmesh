@@ -2437,20 +2437,6 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
         { return face_scratch(face_lm_value_offset + c * n_side_qpoints + q); };
         auto face_other_lm_value_at = [&](const unsigned int c, const unsigned int q) -> Real &
         { return face_scratch(face_other_lm_value_offset + c * n_side_qpoints + q); };
-        auto add_elem_block = [&](const unsigned int c, const unsigned int idx, const Real value)
-        {
-          if (c == 0)
-            elem_blocks_0(idx) += value;
-          else
-            elem_blocks_1(idx) += value;
-        };
-        auto add_elem_resid = [&](const unsigned int c, const unsigned int idx, const Real value)
-        {
-          if (c == 0)
-            elem_residual_0(idx) += value;
-          else
-            elem_residual_1(idx) += value;
-        };
         auto full_convective_block = [&](const unsigned int row, const unsigned int col) -> Real &
         { return full_convective_blocks(elem, row * full_n_dofs + col); };
 
@@ -2589,7 +2575,10 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                            scalar_phi_at(q, j);
               }
 
-              add_elem_block(c, idx, value);
+              if (c == 0)
+                elem_blocks_0(idx) += value;
+              else
+                elem_blocks_1(idx) += value;
             });
         team.team_barrier();
 
@@ -2666,7 +2655,10 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                   }
                 }
 
-                add_elem_resid(c, idx, value);
+                if (c == 0)
+                  elem_residual_0(idx) += value;
+                else
+                  elem_residual_1(idx) += value;
               });
           team.team_barrier();
         }
@@ -2796,7 +2788,10 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                 {
                   if (is_outlet)
                   {
-                    add_elem_block(c, idx, value);
+                    if (c == 0)
+                      elem_blocks_0(idx) += value;
+                    else
+                      elem_blocks_1(idx) += value;
                     return;
                   }
                   const unsigned int local = idx - layout.off_Juq;
@@ -2815,7 +2810,10 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                 {
                   if (is_outlet)
                   {
-                    add_elem_block(c, idx, value);
+                    if (c == 0)
+                      elem_blocks_0(idx) += value;
+                    else
+                      elem_blocks_1(idx) += value;
                     return;
                   }
                   const unsigned int local = idx - layout.off_Jup;
@@ -2833,7 +2831,10 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                 {
                   if (is_dirichlet)
                   {
-                    add_elem_block(c, idx, value);
+                    if (c == 0)
+                      elem_blocks_0(idx) += value;
+                    else
+                      elem_blocks_1(idx) += value;
                     return;
                   }
                   const unsigned int local = idx - layout.off_Jplm;
@@ -2848,7 +2849,10 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                 {
                   if (is_dirichlet)
                   {
-                    add_elem_block(c, idx, value);
+                    if (c == 0)
+                      elem_blocks_0(idx) += value;
+                    else
+                      elem_blocks_1(idx) += value;
                     return;
                   }
                   const unsigned int local = idx - layout.off_Jqlm;
@@ -2866,7 +2870,10 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                 {
                   if (is_dirichlet)
                   {
-                    add_elem_block(c, idx, value);
+                    if (c == 0)
+                      elem_blocks_0(idx) += value;
+                    else
+                      elem_blocks_1(idx) += value;
                     return;
                   }
                   const unsigned int local = idx - layout.off_Jlmq;
@@ -2885,7 +2892,10 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                 {
                   if (is_dirichlet)
                   {
-                    add_elem_block(c, idx, value);
+                    if (c == 0)
+                      elem_blocks_0(idx) += value;
+                    else
+                      elem_blocks_1(idx) += value;
                     return;
                   }
                   const unsigned int local = idx - layout.off_Jlmp;
@@ -2900,7 +2910,10 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                 {
                   if (is_dirichlet)
                   {
-                    add_elem_block(c, idx, value);
+                    if (c == 0)
+                      elem_blocks_0(idx) += value;
+                    else
+                      elem_blocks_1(idx) += value;
                     return;
                   }
                   const unsigned int local = idx - layout.off_Jlms;
@@ -2939,7 +2952,10 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                 {
                   if (is_outlet)
                   {
-                    add_elem_block(c, idx, value);
+                    if (c == 0)
+                      elem_blocks_0(idx) += value;
+                    else
+                      elem_blocks_1(idx) += value;
                     return;
                   }
                   const unsigned int local = idx - layout.off_Juu;
@@ -2958,7 +2974,10 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                 {
                   if (is_outlet || is_dirichlet)
                   {
-                    add_elem_block(c, idx, value);
+                    if (c == 0)
+                      elem_blocks_0(idx) += value;
+                    else
+                      elem_blocks_1(idx) += value;
                     return;
                   }
                   const unsigned int local = idx - layout.off_Julm;
@@ -2974,7 +2993,10 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                   }
                 }
 
-                add_elem_block(c, idx, value);
+                if (c == 0)
+                  elem_blocks_0(idx) += value;
+                else
+                  elem_blocks_1(idx) += value;
               });
           team.team_barrier();
 
@@ -3097,7 +3119,10 @@ assemble_hdg_linear_batch_boundary_pair(const libMesh::FEShapeKey vector_key,
                     }
                   }
 
-                  add_elem_resid(c, idx, value);
+                  if (c == 0)
+                    elem_residual_0(idx) += value;
+                  else
+                    elem_residual_1(idx) += value;
                 });
             team.team_barrier();
           }
