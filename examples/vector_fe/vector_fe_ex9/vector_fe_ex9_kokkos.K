@@ -401,6 +401,118 @@ fill_back_substitution_coo_values(DeviceBackSubstitutionPlan & plan,
       });
 }
 
+template <typename SolView>
+void
+copy_back_substitution_current_values_on_device(DeviceBackSubstitutionPlan & plan,
+                                                const SolView & sol_view,
+                                                const DeviceReal1D & values)
+{
+  const auto layout = plan.layout;
+  const std::size_t n_entries = plan.n_elem * layout.internal_n_dofs;
+  const auto internal_ids = plan.internal_vector_ids;
+  const unsigned int n_internal = layout.internal_n_dofs;
+
+  ::Kokkos::parallel_for(
+      "vector_fe_ex9_backsub_current_values",
+      ::Kokkos::RangePolicy<>(0, cast_int<int>(n_entries)),
+      KOKKOS_LAMBDA(const int entry) {
+        const int elem = entry / static_cast<int>(n_internal);
+        const int i = entry - elem * static_cast<int>(n_internal);
+        values(entry) = sol_view(internal_ids(elem, i));
+      });
+}
+
+template <typename SolView>
+void
+validate_back_substitution_values_on_device(DeviceBackSubstitutionPlan & plan,
+                                            const SolView & sol_view,
+                                            const DeviceReal1D & initial_values)
+{
+  const auto layout = plan.layout;
+  const std::size_t n_entries = plan.n_elem * layout.internal_n_dofs;
+  const auto internal_ids = plan.internal_vector_ids;
+  const auto coo_values = plan.coo_values;
+  const unsigned int n_internal = layout.internal_n_dofs;
+
+  Real max_error = Real(0);
+  {
+    Ex9KokkosTimer timer("back-substitution validation error reduction", false);
+    ::Kokkos::parallel_reduce(
+        "vector_fe_ex9_backsub_validate_error",
+        ::Kokkos::RangePolicy<>(0, cast_int<int>(n_entries)),
+        KOKKOS_LAMBDA(const int entry, Real & local_max) {
+          const int elem = entry / static_cast<int>(n_internal);
+          const int i = entry - elem * static_cast<int>(n_internal);
+          const Real actual_delta = sol_view(internal_ids(elem, i)) - initial_values(entry);
+          const Real error = Kokkos::detail::abs_real(actual_delta - coo_values(entry));
+          if (error > local_max)
+            local_max = error;
+        },
+        ::Kokkos::Max<Real>(max_error));
+  }
+
+  Real max_reference = Real(0);
+  {
+    Ex9KokkosTimer timer("back-substitution validation reference reduction", false);
+    ::Kokkos::parallel_reduce(
+        "vector_fe_ex9_backsub_validate_reference",
+        ::Kokkos::RangePolicy<>(0, cast_int<int>(n_entries)),
+        KOKKOS_LAMBDA(const int entry, Real & local_max) {
+          const int elem = entry / static_cast<int>(n_internal);
+          const int i = entry - elem * static_cast<int>(n_internal);
+          const Real actual_delta = sol_view(internal_ids(elem, i)) - initial_values(entry);
+          const Real reference = Kokkos::detail::abs_real(actual_delta);
+          if (reference > local_max)
+            local_max = reference;
+        },
+        ::Kokkos::Max<Real>(max_reference));
+  }
+
+  const Real tolerance = Real(1.e-8) * (Real(1) + max_reference);
+  if (max_error <= tolerance)
+    return;
+
+  DeviceReal1D actual_values("vector_fe_ex9_backsub_validation_actual_values", n_entries);
+  {
+    Ex9KokkosTimer timer("back-substitution validation copy kernel", false);
+    ::Kokkos::parallel_for(
+        "vector_fe_ex9_backsub_validation_actual_values",
+        ::Kokkos::RangePolicy<>(0, cast_int<int>(n_entries)),
+        KOKKOS_LAMBDA(const int entry) {
+          const int elem = entry / static_cast<int>(n_internal);
+          const int i = entry - elem * static_cast<int>(n_internal);
+          actual_values(entry) = sol_view(internal_ids(elem, i)) - initial_values(entry);
+        });
+  }
+
+  auto h_expected = ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), coo_values);
+  auto h_actual = ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), actual_values);
+  auto h_internal_ids =
+      ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), internal_ids);
+
+  std::size_t failure_entry = 0;
+  Real failure_error = Real(0);
+  for (std::size_t entry = 0; entry != n_entries; ++entry)
+  {
+    const Real error = std::abs(h_actual(entry) - h_expected(entry));
+    if (error > failure_error)
+    {
+      failure_error = error;
+      failure_entry = entry;
+    }
+  }
+
+  const std::size_t elem = failure_entry / n_internal;
+  const std::size_t local = failure_entry - elem * n_internal;
+  libmesh_error_msg("vector_fe_ex9 Kokkos back-substitution PETSc handoff mismatch: elem="
+                    << elem << " local_internal=" << local
+                    << " dof=" << h_internal_ids(elem, local)
+                    << " actual_delta=" << h_actual(failure_entry)
+                    << " expected=" << h_expected(failure_entry)
+                    << " max_error=" << max_error
+                    << " tolerance=" << tolerance);
+}
+
 template <typename RhsView>
 void
 fill_forward_elimination_coo_values(DeviceBackSubstitutionPlan & plan, const RhsView & rhs_view)
@@ -3891,6 +4003,22 @@ run_device_backwards_substitution(DeviceBackSubstitutionPlan & plan,
     fill_back_substitution_coo_values(plan, rhs_guard.view(), sol_guard.view());
   }
 
+  DeviceReal1D initial_backsub_values;
+  if (ex9_kokkos_validate_condense())
+  {
+    initial_backsub_values =
+        DeviceReal1D("vector_fe_ex9_initial_backsub_values", n_entries);
+    using PetscKokkosReadView =
+        ::Kokkos::View<const PetscScalar *, ::Kokkos::DefaultExecutionSpace::memory_space>;
+    PetscKokkosReadView sol_view;
+    LibmeshPetscCall2(full_sol.comm(), VecGetKokkosView(petsc_sol->vec(), &sol_view));
+    {
+      Ex9KokkosTimer timer("back-substitution validation initial copy", false);
+      copy_back_substitution_current_values_on_device(plan, sol_view, initial_backsub_values);
+    }
+    LibmeshPetscCall2(full_sol.comm(), VecRestoreKokkosView(petsc_sol->vec(), &sol_view));
+  }
+
   if (plan.coo_target != petsc_sol->vec())
   {
     Ex9KokkosTimer timer("VecSetPreallocationCOO back-substitution", false);
@@ -3907,6 +4035,17 @@ run_device_backwards_substitution(DeviceBackSubstitutionPlan & plan,
   {
     Ex9KokkosTimer timer("full solution close after back-substitution", false);
     full_sol.close();
+  }
+  if (ex9_kokkos_validate_condense())
+  {
+    using PetscKokkosReadView =
+        ::Kokkos::View<const PetscScalar *, ::Kokkos::DefaultExecutionSpace::memory_space>;
+    PetscKokkosReadView sol_view;
+    LibmeshPetscCall2(full_sol.comm(), VecGetKokkosView(petsc_sol->vec(), &sol_view));
+    validate_back_substitution_values_on_device(plan,
+                                               sol_view,
+                                               initial_backsub_values);
+    LibmeshPetscCall2(full_sol.comm(), VecRestoreKokkosView(petsc_sol->vec(), &sol_view));
   }
   return true;
 }
