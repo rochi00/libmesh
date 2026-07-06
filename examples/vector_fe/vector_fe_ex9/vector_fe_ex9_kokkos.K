@@ -121,6 +121,28 @@ ex9_kokkos_timers_enabled()
   return enabled;
 }
 
+bool
+ex9_kokkos_host_coo_values()
+{
+  static const bool enabled = []() {
+    const bool device_values_are_not_host_accessible =
+        !::Kokkos::SpaceAccessibility<::Kokkos::HostSpace,
+                                      typename ::Kokkos::DefaultExecutionSpace::memory_space>::accessible;
+    return libMesh::command_line_value("--ex9-kokkos-host-coo-values",
+                                       device_values_are_not_host_accessible ? 1 : 0) != 0;
+  }();
+
+  return enabled;
+}
+
+bool
+ex9_kokkos_validate_condense()
+{
+  static const bool enabled =
+      libMesh::on_command_line("--ex9-kokkos-validate-condense") || ex9_kokkos_timers_enabled();
+  return enabled;
+}
+
 int
 ex9_kokkos_condense_solver()
 {
@@ -186,6 +208,38 @@ private:
   bool _enabled = false;
   Clock::time_point _start;
 };
+
+template <typename ViewType>
+void
+ex9_vec_set_values_coo(const Parallel::Communicator & comm,
+                       Vec vec,
+                       const ViewType & values,
+                       const InsertMode mode)
+{
+  if (ex9_kokkos_host_coo_values())
+  {
+    auto host_values = ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), values);
+    LibmeshPetscCall2(comm, VecSetValuesCOO(vec, host_values.data(), mode));
+  }
+  else
+    LibmeshPetscCall2(comm, VecSetValuesCOO(vec, values.data(), mode));
+}
+
+template <typename ViewType>
+void
+ex9_mat_set_values_coo(const Parallel::Communicator & comm,
+                       Mat mat,
+                       const ViewType & values,
+                       const InsertMode mode)
+{
+  if (ex9_kokkos_host_coo_values())
+  {
+    auto host_values = ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), values);
+    LibmeshPetscCall2(comm, MatSetValuesCOO(mat, host_values.data(), mode));
+  }
+  else
+    LibmeshPetscCall2(comm, MatSetValuesCOO(mat, values.data(), mode));
+}
 
 template <typename ViewType>
 void
@@ -2890,6 +2944,105 @@ condense_ex9_full_on_device(const Ex9FullBlockLayout layout,
       });
 }
 
+template <typename BlockStorage, typename CondensedStorage, typename StatusStorage>
+void
+validate_ex9_full_condense_on_device(const Ex9FullBlockLayout layout,
+                                     const unsigned int n_elem,
+                                     const BlockStorage & blocks,
+                                     const CondensedStorage & condensed_blocks,
+                                     const CondensedStorage & internal_inverse,
+                                     const CondensedStorage & internal_external_solve,
+                                     const StatusStorage & block_status,
+                                     const DeviceInt1D & failure_pivot,
+                                     const DeviceReal1D & failure_pivot_abs,
+                                     const DeviceReal1D & failure_initial_diag,
+                                     const DeviceReal1D & failure_initial_row_abs)
+{
+  ::Kokkos::parallel_for(
+      "vector_fe_ex9_full_condense_validate",
+      ::Kokkos::RangePolicy<>(0, static_cast<int>(n_elem)),
+      KOKKOS_LAMBDA(const int raw_e) {
+        const unsigned int e = static_cast<unsigned int>(raw_e);
+        if (block_status(e))
+          return;
+
+        const unsigned int n_internal = layout.internal_n_dofs;
+        const unsigned int n_external = layout.external_n_dofs;
+        Real max_error = Real(0);
+        Real max_reference = Real(0);
+        int failure_kind = -1;
+
+        for (unsigned int i = 0; i != n_internal; ++i)
+          for (unsigned int j = 0; j != n_internal; ++j)
+          {
+            Real value = Real(0);
+            for (unsigned int k = 0; k != n_internal; ++k)
+              value += blocks(e, i * layout.n_dofs + k) *
+                       internal_inverse(e, k * n_internal + j);
+            const Real expected = i == j ? Real(1) : Real(0);
+            const Real abs_error = Kokkos::detail::abs_real(value - expected);
+            const Real abs_reference = Kokkos::detail::abs_real(expected);
+            if (abs_reference > max_reference)
+              max_reference = abs_reference;
+            if (abs_error > max_error)
+            {
+              max_error = abs_error;
+              failure_kind = 0;
+            }
+          }
+
+        for (unsigned int i = 0; i != n_internal; ++i)
+          for (unsigned int j = 0; j != n_external; ++j)
+          {
+            Real value = Real(0);
+            for (unsigned int k = 0; k != n_internal; ++k)
+              value += blocks(e, i * layout.n_dofs + k) *
+                       internal_external_solve(e, k * n_external + j);
+            const Real expected = blocks(e, i * layout.n_dofs + ex9_external_full_offset(layout, j));
+            const Real abs_error = Kokkos::detail::abs_real(value - expected);
+            const Real abs_reference = Kokkos::detail::abs_real(expected);
+            if (abs_reference > max_reference)
+              max_reference = abs_reference;
+            if (abs_error > max_error)
+            {
+              max_error = abs_error;
+              failure_kind = 1;
+            }
+          }
+
+        for (unsigned int i = 0; i != n_external; ++i)
+          for (unsigned int j = 0; j != n_external; ++j)
+          {
+            const unsigned int full_i = ex9_external_full_offset(layout, i);
+            const unsigned int full_j = ex9_external_full_offset(layout, j);
+            Real expected = blocks(e, full_i * layout.n_dofs + full_j);
+            for (unsigned int k = 0; k != n_internal; ++k)
+              expected -= blocks(e, full_i * layout.n_dofs + k) *
+                          internal_external_solve(e, k * n_external + j);
+            const Real value = condensed_blocks(e, i * n_external + j);
+            const Real abs_error = Kokkos::detail::abs_real(value - expected);
+            const Real abs_reference = Kokkos::detail::abs_real(expected);
+            if (abs_reference > max_reference)
+              max_reference = abs_reference;
+            if (abs_error > max_error)
+            {
+              max_error = abs_error;
+              failure_kind = 2;
+            }
+          }
+
+        const Real tolerance = Real(1.e-8) * (Real(1) + max_reference);
+        if (max_error > tolerance)
+        {
+          block_status(e) = 4;
+          failure_pivot(e) = failure_kind;
+          failure_pivot_abs(e) = max_error;
+          failure_initial_diag(e) = tolerance;
+          failure_initial_row_abs(e) = max_reference;
+        }
+      });
+}
+
 void
 check_ex9_full_condense_status(const Ex9FullBatch & full,
                                const DeviceAssemblyData & component_data,
@@ -3361,6 +3514,21 @@ make_ex9_full_batch(const Ex9DeviceAssemblyData & data,
                                 failure_initial_diag,
                                 failure_initial_row_abs);
   }
+  if (ex9_kokkos_validate_condense())
+  {
+    Ex9KokkosTimer timer("full static condensation validation kernel");
+    validate_ex9_full_condense_on_device(data.layout,
+                                         data.n_elem,
+                                         device_blocks,
+                                         condensed_blocks,
+                                         internal_inverse,
+                                         internal_external_solve,
+                                         condense_status,
+                                         failure_pivot,
+                                         failure_pivot_abs,
+                                         failure_initial_diag,
+                                         failure_initial_row_abs);
+  }
 
   full.device_residual = device_residual;
   full.device_condensed_blocks = condensed_blocks;
@@ -3734,8 +3902,7 @@ run_device_backwards_substitution(DeviceBackSubstitutionPlan & plan,
   }
   {
     Ex9KokkosTimer timer("VecSetValuesCOO back-substitution", false);
-    LibmeshPetscCall2(full_sol.comm(),
-                      VecSetValuesCOO(petsc_sol->vec(), coo_values.data(), ADD_VALUES));
+    ex9_vec_set_values_coo(full_sol.comm(), petsc_sol->vec(), coo_values, ADD_VALUES);
   }
   {
     Ex9KokkosTimer timer("full solution close after back-substitution", false);
@@ -3811,8 +3978,7 @@ run_device_forward_elimination(DeviceBackSubstitutionPlan & plan,
   }
   {
     Ex9KokkosTimer timer("VecSetValuesCOO forward elimination", false);
-    LibmeshPetscCall2(reduced_rhs.comm(),
-                      VecSetValuesCOO(petsc_reduced_rhs->vec(), coo_values.data(), ADD_VALUES));
+    ex9_vec_set_values_coo(reduced_rhs.comm(), petsc_reduced_rhs->vec(), coo_values, ADD_VALUES);
   }
 
   return true;
@@ -3902,8 +4068,7 @@ add_device_full_residual_to_petsc_coo(const Ex9FullBatch & batch,
   }
   {
     Ex9KokkosTimer timer("VecSetValuesCOO residual", false);
-    LibmeshPetscCall2(vector.comm(),
-                      VecSetValuesCOO(petsc_vector->vec(), coo_values.data(), ADD_VALUES));
+    ex9_vec_set_values_coo(vector.comm(), petsc_vector->vec(), coo_values, ADD_VALUES);
   }
 }
 
@@ -4032,8 +4197,7 @@ add_device_condensed_jacobian_to_petsc_coo(const Ex9FullBatch & batch,
   }
   {
     Ex9KokkosTimer timer("MatSetValuesCOO condensed Jacobian", false);
-    LibmeshPetscCall2(sc.comm(),
-                      MatSetValuesCOO(petsc_matrix->mat(), coo_values.data(), ADD_VALUES));
+    ex9_mat_set_values_coo(sc.comm(), petsc_matrix->mat(), coo_values, ADD_VALUES);
   }
 }
 
