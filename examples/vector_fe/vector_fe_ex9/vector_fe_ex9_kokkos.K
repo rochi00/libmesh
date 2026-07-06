@@ -1632,6 +1632,558 @@ assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
 }
 
 template <ElemType ExactTopo>
+void
+assemble_component_pair_volume_residual_range(const DeviceAssemblyData & u_data,
+                                              const DeviceAssemblyData & v_data,
+                                              const ComponentDofViews & u_dofs,
+                                              const ComponentDofViews & v_dofs,
+                                              const DeviceReal2D & u_residual,
+                                              const DeviceReal2D & v_residual)
+{
+  const unsigned int n_elem = u_data.n_elem;
+  const HDGLinearBlockLayout layout = u_data.layout;
+  const unsigned int n_entries = layout.vector_n_dofs + 2 * layout.scalar_n_dofs;
+  const unsigned int u0 = layout.vector_n_dofs;
+  const unsigned int p0 = u0 + layout.scalar_n_dofs;
+  const FEShapeKey vector_key = u_data.vector_key;
+  const FEShapeKey scalar_key = u_data.scalar_key;
+  const DeviceReal3D coords = u_data.coords;
+  const unsigned int n_geom_nodes = u_data.n_geom_nodes;
+  const DeviceReal1D xi = u_data.xi;
+  const DeviceReal1D eta = u_data.eta;
+  const DeviceReal1D zeta = u_data.zeta;
+  const DeviceReal1D jxw = u_data.jxw;
+  const DeviceReal2D scalar_forcing_0 = u_data.scalar_forcing;
+  const DeviceReal2D scalar_forcing_1 = v_data.scalar_forcing;
+  const DeviceReal2D pressure_forcing = u_data.pressure_forcing;
+  const unsigned int n_qp = u_data.n_qp;
+  const Real nu = u_data.problem->nu;
+  const bool include_convection = true;
+  const DeviceReal2D u_q_dofs = u_dofs.q_dofs;
+  const DeviceReal2D u_u_dofs = u_dofs.u_dofs;
+  const DeviceReal2D u_p_dofs = u_dofs.p_dofs;
+  const DeviceReal2D u_other_u_dofs = u_dofs.other_u_dofs;
+  const DeviceReal2D v_q_dofs = v_dofs.q_dofs;
+  const DeviceReal2D v_u_dofs = v_dofs.u_dofs;
+  const DeviceReal2D v_other_u_dofs = v_dofs.other_u_dofs;
+
+  ::Kokkos::parallel_for(
+      "vector_fe_ex9_split_component_volume_residual",
+      ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * 2 * n_entries)),
+      KOKKOS_LAMBDA(const int raw_entry) {
+        const unsigned int entry = static_cast<unsigned int>(raw_entry);
+        const unsigned int e = entry / (2 * n_entries);
+        const unsigned int component_entry = entry - e * 2 * n_entries;
+        const unsigned int component = component_entry / n_entries;
+        const unsigned int idx = component_entry - component * n_entries;
+        const unsigned int velocity_component = component;
+        Real value = Real(0);
+
+        if (idx < u0)
+        {
+          const unsigned int i = idx;
+          for (unsigned int q = 0; q != n_qp; ++q)
+          {
+            const Real xiq = xi(q);
+            const Real etaq = eta(q);
+            const Real zetaq = zeta(q);
+            const unsigned int scalar_i = i / 2;
+            const unsigned int grad_component = i - scalar_i * 2;
+            const libMesh::Kokkos::RealTensor J =
+                libMesh::Kokkos::jacobian<libMesh::LAGRANGE, ExactTopo>(
+                    Kokkos::detail::HDGElementNodeView<DeviceReal3D>{coords, e},
+                    n_geom_nodes,
+                    xiq,
+                    etaq,
+                    zetaq);
+            const libMesh::Kokkos::RealTensor Jinv =
+                libMesh::Kokkos::inverse<libMesh::Kokkos::RealTensor>(J, 2);
+            const libMesh::Kokkos::RealVector grad_phys =
+                Jinv * libMesh::Kokkos::grad_shape(scalar_key, scalar_i, xiq, etaq, zetaq);
+            const libMesh::Kokkos::RealVector phi_i =
+                libMesh::Kokkos::vector_shape(vector_key, i, xiq, etaq, zetaq);
+            Real phi_dot_q = Real(0);
+            for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+            {
+              Real q_value = Real(0);
+              for (unsigned int j = 0; j != layout.vector_n_dofs; ++j)
+              {
+                const libMesh::Kokkos::RealVector phi_j =
+                    libMesh::Kokkos::vector_shape(vector_key, j, xiq, etaq, zetaq);
+                const Real q_dof = component == 0 ? u_q_dofs(e, j) : v_q_dofs(e, j);
+                q_value += Kokkos::detail::component_or_zero(phi_j, d) * q_dof;
+              }
+              phi_dot_q += Kokkos::detail::component_or_zero(phi_i, d) * q_value;
+            }
+
+            Real u_value = Real(0);
+            for (unsigned int j = 0; j != layout.scalar_n_dofs; ++j)
+            {
+              const Real phi = libMesh::Kokkos::shape(scalar_key, j, xiq, etaq, zetaq);
+              const Real u_dof = component == 0 ? u_u_dofs(e, j) : v_u_dofs(e, j);
+              u_value += phi * u_dof;
+            }
+
+            value += jxw(q) *
+                     (phi_dot_q +
+                      Kokkos::detail::component_or_zero(grad_phys, grad_component) * u_value);
+          }
+        }
+        else if (idx < p0)
+        {
+          const unsigned int i = idx - u0;
+          for (unsigned int q = 0; q != n_qp; ++q)
+          {
+            const Real xiq = xi(q);
+            const Real etaq = eta(q);
+            const Real zetaq = zeta(q);
+            const libMesh::Kokkos::RealTensor J =
+                libMesh::Kokkos::jacobian<libMesh::LAGRANGE, ExactTopo>(
+                    Kokkos::detail::HDGElementNodeView<DeviceReal3D>{coords, e},
+                    n_geom_nodes,
+                    xiq,
+                    etaq,
+                    zetaq);
+            const libMesh::Kokkos::RealTensor Jinv =
+                libMesh::Kokkos::inverse<libMesh::Kokkos::RealTensor>(J, 2);
+            const libMesh::Kokkos::RealVector grad_phys =
+                Jinv * libMesh::Kokkos::grad_shape(scalar_key, i, xiq, etaq, zetaq);
+
+            Real grad_dot_stress = Real(0);
+            for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+            {
+              Real q_value = Real(0);
+              for (unsigned int j = 0; j != layout.vector_n_dofs; ++j)
+              {
+                const libMesh::Kokkos::RealVector phi_j =
+                    libMesh::Kokkos::vector_shape(vector_key, j, xiq, etaq, zetaq);
+                const Real q_dof = component == 0 ? u_q_dofs(e, j) : v_q_dofs(e, j);
+                q_value += Kokkos::detail::component_or_zero(phi_j, d) * q_dof;
+              }
+
+              Real p_value = Real(0);
+              for (unsigned int j = 0; j != layout.scalar_n_dofs; ++j)
+                p_value +=
+                    libMesh::Kokkos::shape(scalar_key, j, xiq, etaq, zetaq) * u_p_dofs(e, j);
+
+              Real stress_component = nu * q_value;
+              if (d == velocity_component)
+                stress_component -= p_value;
+              grad_dot_stress +=
+                  Kokkos::detail::component_or_zero(grad_phys, d) * stress_component;
+            }
+
+            Real active_u = Real(0);
+            Real other_u = Real(0);
+            for (unsigned int j = 0; j != layout.scalar_n_dofs; ++j)
+            {
+              const Real phi = libMesh::Kokkos::shape(scalar_key, j, xiq, etaq, zetaq);
+              const Real u_dof = component == 0 ? u_u_dofs(e, j) : v_u_dofs(e, j);
+              const Real other_u_dof =
+                  component == 0 ? u_other_u_dofs(e, j) : v_other_u_dofs(e, j);
+              active_u += phi * u_dof;
+              other_u += phi * other_u_dof;
+            }
+
+            const libMesh::Kokkos::RealVector convective_flux =
+                include_convection
+                    ? Kokkos::detail::hdg_velocity_from_components(
+                          active_u, other_u, velocity_component) *
+                          active_u
+                    : libMesh::Kokkos::RealVector();
+            Real grad_dot_convective_flux = Real(0);
+            for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+              grad_dot_convective_flux +=
+                  Kokkos::detail::component_or_zero(grad_phys, d) *
+                  Kokkos::detail::component_or_zero(convective_flux, d);
+            const Real forcing =
+                component == 0 ? scalar_forcing_0(e, q) : scalar_forcing_1(e, q);
+
+            value += jxw(q) *
+                     (grad_dot_stress - grad_dot_convective_flux -
+                      libMesh::Kokkos::shape(scalar_key, i, xiq, etaq, zetaq) * forcing);
+          }
+        }
+        else
+        {
+          const unsigned int i = idx - p0;
+          for (unsigned int q = 0; q != n_qp; ++q)
+          {
+            const Real xiq = xi(q);
+            const Real etaq = eta(q);
+            const Real zetaq = zeta(q);
+            const libMesh::Kokkos::RealTensor J =
+                libMesh::Kokkos::jacobian<libMesh::LAGRANGE, ExactTopo>(
+                    Kokkos::detail::HDGElementNodeView<DeviceReal3D>{coords, e},
+                    n_geom_nodes,
+                    xiq,
+                    etaq,
+                    zetaq);
+            const libMesh::Kokkos::RealTensor Jinv =
+                libMesh::Kokkos::inverse<libMesh::Kokkos::RealTensor>(J, 2);
+            const libMesh::Kokkos::RealVector grad_phys =
+                Jinv * libMesh::Kokkos::grad_shape(scalar_key, i, xiq, etaq, zetaq);
+            Real u_value = Real(0);
+            for (unsigned int j = 0; j != layout.scalar_n_dofs; ++j)
+            {
+              const Real phi = libMesh::Kokkos::shape(scalar_key, j, xiq, etaq, zetaq);
+              const Real u_dof = component == 0 ? u_u_dofs(e, j) : v_u_dofs(e, j);
+              u_value += phi * u_dof;
+            }
+
+            value -= jxw(q) *
+                     Kokkos::detail::component_or_zero(grad_phys, velocity_component) * u_value;
+            if (velocity_component == 0)
+              value -= jxw(q) *
+                       libMesh::Kokkos::shape(scalar_key, i, xiq, etaq, zetaq) *
+                       pressure_forcing(e, q);
+          }
+        }
+
+        if (component == 0)
+          u_residual(e, idx) += value;
+        else
+          v_residual(e, idx) += value;
+      });
+}
+
+void
+assemble_component_pair_side_residual_range(const DeviceAssemblyData & u_data,
+                                            const DeviceAssemblyData & v_data,
+                                            const ComponentDofViews & u_dofs,
+                                            const ComponentDofViews & v_dofs,
+                                            const DeviceReal2D & u_residual,
+                                            const DeviceReal2D & v_residual)
+{
+  const unsigned int n_elem = u_data.n_elem;
+  const HDGLinearBlockLayout layout = u_data.layout;
+  const unsigned int n_entries = u_data.residual_n_dofs;
+  const unsigned int u0 = layout.vector_n_dofs;
+  const unsigned int p0 = u0 + layout.scalar_n_dofs;
+  const unsigned int lm0 = p0 + layout.scalar_n_dofs;
+  const FEShapeKey vector_key = u_data.vector_key;
+  const FEShapeKey scalar_key = u_data.scalar_key;
+  const FEShapeKey lm_key = u_data.lm_key;
+  const DeviceReal3D parent_xi = u_data.parent_xi;
+  const DeviceReal3D parent_eta = u_data.parent_eta;
+  const DeviceReal3D parent_zeta = u_data.parent_zeta;
+  const DeviceReal3D side_jxw = u_data.side_jxw;
+  const DeviceReal3D normal_x = u_data.normal_x;
+  const DeviceReal3D normal_y = u_data.normal_y;
+  const DeviceReal3D normal_z = u_data.normal_z;
+  const DeviceReal3D dirichlet_component_0 = u_data.dirichlet_component;
+  const DeviceReal3D dirichlet_component_1 = v_data.dirichlet_component;
+  const DeviceReal3D dirichlet_vdotn = u_data.dirichlet_vdotn;
+  const DeviceUChar2D orientations = u_data.orientations;
+  const DeviceInt2D side_types = u_data.side_types;
+  const unsigned int n_sides = u_data.n_sides;
+  const unsigned int n_side_qp = u_data.n_side_qp;
+  const Real nu = u_data.problem->nu;
+  const Real tau = Real(1);
+  const bool include_convection = true;
+  const DeviceReal2D u_q_dofs = u_dofs.q_dofs;
+  const DeviceReal2D u_u_dofs = u_dofs.u_dofs;
+  const DeviceReal2D u_p_dofs = u_dofs.p_dofs;
+  const DeviceReal2D u_lm_dofs = u_dofs.lm_dofs;
+  const DeviceReal2D u_other_lm_dofs = u_dofs.other_lm_dofs;
+  const DeviceReal2D v_q_dofs = v_dofs.q_dofs;
+  const DeviceReal2D v_u_dofs = v_dofs.u_dofs;
+  const DeviceReal2D v_lm_dofs = v_dofs.lm_dofs;
+  const DeviceReal2D v_other_lm_dofs = v_dofs.other_lm_dofs;
+
+  ::Kokkos::parallel_for(
+      "vector_fe_ex9_split_component_side_residual",
+      ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * n_sides * 2 * n_entries)),
+      KOKKOS_LAMBDA(const int raw_entry) {
+        const unsigned int entry = static_cast<unsigned int>(raw_entry);
+        const unsigned int entries_per_elem = n_sides * 2 * n_entries;
+        const unsigned int e = entry / entries_per_elem;
+        const unsigned int elem_entry = entry - e * entries_per_elem;
+        const unsigned int side = elem_entry / (2 * n_entries);
+        const unsigned int side_entry = elem_entry - side * 2 * n_entries;
+        const unsigned int component = side_entry / n_entries;
+        const unsigned int idx = side_entry - component * n_entries;
+        const unsigned int velocity_component = component;
+        const bool positive_edge_orientation = static_cast<bool>(orientations(e, side));
+        const int side_type = side_types(e, side);
+        const bool is_outlet = side_type == Kokkos::detail::hdg_linear_side_outlet;
+        const bool is_dirichlet = side_type == Kokkos::detail::hdg_linear_side_dirichlet;
+        Real value = Real(0);
+
+        if (idx < u0)
+        {
+          const unsigned int i = idx;
+          for (unsigned int q = 0; q != n_side_qp; ++q)
+          {
+            const Real px = parent_xi(e, side, q);
+            const Real py = parent_eta(e, side, q);
+            const Real pz = parent_zeta(e, side, q);
+            const libMesh::Kokkos::RealVector phi_i =
+                libMesh::Kokkos::vector_shape(vector_key, i, px, py, pz);
+            const Real nx = normal_x(e, side, q);
+#if LIBMESH_DIM > 1
+            const Real ny = normal_y(e, side, q);
+#else
+            const Real ny = Real(0);
+#endif
+#if LIBMESH_DIM > 2
+            const Real nz = normal_z(e, side, q);
+#else
+            const Real nz = Real(0);
+#endif
+            const Real boundary_value =
+                is_dirichlet
+                    ? (component == 0 ? dirichlet_component_0(e, side, q)
+                                      : dirichlet_component_1(e, side, q))
+                    : Real(0);
+            Real lm_value = Real(0);
+            if (!is_dirichlet)
+              for (unsigned int j = 0; j != layout.lm_n_dofs; ++j)
+              {
+                const Real trace = libMesh::Kokkos::side_trace_shape(
+                    lm_key, j, side, positive_edge_orientation, px, py, pz);
+                const Real lm_dof = component == 0 ? u_lm_dofs(e, j) : v_lm_dofs(e, j);
+                lm_value += trace * lm_dof;
+              }
+            const Real active_boundary_value = is_dirichlet ? boundary_value : lm_value;
+            Real vector_normal = Kokkos::detail::component_or_zero(phi_i, 0) * nx;
+#if LIBMESH_DIM > 1
+            vector_normal += Kokkos::detail::component_or_zero(phi_i, 1) * ny;
+#endif
+#if LIBMESH_DIM > 2
+            vector_normal += Kokkos::detail::component_or_zero(phi_i, 2) * nz;
+#endif
+            value -= side_jxw(e, side, q) * vector_normal * active_boundary_value;
+          }
+        }
+        else if (idx < p0)
+        {
+          const unsigned int i = idx - u0;
+          for (unsigned int q = 0; q != n_side_qp; ++q)
+          {
+            const Real px = parent_xi(e, side, q);
+            const Real py = parent_eta(e, side, q);
+            const Real pz = parent_zeta(e, side, q);
+            const Real nx = normal_x(e, side, q);
+#if LIBMESH_DIM > 1
+            const Real ny = normal_y(e, side, q);
+#else
+            const Real ny = Real(0);
+#endif
+#if LIBMESH_DIM > 2
+            const Real nz = normal_z(e, side, q);
+#else
+            const Real nz = Real(0);
+#endif
+            Real normal_norm2 = nx * nx;
+#if LIBMESH_DIM > 1
+            normal_norm2 += ny * ny;
+#endif
+#if LIBMESH_DIM > 2
+            normal_norm2 += nz * nz;
+#endif
+            Real q_normal = Real(0);
+            for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+            {
+              Real q_value = Real(0);
+              for (unsigned int j = 0; j != layout.vector_n_dofs; ++j)
+              {
+                const libMesh::Kokkos::RealVector phi_j =
+                    libMesh::Kokkos::vector_shape(vector_key, j, px, py, pz);
+                const Real q_dof = component == 0 ? u_q_dofs(e, j) : v_q_dofs(e, j);
+                q_value += Kokkos::detail::component_or_zero(phi_j, d) * q_dof;
+              }
+              const Real normal_component =
+                  d == 0 ? nx :
+#if LIBMESH_DIM > 1
+                           d == 1 ? ny :
+#endif
+                                    nz;
+              q_normal += q_value * normal_component;
+            }
+
+            Real u_value = Real(0);
+            Real p_value = Real(0);
+            for (unsigned int j = 0; j != layout.scalar_n_dofs; ++j)
+            {
+              const Real phi = libMesh::Kokkos::shape(scalar_key, j, px, py, pz);
+              const Real u_dof = component == 0 ? u_u_dofs(e, j) : v_u_dofs(e, j);
+              u_value += phi * u_dof;
+              p_value += phi * u_p_dofs(e, j);
+            }
+
+            Real lm_value = Real(0);
+            Real other_lm_value = Real(0);
+            for (unsigned int j = 0; j != layout.lm_n_dofs; ++j)
+            {
+              const Real trace = libMesh::Kokkos::side_trace_shape(
+                  lm_key, j, side, positive_edge_orientation, px, py, pz);
+              const Real lm_dof = component == 0 ? u_lm_dofs(e, j) : v_lm_dofs(e, j);
+              const Real other_lm_dof =
+                  component == 0 ? u_other_lm_dofs(e, j) : v_other_lm_dofs(e, j);
+              lm_value += trace * lm_dof;
+              other_lm_value += trace * other_lm_dof;
+            }
+
+            const Real boundary_value =
+                is_dirichlet
+                    ? (component == 0 ? dirichlet_component_0(e, side, q)
+                                      : dirichlet_component_1(e, side, q))
+                    : lm_value;
+            const Real advective_vdotn =
+                velocity_component == 0 ? nx * lm_value + ny * other_lm_value
+                                        : nx * other_lm_value + ny * lm_value;
+            const Real advective_flux =
+                !include_convection ? Real(0)
+                : is_dirichlet      ? dirichlet_vdotn(e, side, q) * boundary_value
+                                    : advective_vdotn * lm_value;
+            const Real normal_component = velocity_component == 0 ? nx : ny;
+            const Real linear_flux =
+                is_outlet ? Real(0)
+                          : -nu * q_normal + p_value * normal_component +
+                                tau * (u_value - boundary_value) * normal_norm2;
+            value += side_jxw(e, side, q) *
+                     libMesh::Kokkos::shape(scalar_key, i, px, py, pz) *
+                     (linear_flux + advective_flux);
+          }
+        }
+        else if (idx < lm0)
+        {
+          const unsigned int i = idx - p0;
+          for (unsigned int q = 0; q != n_side_qp; ++q)
+          {
+            const Real px = parent_xi(e, side, q);
+            const Real py = parent_eta(e, side, q);
+            const Real pz = parent_zeta(e, side, q);
+            const Real nx = normal_x(e, side, q);
+#if LIBMESH_DIM > 1
+            const Real ny = normal_y(e, side, q);
+#else
+            const Real ny = Real(0);
+#endif
+            Real lm_value = Real(0);
+            if (!is_dirichlet)
+              for (unsigned int j = 0; j != layout.lm_n_dofs; ++j)
+              {
+                const Real trace = libMesh::Kokkos::side_trace_shape(
+                    lm_key, j, side, positive_edge_orientation, px, py, pz);
+                const Real lm_dof = component == 0 ? u_lm_dofs(e, j) : v_lm_dofs(e, j);
+                lm_value += trace * lm_dof;
+              }
+            const Real boundary_value =
+                is_dirichlet
+                    ? (component == 0 ? dirichlet_component_0(e, side, q)
+                                      : dirichlet_component_1(e, side, q))
+                    : lm_value;
+            const Real normal_component = velocity_component == 0 ? nx : ny;
+            value += side_jxw(e, side, q) *
+                     libMesh::Kokkos::shape(scalar_key, i, px, py, pz) * boundary_value *
+                     normal_component;
+          }
+        }
+        else
+        {
+          const unsigned int i = idx - lm0;
+          for (unsigned int q = 0; q != n_side_qp; ++q)
+          {
+            const Real px = parent_xi(e, side, q);
+            const Real py = parent_eta(e, side, q);
+            const Real pz = parent_zeta(e, side, q);
+            const Real phi_i = libMesh::Kokkos::side_trace_shape(
+                lm_key, i, side, positive_edge_orientation, px, py, pz);
+            Real lm_value = Real(0);
+            for (unsigned int j = 0; j != layout.lm_n_dofs; ++j)
+            {
+              const Real trace = libMesh::Kokkos::side_trace_shape(
+                  lm_key, j, side, positive_edge_orientation, px, py, pz);
+              const Real lm_dof = component == 0 ? u_lm_dofs(e, j) : v_lm_dofs(e, j);
+              lm_value += trace * lm_dof;
+            }
+
+            if (is_dirichlet)
+            {
+              value -= side_jxw(e, side, q) * phi_i * lm_value;
+              continue;
+            }
+
+            const Real nx = normal_x(e, side, q);
+#if LIBMESH_DIM > 1
+            const Real ny = normal_y(e, side, q);
+#else
+            const Real ny = Real(0);
+#endif
+#if LIBMESH_DIM > 2
+            const Real nz = normal_z(e, side, q);
+#else
+            const Real nz = Real(0);
+#endif
+            Real normal_norm2 = nx * nx;
+#if LIBMESH_DIM > 1
+            normal_norm2 += ny * ny;
+#endif
+#if LIBMESH_DIM > 2
+            normal_norm2 += nz * nz;
+#endif
+            Real q_normal = Real(0);
+            for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+            {
+              Real q_value = Real(0);
+              for (unsigned int j = 0; j != layout.vector_n_dofs; ++j)
+              {
+                const libMesh::Kokkos::RealVector phi_j =
+                    libMesh::Kokkos::vector_shape(vector_key, j, px, py, pz);
+                const Real q_dof = component == 0 ? u_q_dofs(e, j) : v_q_dofs(e, j);
+                q_value += Kokkos::detail::component_or_zero(phi_j, d) * q_dof;
+              }
+              const Real normal_component =
+                  d == 0 ? nx :
+#if LIBMESH_DIM > 1
+                           d == 1 ? ny :
+#endif
+                                    nz;
+              q_normal += q_value * normal_component;
+            }
+
+            Real u_value = Real(0);
+            Real p_value = Real(0);
+            for (unsigned int j = 0; j != layout.scalar_n_dofs; ++j)
+            {
+              const Real phi = libMesh::Kokkos::shape(scalar_key, j, px, py, pz);
+              const Real u_dof = component == 0 ? u_u_dofs(e, j) : v_u_dofs(e, j);
+              u_value += phi * u_dof;
+              p_value += phi * u_p_dofs(e, j);
+            }
+
+            Real other_lm_value = Real(0);
+            for (unsigned int j = 0; j != layout.lm_n_dofs; ++j)
+            {
+              const Real trace = libMesh::Kokkos::side_trace_shape(
+                  lm_key, j, side, positive_edge_orientation, px, py, pz);
+              const Real other_lm_dof =
+                  component == 0 ? u_other_lm_dofs(e, j) : v_other_lm_dofs(e, j);
+              other_lm_value += trace * other_lm_dof;
+            }
+
+            const Real advective_vdotn =
+                velocity_component == 0 ? nx * lm_value + ny * other_lm_value
+                                        : nx * other_lm_value + ny * lm_value;
+            const Real advective_flux =
+                (!include_convection || is_outlet) ? Real(0) : advective_vdotn * lm_value;
+            const Real normal_component = velocity_component == 0 ? nx : ny;
+            value += side_jxw(e, side, q) * phi_i *
+                     (-nu * q_normal + p_value * normal_component +
+                      tau * (u_value - lm_value) * normal_norm2 + advective_flux);
+          }
+        }
+
+        if (component == 0)
+          u_residual(e, idx) += value;
+        else
+          v_residual(e, idx) += value;
+      });
+}
+
+template <ElemType ExactTopo>
 bool
 assemble_component_pair_into_full(const DeviceAssemblyData & u_data,
                                   const DeviceAssemblyData & v_data,
@@ -1721,9 +2273,16 @@ assemble_component_pair_into_full(const DeviceAssemblyData & u_data,
         v_residual_status,
         "vector_fe_ex9_hdg_direct_full_pair_batch",
         ex9_kokkos_team_size(),
-        assemble_residual,
+        false,
         false,
         false);
+  }
+
+  if (assemble_residual)
+  {
+    Ex9KokkosTimer timer("split component residual zero");
+    ::Kokkos::deep_copy(u_residual, Real(0));
+    ::Kokkos::deep_copy(v_residual, Real(0));
   }
 
   {
@@ -1733,6 +2292,19 @@ assemble_component_pair_into_full(const DeviceAssemblyData & u_data,
   {
     Ex9KokkosTimer timer("split component side blocks kernel");
     assemble_component_pair_side_blocks_range(u_data, u_blocks, v_blocks);
+  }
+  if (assemble_residual)
+  {
+    {
+      Ex9KokkosTimer timer("split component volume residual kernel");
+      assemble_component_pair_volume_residual_range<ExactTopo>(
+          u_data, v_data, u_dofs, v_dofs, u_residual, v_residual);
+    }
+    {
+      Ex9KokkosTimer timer("split component side residual kernel");
+      assemble_component_pair_side_residual_range(
+          u_data, v_data, u_dofs, v_dofs, u_residual, v_residual);
+    }
   }
 
   int n_failures = 0;
