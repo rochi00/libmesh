@@ -582,6 +582,144 @@ validate_back_substitution_values_on_device(DeviceBackSubstitutionPlan & plan,
                     << " tolerance=" << tolerance);
 }
 
+template <typename RhsView, typename SolView>
+void
+validate_back_substitution_equations_on_device(const Parallel::Communicator & comm,
+                                               DeviceBackSubstitutionPlan & plan,
+                                               const RhsView & rhs_view,
+                                               const SolView & sol_view)
+{
+  if (!ex9_kokkos_validate_condense() || comm.size() != 1)
+    return;
+
+  const auto layout = plan.layout;
+  const std::size_t n_entries = plan.n_elem * layout.internal_n_dofs;
+  const auto full_blocks = plan.full_blocks;
+  const auto internal_ids = plan.internal_vector_ids;
+  const auto external_ids = plan.external_vector_ids;
+  const unsigned int n_internal = layout.internal_n_dofs;
+  const unsigned int n_external = layout.external_n_dofs;
+  const unsigned int n_dofs = layout.n_dofs;
+
+  Real max_error = Real(0);
+  {
+    Ex9KokkosTimer timer("back-substitution equation error reduction", false);
+    ::Kokkos::parallel_reduce(
+        "vector_fe_ex9_backsub_equation_error",
+        ::Kokkos::RangePolicy<>(0, cast_int<int>(n_entries)),
+        KOKKOS_LAMBDA(const int entry, Real & local_max) {
+          const int elem = entry / static_cast<int>(n_internal);
+          const int i = entry - elem * static_cast<int>(n_internal);
+          Real lhs = Real(0);
+          for (unsigned int j = 0; j != n_internal; ++j)
+            lhs += full_blocks(elem, i * n_dofs + j) * sol_view(internal_ids(elem, j));
+          for (unsigned int j = 0; j != n_external; ++j)
+          {
+            const unsigned int full_j = ex9_external_full_offset(layout, j);
+            lhs += full_blocks(elem, i * n_dofs + full_j) * sol_view(external_ids(elem, j));
+          }
+          const Real error = Kokkos::detail::abs_real(lhs - rhs_view(internal_ids(elem, i)));
+          if (error > local_max)
+            local_max = error;
+        },
+        ::Kokkos::Max<Real>(max_error));
+  }
+
+  Real max_reference = Real(0);
+  {
+    Ex9KokkosTimer timer("back-substitution equation reference reduction", false);
+    ::Kokkos::parallel_reduce(
+        "vector_fe_ex9_backsub_equation_reference",
+        ::Kokkos::RangePolicy<>(0, cast_int<int>(n_entries)),
+        KOKKOS_LAMBDA(const int entry, Real & local_max) {
+          const int elem = entry / static_cast<int>(n_internal);
+          const int i = entry - elem * static_cast<int>(n_internal);
+          Real lhs = Real(0);
+          for (unsigned int j = 0; j != n_internal; ++j)
+            lhs += full_blocks(elem, i * n_dofs + j) * sol_view(internal_ids(elem, j));
+          for (unsigned int j = 0; j != n_external; ++j)
+          {
+            const unsigned int full_j = ex9_external_full_offset(layout, j);
+            lhs += full_blocks(elem, i * n_dofs + full_j) * sol_view(external_ids(elem, j));
+          }
+          const Real rhs = rhs_view(internal_ids(elem, i));
+          const Real reference =
+              Kokkos::detail::abs_real(lhs) > Kokkos::detail::abs_real(rhs) ?
+                  Kokkos::detail::abs_real(lhs) :
+                  Kokkos::detail::abs_real(rhs);
+          if (reference > local_max)
+            local_max = reference;
+        },
+        ::Kokkos::Max<Real>(max_reference));
+  }
+
+  const Real relative_tolerance =
+      libMesh::command_line_value("--ex9-kokkos-backsub-equation-validation-rtol", Real(1.e-8));
+  const Real absolute_tolerance =
+      libMesh::command_line_value("--ex9-kokkos-backsub-equation-validation-atol", Real(1.e-8));
+  const Real tolerance = absolute_tolerance + relative_tolerance * (Real(1) + max_reference);
+  if (max_error <= tolerance)
+    return;
+
+  DeviceReal1D residuals("vector_fe_ex9_backsub_equation_residuals", n_entries);
+  DeviceReal1D lhs_values("vector_fe_ex9_backsub_equation_lhs", n_entries);
+  DeviceReal1D rhs_values("vector_fe_ex9_backsub_equation_rhs", n_entries);
+  {
+    Ex9KokkosTimer timer("back-substitution equation diagnostics kernel", false);
+    ::Kokkos::parallel_for(
+        "vector_fe_ex9_backsub_equation_diagnostics",
+        ::Kokkos::RangePolicy<>(0, cast_int<int>(n_entries)),
+        KOKKOS_LAMBDA(const int entry) {
+          const int elem = entry / static_cast<int>(n_internal);
+          const int i = entry - elem * static_cast<int>(n_internal);
+          Real lhs = Real(0);
+          for (unsigned int j = 0; j != n_internal; ++j)
+            lhs += full_blocks(elem, i * n_dofs + j) * sol_view(internal_ids(elem, j));
+          for (unsigned int j = 0; j != n_external; ++j)
+          {
+            const unsigned int full_j = ex9_external_full_offset(layout, j);
+            lhs += full_blocks(elem, i * n_dofs + full_j) * sol_view(external_ids(elem, j));
+          }
+          const Real rhs = rhs_view(internal_ids(elem, i));
+          lhs_values(entry) = lhs;
+          rhs_values(entry) = rhs;
+          residuals(entry) = lhs - rhs;
+        });
+  }
+
+  auto h_residuals = ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), residuals);
+  auto h_lhs = ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), lhs_values);
+  auto h_rhs = ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), rhs_values);
+  auto h_internal_ids =
+      ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), internal_ids);
+
+  std::size_t failure_entry = 0;
+  Real failure_error = Real(0);
+  for (std::size_t entry = 0; entry != n_entries; ++entry)
+  {
+    const Real error = std::abs(h_residuals(entry));
+    if (error > failure_error)
+    {
+      failure_error = error;
+      failure_entry = entry;
+    }
+  }
+
+  const std::size_t elem = failure_entry / n_internal;
+  const std::size_t local = failure_entry - elem * n_internal;
+  libmesh_error_msg("vector_fe_ex9 Kokkos back-substitution equation mismatch: elem="
+                    << elem << " local_internal=" << local
+                    << " dof=" << h_internal_ids(elem, local)
+                    << " lhs=" << h_lhs(failure_entry)
+                    << " rhs=" << h_rhs(failure_entry)
+                    << " residual=" << h_residuals(failure_entry)
+                    << " max_error=" << max_error
+                    << " max_reference=" << max_reference
+                    << " tolerance=" << tolerance
+                    << " relative_tolerance=" << relative_tolerance
+                    << " absolute_tolerance=" << absolute_tolerance);
+}
+
 template <typename SolView>
 void
 validate_condensed_solution_on_device(const Parallel::Communicator & comm,
@@ -4310,11 +4448,15 @@ run_device_backwards_substitution(DeviceBackSubstitutionPlan & plan,
   {
     using PetscKokkosReadView =
         ::Kokkos::View<const PetscScalar *, ::Kokkos::DefaultExecutionSpace::memory_space>;
+    PetscKokkosReadView rhs_view;
     PetscKokkosReadView sol_view;
+    LibmeshPetscCall2(full_rhs.comm(), VecGetKokkosView(petsc_rhs->vec(), &rhs_view));
     LibmeshPetscCall2(full_sol.comm(), VecGetKokkosView(petsc_sol->vec(), &sol_view));
+    validate_back_substitution_equations_on_device(full_sol.comm(), plan, rhs_view, sol_view);
     validate_back_substitution_values_on_device(plan,
                                                sol_view,
                                                initial_backsub_values);
+    LibmeshPetscCall2(full_rhs.comm(), VecRestoreKokkosView(petsc_rhs->vec(), &rhs_view));
     LibmeshPetscCall2(full_sol.comm(), VecRestoreKokkosView(petsc_sol->vec(), &sol_view));
   }
   return true;
