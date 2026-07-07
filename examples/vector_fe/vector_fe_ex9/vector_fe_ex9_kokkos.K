@@ -45,17 +45,23 @@
 #include "libmesh/mesh_base_kokkos.h"
 
 #include <Kokkos_Core.hpp>
+#include <Kokkos_Profiling_ScopedRegion.hpp>
 #if __has_include(<KokkosBatched_Gesv.hpp>)
 #include <KokkosBatched_Gesv.hpp>
 #define LIBMESH_EX9_HAVE_KOKKOS_BATCHED_GESV 1
 #else
 #define LIBMESH_EX9_HAVE_KOKKOS_BATCHED_GESV 0
 #endif
+#ifdef LIBMESH_HAVE_NVTX_API
+#include <nvtx3/nvtx3.hpp>
+#endif
 #endif
 
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
+#include <cstring>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -122,6 +128,14 @@ ex9_kokkos_timers_enabled()
 }
 
 bool
+ex9_kokkos_profile_ranges_enabled()
+{
+  static const bool enabled =
+      ex9_kokkos_timers_enabled() || libMesh::on_command_line("--ex9-kokkos-nvtx");
+  return enabled;
+}
+
+bool
 ex9_kokkos_host_coo_values()
 {
   static const bool enabled = []() {
@@ -163,11 +177,77 @@ ex9_kokkos_condense_solver()
   return solver;
 }
 
+std::uint32_t
+ex9_kokkos_region_color(const char * name)
+{
+  if (!name)
+    return 0xff8f8f8f;
+  if (std::strstr(name, "PETSc") || std::strstr(name, "Vec") || std::strstr(name, "Mat"))
+    return 0xffe15759;
+  if (std::strstr(name, "COO"))
+    return 0xfff28e2b;
+  if (std::strstr(name, "residual"))
+    return 0xff4e79a7;
+  if (std::strstr(name, "jacobian") || std::strstr(name, "Jacobian"))
+    return 0xffb07aa1;
+  if (std::strstr(name, "condense") || std::strstr(name, "condensation"))
+    return 0xffedc948;
+  if (std::strstr(name, "back-substitution") || std::strstr(name, "forward elimination"))
+    return 0xff59a14f;
+  if (std::strstr(name, "gather") || std::strstr(name, "scatter"))
+    return 0xff76b7b2;
+  if (std::strstr(name, "zero") || std::strstr(name, "close"))
+    return 0xffbab0ac;
+  return 0xff9c755f;
+}
+
+class Ex9KokkosProfileRegion
+{
+public:
+  explicit Ex9KokkosProfileRegion(const std::string & label)
+    : _enabled(ex9_kokkos_profile_ranges_enabled())
+  {
+    if (!_enabled)
+      return;
+
+    const char * name = label.c_str();
+    ::Kokkos::Profiling::pushRegion(name);
+#ifdef LIBMESH_HAVE_NVTX_API
+    nvtxEventAttributes_t event_attributes = {};
+    event_attributes.version = NVTX_VERSION;
+    event_attributes.size = NVTX_EVENT_ATTRIB_STRUCT_SIZE;
+    event_attributes.colorType = NVTX_COLOR_ARGB;
+    event_attributes.color = ex9_kokkos_region_color(name);
+    event_attributes.messageType = NVTX_MESSAGE_TYPE_ASCII;
+    event_attributes.message.ascii = name;
+    nvtxRangePushEx(&event_attributes);
+#endif
+  }
+
+  ~Ex9KokkosProfileRegion()
+  {
+    if (!_enabled)
+      return;
+
+#ifdef LIBMESH_HAVE_NVTX_API
+    nvtxRangePop();
+#endif
+    ::Kokkos::Profiling::popRegion();
+  }
+
+  Ex9KokkosProfileRegion(const Ex9KokkosProfileRegion &) = delete;
+  Ex9KokkosProfileRegion & operator=(const Ex9KokkosProfileRegion &) = delete;
+
+private:
+  bool _enabled = false;
+};
+
 class Ex9KokkosTimer
 {
 public:
   explicit Ex9KokkosTimer(std::string label, const bool fence = true)
     : _label(std::move(label)),
+      _region(_label),
       _fence(fence),
       _enabled(ex9_kokkos_timers_enabled())
   {
@@ -194,6 +274,7 @@ public:
 private:
   using Clock = std::chrono::steady_clock;
   std::string _label;
+  Ex9KokkosProfileRegion _region;
   bool _fence = true;
   bool _enabled = false;
   Clock::time_point _start;
