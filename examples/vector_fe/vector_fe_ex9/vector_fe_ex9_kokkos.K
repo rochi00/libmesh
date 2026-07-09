@@ -1287,8 +1287,11 @@ scatter_component_pair_into_full(const DeviceAssemblyData & u_data,
       ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * n_entries)),
       KOKKOS_LAMBDA(const int raw_entry) {
         const unsigned int entry = static_cast<unsigned int>(raw_entry);
-        const unsigned int e = entry / n_entries;
-        const unsigned int idx = entry - e * n_entries;
+        // Element index varies fastest across consecutive threads so that
+        // accesses to the LayoutLeft (e, idx) views coalesce and the block
+        // offset computation below is uniform across a warp.
+        const unsigned int e = entry % n_elem;
+        const unsigned int idx = entry / n_elem;
         const unsigned int u_full_idx =
             ex9_component_full_block_offset(full_layout,
                                             component_layout,
@@ -1315,8 +1318,10 @@ scatter_component_pair_into_full(const DeviceAssemblyData & u_data,
       ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * residual_n_dofs)),
       KOKKOS_LAMBDA(const int raw_entry) {
         const unsigned int entry = static_cast<unsigned int>(raw_entry);
-        const unsigned int e = entry / residual_n_dofs;
-        const unsigned int idx = entry - e * residual_n_dofs;
+        // Element-fastest thread mapping for coalesced LayoutLeft access;
+        // see the block scatter kernel above.
+        const unsigned int e = entry % n_elem;
+        const unsigned int idx = entry / n_elem;
         const unsigned int u_full_idx =
             ex9_component_full_residual_offset(full_layout,
                                                component_layout,
