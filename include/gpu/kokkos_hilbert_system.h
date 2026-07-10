@@ -856,6 +856,90 @@ private:
   QpJinvView _qp_jinv;
 };
 
+template <typename NodeCoordinateStorage,
+          typename ElemNodeIdStorage,
+          typename ElemMappingTypeStorage,
+          typename ElemNodeCountStorage,
+          typename ShapeKeyStorage,
+          typename ElemIndexStorage,
+          typename QuadratureOrderStorage,
+          typename OffsetStorage,
+          typename GoalFunction,
+          typename GoalGradient,
+          typename ValueView,
+          typename GradientView>
+void
+run_hilbert_analytic_goal_device_sampling(const NodeCoordinateStorage & node_coordinates,
+                                          const ElemNodeIdStorage & element_node_ids,
+                                          const ElemMappingTypeStorage & element_mapping_types,
+                                          const ElemNodeCountStorage & element_n_nodes,
+                                          const ShapeKeyStorage & shape_keys,
+                                          const ElemIndexStorage & elem_indices,
+                                          const QuadratureOrderStorage & quadrature_orders,
+                                          const OffsetStorage & qp_offsets,
+                                          GoalFunction goal_func,
+                                          GoalGradient goal_grad,
+                                          const unsigned int hilbert_order,
+                                          ValueView values,
+                                          GradientView gradients)
+{
+  using ExecutionSpace = typename std::decay_t<ValueView>::execution_space;
+
+  // Sampling the goal into flat per-qp tables in its own kernel keeps the
+  // register-hungry parsed-program interpreter out of the assembly kernels,
+  // whose occupancy it would otherwise cap.
+  ::Kokkos::parallel_for(
+    "hilbert_analytic_goal_device_sampling",
+    ::Kokkos::RangePolicy<ExecutionSpace>(0, cast_int<int>(elem_indices.extent(0))),
+    KOKKOS_LAMBDA(const int raw_record_index) {
+      const unsigned int record_index = static_cast<unsigned int>(raw_record_index);
+      const unsigned int elem_index = elem_indices(record_index);
+      const auto key = shape_keys(record_index);
+      const unsigned int quadrature_order = quadrature_orders(record_index);
+      const unsigned int n_qpoints = GaussQuadrature::n_points(key.elem_type, quadrature_order);
+      const auto elem_nodes =
+        make_element_node_access(node_coordinates, element_node_ids, elem_index);
+      const unsigned int n_nodes = element_n_nodes(elem_index);
+      const auto mapping_type = element_mapping_types(elem_index);
+      const std::size_t qp_offset = qp_offsets(elem_index);
+
+      for (unsigned int qp = 0; qp != n_qpoints; ++qp)
+      {
+        const RealVector qp_ref = GaussQuadrature::point(key.elem_type, quadrature_order, qp);
+        RealVector xyz = zero_vector();
+        RealTensor J = zero_tensor();
+        physical_point_and_jacobian(mapping_type,
+                                    key.elem_type,
+                                    elem_nodes,
+                                    n_nodes,
+                                    qp_ref(0),
+                                    qp_ref(1),
+                                    qp_ref(2),
+                                    xyz,
+                                    J);
+
+        Real y = 0.;
+        Real z = 0.;
+#if LIBMESH_DIM > 1
+        y = xyz(1);
+#endif
+#if LIBMESH_DIM > 2
+        z = xyz(2);
+#endif
+        const Point xyz_pt(xyz(0), y, z);
+        const std::size_t flat_qp = qp_offset + qp;
+        values(flat_qp) = goal_func(xyz_pt);
+
+        if (hilbert_order > 0)
+        {
+          const Gradient grad = goal_grad(xyz_pt);
+          for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+            gradients(flat_qp * LIBMESH_DIM + d) = grad(d);
+        }
+      }
+    });
+}
+
 template <unsigned int MaxDofs,
           typename NodeCoordinateStorage,
           typename ElemNodeIdStorage,
@@ -907,7 +991,12 @@ run_hilbert_system_bucket_team_value_batch(const libMesh::FEShapeKey key,
       ScratchRealVectorView::shmem_size(bucket_n_dofs, n_qpoints) +
       ScratchRealTensorView::shmem_size(bucket_n_dofs, n_qpoints, 3);
 
-  TeamPolicy policy(cast_int<int>(n_records), ::Kokkos::AUTO());
+  // Per-element work is small (n_qpoints geometry entries, n_dofs^2 matrix entries),
+  // so a default-sized team leaves most lanes idle at every team barrier. One warp
+  // per team keeps lanes busy and makes the barriers warp-synchronous on device.
+  TeamPolicy policy = is_host_thread_execution_space<ExecutionSpace>()
+                          ? TeamPolicy(cast_int<int>(n_records), ::Kokkos::AUTO())
+                          : TeamPolicy(cast_int<int>(n_records), 32);
   policy = policy.set_scratch_size(0, ::Kokkos::PerTeam(scratch_bytes));
 
   ::Kokkos::parallel_for(

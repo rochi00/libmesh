@@ -1036,6 +1036,82 @@ ensure_kokkos_analytic_goal_batch_data(
 }
 
 bool
+build_kokkos_analytic_goal_batch_data_device(
+    ::HilbertSystem & sys,
+    const KokkosPetscAssemblyPlan & plan,
+    const libMesh::Kokkos::KokkosParsedFunction<Number> & kokkos_goal,
+    KokkosAnalyticGoalBatchData & batch_data)
+{
+  KokkosProfilingRegion kokkos_region("L2Kokkos::sample analytic goal on device");
+
+  const auto & geometry_cache = sys.get_mesh().get_kokkos_geometry_cache();
+
+  batch_data.qp_offsets =
+      KokkosSizeView("hilbert_analytic_goal_qp_offsets",
+                     geometry_cache.host_element_ids.size());
+  auto h_qp_offsets = ::Kokkos::create_mirror_view(batch_data.qp_offsets);
+
+  std::size_t total_qpoints = 0;
+  for (const auto & record : plan.records)
+  {
+    h_qp_offsets(record.elem_index) = total_qpoints;
+    total_qpoints += libMesh::Kokkos::GaussQuadrature::n_points(
+        geometry_cache.host_element_types[record.elem_index],
+        record.quadrature_order);
+  }
+  ::Kokkos::deep_copy(batch_data.qp_offsets, h_qp_offsets);
+
+  batch_data.values = KokkosScalarView<Number>("hilbert_analytic_goal_values", total_qpoints);
+  batch_data.gradients =
+      KokkosScalarView<Number>("hilbert_analytic_goal_gradients", total_qpoints * LIBMESH_DIM);
+
+  auto timed_goal = kokkos_goal.with_time(sys.time);
+  auto timed_goal_grad = timed_goal.gradient_function();
+  libMesh::Kokkos::detail::run_hilbert_analytic_goal_device_sampling(
+      geometry_cache.node_coordinates_dual.view_device(),
+      geometry_cache.element_node_ids_dual.view_device(),
+      geometry_cache.element_mapping_types_dual.view_device(),
+      geometry_cache.element_n_nodes_dual.view_device(),
+      plan.batch_data.shape_keys,
+      plan.batch_data.elem_indices,
+      plan.batch_data.quadrature_orders,
+      batch_data.qp_offsets,
+      std::move(timed_goal),
+      std::move(timed_goal_grad),
+      sys.hilbert_order(),
+      batch_data.values,
+      batch_data.gradients);
+
+  return true;
+}
+
+bool
+ensure_kokkos_analytic_goal_batch_data_device(
+    ::HilbertSystem & sys,
+    FunctionBase<Number> * host_goal_key,
+    FunctionBase<Gradient> * host_gradient_key,
+    const libMesh::Kokkos::KokkosParsedFunction<Number> & kokkos_goal,
+    KokkosPetscAssemblyPlan & plan)
+{
+  KokkosProfilingRegion kokkos_region("L2Kokkos::ensure device analytic goal samples");
+
+  if (plan.analytic_goal_target == host_goal_key &&
+      plan.analytic_goal_gradient_target == host_gradient_key &&
+      plan.analytic_goal_time == sys.time)
+    return true;
+
+  KokkosAnalyticGoalBatchData batch_data;
+  if (!build_kokkos_analytic_goal_batch_data_device(sys, plan, kokkos_goal, batch_data))
+    return false;
+
+  plan.analytic_goal_batch_data = batch_data;
+  plan.analytic_goal_target = host_goal_key;
+  plan.analytic_goal_gradient_target = host_gradient_key;
+  plan.analytic_goal_time = sys.time;
+  return true;
+}
+
+bool
 build_kokkos_fem_goal_batch_data(
     ::HilbertSystem & sys,
     const KokkosPetscAssemblyPlan & plan,
@@ -1431,18 +1507,25 @@ assemble_kokkos_petsc_global_system(
                            "HilbertSystem Kokkos PETSc COO assembly requires an analytic goal "
                            "gradient for Hilbert orders greater than zero.");
 
-      // Prefer evaluating the parsed goal (and its symbolic gradient) on device at the
-      // quadrature points the batch kernels already compute; the host pre-sampling sweep
-      // (serial fparser evaluation per element x qp, FDM gradients) is kept as a fallback
-      // for goals without device support.
+      // Prefer sampling the parsed goal (and its symbolic gradient) on device into the
+      // per-qp tables; the host pre-sampling sweep (serial fparser evaluation per
+      // element x qp, FDM gradients) is kept as a fallback for goals without device
+      // support. A dedicated sampling kernel — rather than evaluating the goal inline in
+      // the assembly kernels — keeps the register-hungry parsed-program interpreter from
+      // capping the assembly kernels' occupancy.
       const bool use_device_goal =
           kokkos_analytic_goal && !kokkos_l2_env_enabled("LIBMESH_KOKKOS_L2_HOST_GOAL_SAMPLING");
 
       ensure_kokkos_entry_value_storage(plan);
-      if (!use_device_goal)
-        if (!ensure_kokkos_analytic_goal_batch_data(
-                sys, *analytic_goal_func, analytic_goal_grad, plan))
+      if (use_device_goal)
+      {
+        if (!ensure_kokkos_analytic_goal_batch_data_device(
+                sys, analytic_goal_func, analytic_goal_grad, *kokkos_analytic_goal, plan))
           return false;
+      }
+      else if (!ensure_kokkos_analytic_goal_batch_data(
+                   sys, *analytic_goal_func, analytic_goal_grad, plan))
+        return false;
 
       const auto node_coordinates = geometry_cache.node_coordinates_dual.view_device();
       const auto element_node_ids = geometry_cache.element_node_ids_dual.view_device();
@@ -1471,26 +1554,13 @@ assemble_kokkos_petsc_global_system(
               bucket_name);
       };
 
-      if (use_device_goal)
-      {
-        // Move the functors in so the goal access stores them by value; storing
-        // references to these host stack objects would crash the device kernels.
-        auto timed_goal = kokkos_analytic_goal->with_time(sys.time);
-        auto timed_goal_grad = timed_goal.gradient_function();
-        auto goal_access = libMesh::Kokkos::detail::make_hilbert_analytic_goal_access(
-            std::move(timed_goal), std::move(timed_goal_grad));
-        assemble_with_goal(goal_access, "hilbert_device_analytic_all_record_values");
-      }
-      else
-      {
-        auto goal_access = libMesh::Kokkos::detail::SampledAnalyticGoalAccess<
-            KokkosSizeView,
-            KokkosScalarView<Number>,
-            KokkosScalarView<Number>>(plan.analytic_goal_batch_data.qp_offsets,
-                                      plan.analytic_goal_batch_data.values,
-                                      plan.analytic_goal_batch_data.gradients);
-        assemble_with_goal(goal_access, "hilbert_device_analytic_all_record_values");
-      }
+      auto goal_access = libMesh::Kokkos::detail::SampledAnalyticGoalAccess<
+          KokkosSizeView,
+          KokkosScalarView<Number>,
+          KokkosScalarView<Number>>(plan.analytic_goal_batch_data.qp_offsets,
+                                    plan.analytic_goal_batch_data.values,
+                                    plan.analytic_goal_batch_data.gradients);
+      assemble_with_goal(goal_access, "hilbert_device_analytic_all_record_values");
     }
     else
     {
