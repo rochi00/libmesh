@@ -869,6 +869,7 @@ void
 run_hilbert_system_bucket_team_value_batch(const libMesh::FEShapeKey key,
                                            const libMesh::ElemMappingType mapping_type,
                                            const unsigned int n_nodes,
+                                           const unsigned int bucket_n_dofs,
                                            const unsigned int quadrature_order,
                                            const NodeCoordinateStorage & node_coordinates,
                                            const ElemNodeIdStorage & element_node_ids,
@@ -895,10 +896,16 @@ run_hilbert_system_bucket_team_value_batch(const libMesh::FEShapeKey key,
   using ScratchRealTensorView =
       ::Kokkos::View<Real ***, ScratchSpace, ::Kokkos::MemoryTraits<::Kokkos::Unmanaged>>;
 
+  // Geometry staging plus tabulated goal and shape values: evaluating the shape
+  // dispatch and the goal per matrix entry per qp is the dominant cost otherwise.
   const std::size_t scratch_bytes =
       2 * ScratchRealVectorView::shmem_size(n_qpoints, 3) +
       ScratchRealView::shmem_size(n_qpoints) +
-      ScratchRealTensorView::shmem_size(n_qpoints, 3, 3);
+      ScratchRealTensorView::shmem_size(n_qpoints, 3, 3) +
+      ScratchRealView::shmem_size(n_qpoints) +
+      ScratchRealVectorView::shmem_size(n_qpoints, 3) +
+      ScratchRealVectorView::shmem_size(bucket_n_dofs, n_qpoints) +
+      ScratchRealTensorView::shmem_size(bucket_n_dofs, n_qpoints, 3);
 
   TeamPolicy policy(cast_int<int>(n_records), ::Kokkos::AUTO());
   policy = policy.set_scratch_size(0, ::Kokkos::PerTeam(scratch_bytes));
@@ -915,10 +922,22 @@ run_hilbert_system_bucket_team_value_batch(const libMesh::FEShapeKey key,
         ScratchRealVectorView qp_xyz(team.team_scratch(0), n_qpoints, 3);
         ScratchRealView qp_jxw(team.team_scratch(0), n_qpoints);
         ScratchRealTensorView qp_jinv(team.team_scratch(0), n_qpoints, 3, 3);
+        ScratchRealView goal_err(team.team_scratch(0), n_qpoints);
+        ScratchRealVectorView goal_err_grad(team.team_scratch(0), n_qpoints, 3);
+        ScratchRealVectorView phi_tab(team.team_scratch(0), bucket_n_dofs, n_qpoints);
+        ScratchRealTensorView dphi_tab(team.team_scratch(0), bucket_n_dofs, n_qpoints, 3);
 
         const auto elem_nodes =
             make_element_node_access(node_coordinates, element_node_ids, elem_index);
         const unsigned int dim = dim_from_topology(key.elem_type);
+
+        const auto make_qp_data = [&](const unsigned int qp) {
+          return CachedTeamQpData<decltype(qp_reference_points),
+                                  decltype(qp_xyz),
+                                  decltype(qp_jxw),
+                                  decltype(qp_jinv)>(
+              key, elem_index, qp, qp_reference_points, qp_xyz, qp_jxw, qp_jinv);
+        };
 
         ::Kokkos::parallel_for(
             ::Kokkos::TeamThreadRange(team, n_qpoints),
@@ -964,15 +983,48 @@ run_hilbert_system_bucket_team_value_batch(const libMesh::FEShapeKey key,
                   for (unsigned int col = 0; col != LIBMESH_DIM; ++col)
                     qp_jinv(qp, row, col) = Jinv(row, col);
               }
+
+              // Stage the goal per qp so the dof loops below read tables instead of
+              // re-evaluating it per (dof, qp). Same evaluation as before: the scratch
+              // entries for this qp were just written by this thread.
+              const auto qp_data = make_qp_data(qp);
+              const Point xyz_pt = qp_data.xyz();
+              goal_err(qp) = Number(0.) - goal_access.value(qp_data, xyz_pt);
+              if (hilbert_order > 0)
+              {
+                const Gradient err_grad_u = -goal_access.gradient(qp_data, xyz_pt);
+                for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+                  goal_err_grad(qp, d) = err_grad_u(d);
+              }
             });
         team.team_barrier();
 
-        const auto make_qp_data = [&](const unsigned int qp) {
-          return CachedTeamQpData<decltype(qp_reference_points),
-                                  decltype(qp_xyz),
-                                  decltype(qp_jxw),
-                                  decltype(qp_jinv)>(
-              key, elem_index, qp, qp_reference_points, qp_xyz, qp_jxw, qp_jinv);
+        // Tabulate shape values (and physical gradients) per (dof, qp): the shape
+        // dispatch is far too expensive to re-run per matrix entry per qp.
+        ::Kokkos::parallel_for(
+            ::Kokkos::TeamThreadRange(team, n_dofs),
+            [&](const int raw_i) {
+              const unsigned int i = static_cast<unsigned int>(raw_i);
+              for (unsigned int qp = 0; qp != n_qpoints; ++qp)
+              {
+                const auto qp_data = make_qp_data(qp);
+                phi_tab(i, qp) = qp_data.phi(i);
+                if (hilbert_order > 0)
+                {
+                  const Gradient dphi_i = qp_data.dphi(i);
+                  for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+                    dphi_tab(i, qp, d) = dphi_i(d);
+                }
+              }
+            });
+        team.team_barrier();
+
+        const auto load_gradient = [&](const auto & tab, const unsigned int a,
+                                       const unsigned int qp) {
+          Gradient g;
+          for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+            g(d) = tab(a, qp, d);
+          return g;
         };
 
         const auto rhs_offset = rhs_offsets(record_index);
@@ -983,15 +1035,14 @@ run_hilbert_system_bucket_team_value_batch(const libMesh::FEShapeKey key,
               Number residual = 0.;
               for (unsigned int qp = 0; qp != n_qpoints; ++qp)
               {
-                const auto qp_data = make_qp_data(qp);
-                const Point xyz = qp_data.xyz();
-                const Number err_u = Number(0.) - goal_access.value(qp_data, xyz);
-                residual += qp_data.JxW() * err_u * qp_data.phi(i);
+                residual += qp_jxw(qp) * goal_err(qp) * phi_tab(i, qp);
 
                 if (hilbert_order > 0)
                 {
-                  const Gradient err_grad_u = -goal_access.gradient(qp_data, xyz);
-                  residual += qp_data.JxW() * (err_grad_u * qp_data.dphi(i));
+                  Gradient err_grad_u;
+                  for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+                    err_grad_u(d) = goal_err_grad(qp, d);
+                  residual += qp_jxw(qp) * (err_grad_u * load_gradient(dphi_tab, i, qp));
                 }
               }
               rhs_values(rhs_offset + i) = -residual;
@@ -1007,10 +1058,10 @@ run_hilbert_system_bucket_team_value_batch(const libMesh::FEShapeKey key,
               Number value = 0.;
               for (unsigned int qp = 0; qp != n_qpoints; ++qp)
               {
-                const auto qp_data = make_qp_data(qp);
-                value += qp_data.JxW() * qp_data.phi(i) * qp_data.phi(j);
+                value += qp_jxw(qp) * phi_tab(i, qp) * phi_tab(j, qp);
                 if (hilbert_order > 0)
-                  value += qp_data.JxW() * (qp_data.dphi(i) * qp_data.dphi(j));
+                  value += qp_jxw(qp) *
+                           (load_gradient(dphi_tab, i, qp) * load_gradient(dphi_tab, j, qp));
               }
               mat_values(mat_offset + entry) = value;
             });

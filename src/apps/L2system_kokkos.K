@@ -1331,6 +1331,7 @@ run_kokkos_hilbert_bucket_value_batch(const KokkosHilbertHomogeneousBucket & buc
       bucket.key,
       bucket.mapping_type,
       bucket.n_nodes,
+      bucket.n_dofs,
       bucket.quadrature_order,
       node_coordinates,
       element_node_ids,
@@ -1383,6 +1384,7 @@ assemble_kokkos_petsc_global_system(
     const bool analytic_goal,
     FunctionBase<Number> * analytic_goal_func,
     FunctionBase<Gradient> * analytic_goal_grad,
+    const libMesh::Kokkos::KokkosParsedFunction<Number> * kokkos_analytic_goal,
     const libMesh::Kokkos::KokkosParsedFEMFunction<Number> * fem_goal,
     PetscMatrixBase<Number> & system_matrix,
     PetscVector<Number> & system_rhs,
@@ -1429,10 +1431,18 @@ assemble_kokkos_petsc_global_system(
                            "HilbertSystem Kokkos PETSc COO assembly requires an analytic goal "
                            "gradient for Hilbert orders greater than zero.");
 
+      // Prefer evaluating the parsed goal (and its symbolic gradient) on device at the
+      // quadrature points the batch kernels already compute; the host pre-sampling sweep
+      // (serial fparser evaluation per element x qp, FDM gradients) is kept as a fallback
+      // for goals without device support.
+      const bool use_device_goal =
+          kokkos_analytic_goal && !kokkos_l2_env_enabled("LIBMESH_KOKKOS_L2_HOST_GOAL_SAMPLING");
+
       ensure_kokkos_entry_value_storage(plan);
-      if (!ensure_kokkos_analytic_goal_batch_data(
-              sys, *analytic_goal_func, analytic_goal_grad, plan))
-        return false;
+      if (!use_device_goal)
+        if (!ensure_kokkos_analytic_goal_batch_data(
+                sys, *analytic_goal_func, analytic_goal_grad, plan))
+          return false;
 
       const auto node_coordinates = geometry_cache.node_coordinates_dual.view_device();
       const auto element_node_ids = geometry_cache.element_node_ids_dual.view_device();
@@ -1461,13 +1471,26 @@ assemble_kokkos_petsc_global_system(
               bucket_name);
       };
 
-      auto goal_access = libMesh::Kokkos::detail::SampledAnalyticGoalAccess<
-          KokkosSizeView,
-          KokkosScalarView<Number>,
-          KokkosScalarView<Number>>(plan.analytic_goal_batch_data.qp_offsets,
-                                    plan.analytic_goal_batch_data.values,
-                                    plan.analytic_goal_batch_data.gradients);
-      assemble_with_goal(goal_access, "hilbert_device_analytic_all_record_values");
+      if (use_device_goal)
+      {
+        // Move the functors in so the goal access stores them by value; storing
+        // references to these host stack objects would crash the device kernels.
+        auto timed_goal = kokkos_analytic_goal->with_time(sys.time);
+        auto timed_goal_grad = timed_goal.gradient_function();
+        auto goal_access = libMesh::Kokkos::detail::make_hilbert_analytic_goal_access(
+            std::move(timed_goal), std::move(timed_goal_grad));
+        assemble_with_goal(goal_access, "hilbert_device_analytic_all_record_values");
+      }
+      else
+      {
+        auto goal_access = libMesh::Kokkos::detail::SampledAnalyticGoalAccess<
+            KokkosSizeView,
+            KokkosScalarView<Number>,
+            KokkosScalarView<Number>>(plan.analytic_goal_batch_data.qp_offsets,
+                                      plan.analytic_goal_batch_data.values,
+                                      plan.analytic_goal_batch_data.gradients);
+        assemble_with_goal(goal_access, "hilbert_device_analytic_all_record_values");
+      }
     }
     else
     {
@@ -1905,6 +1928,8 @@ HilbertSystem::kokkos_petsc_solve()
                                              analytic_goal,
                                              _analytic_goal_func.get(),
                                              _analytic_goal_grad.get(),
+                                             analytic_goal ? this->ensure_kokkos_goal_func()
+                                                           : nullptr,
                                              fem_goal,
                                              *petsc_matrix,
                                              *petsc_rhs,

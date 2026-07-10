@@ -723,12 +723,244 @@ collect_supported_elements(const HDGProblem & problem,
   return elem_type != INVALID_ELEM;
 }
 
+// Component-independent host tabulation shared by the full/u/v assembly-data builders.
+// Building this once keeps the DofMap, volume-FE, and side-FE sweeps over the mesh from
+// being repeated per builder; the u/v builders differ only in which variable's indices,
+// forcing, and Dirichlet component they pick out of it.
+struct Ex9SharedAssemblyInputs
+{
+  unsigned int n_elem = 0;
+  unsigned int n_geom_nodes = 0;
+  unsigned int n_sides = 0;
+  unsigned int n_qp = 0;
+  unsigned int n_side_qp = 0;
+  std::vector<std::vector<dof_id_type>> qu_indices, qv_indices, u_indices, v_indices, p_indices,
+      lm_u_indices, lm_v_indices, global_lm_indices;
+  std::vector<Real> xi, eta, zeta, jxw;
+  std::vector<Real> coords;
+  std::vector<Real> u_forcing, v_forcing, pressure_forcing;
+  std::vector<Real> parent_xi, parent_eta, parent_zeta, side_jxw, normal_x, normal_y, normal_z,
+      dirichlet_u, dirichlet_v, dirichlet_vdotn;
+  std::vector<unsigned char> orientations;
+  std::vector<int> side_types;
+};
+
+Ex9SharedAssemblyInputs
+make_ex9_shared_assembly_inputs(NonlinearImplicitSystem & system,
+                                HDGProblem & problem,
+                                const std::vector<const Elem *> & elems,
+                                const unsigned int qu_var,
+                                const unsigned int qv_var,
+                                const unsigned int u_var,
+                                const unsigned int v_var,
+                                const unsigned int p_var,
+                                const unsigned int lm_u_var,
+                                const unsigned int lm_v_var,
+                                const unsigned int global_lm_var)
+{
+  Ex9SharedAssemblyInputs shared;
+  const unsigned int n_elem = cast_int<unsigned int>(elems.size());
+  shared.n_elem = n_elem;
+
+  const Elem & first_elem = *elems.front();
+  shared.n_geom_nodes = first_elem.n_nodes();
+  shared.n_sides = first_elem.n_sides();
+
+  {
+    Ex9KokkosTimer timer("shared dof index tabulation", false);
+    shared.qu_indices.resize(n_elem);
+    shared.qv_indices.resize(n_elem);
+    shared.u_indices.resize(n_elem);
+    shared.v_indices.resize(n_elem);
+    shared.p_indices.resize(n_elem);
+    shared.lm_u_indices.resize(n_elem);
+    shared.lm_v_indices.resize(n_elem);
+    shared.global_lm_indices.resize(n_elem);
+
+    const DofMap & dof_map = system.get_dof_map();
+    const bool has_global_lm = global_lm_var != invalid_uint;
+    for (unsigned int e = 0; e != n_elem; ++e)
+    {
+      dof_map.dof_indices(elems[e], shared.qu_indices[e], qu_var);
+      dof_map.dof_indices(elems[e], shared.qv_indices[e], qv_var);
+      dof_map.dof_indices(elems[e], shared.u_indices[e], u_var);
+      dof_map.dof_indices(elems[e], shared.v_indices[e], v_var);
+      dof_map.dof_indices(elems[e], shared.p_indices[e], p_var);
+      dof_map.dof_indices(elems[e], shared.lm_u_indices[e], lm_u_var);
+      dof_map.dof_indices(elems[e], shared.lm_v_indices[e], lm_v_var);
+      if (has_global_lm)
+      {
+        dof_map.dof_indices(elems[e], shared.global_lm_indices[e], global_lm_var);
+        libmesh_assert_equal_to(shared.global_lm_indices[e].size(), 1);
+      }
+    }
+  }
+
+  {
+    Ex9KokkosTimer timer("shared volume tabulation", false);
+    problem.vector_fe->reinit(&first_elem);
+    const auto & first_jxw = problem.vector_fe->get_JxW();
+    shared.n_qp = cast_int<unsigned int>(first_jxw.size());
+    shared.xi.resize(shared.n_qp);
+    shared.eta.resize(shared.n_qp);
+    shared.zeta.resize(shared.n_qp);
+    shared.jxw.resize(shared.n_qp);
+    for (unsigned int q = 0; q != shared.n_qp; ++q)
+    {
+      const Point & qp = problem.qrule->qp(q);
+      shared.xi[q] = qp(0);
+      shared.eta[q] = qp(1);
+      shared.zeta[q] = 0;
+      shared.jxw[q] = first_jxw[q];
+    }
+
+    // The assembly kernels use one JxW table for the entire batch, which requires a
+    // uniform affine mesh. A sampled check keeps that guard without a full-mesh FE
+    // reinit sweep.
+    const unsigned int n_jxw_samples = std::min<unsigned int>(n_elem, 8u);
+    for (unsigned int s = 0; s != n_jxw_samples; ++s)
+    {
+      const unsigned int e =
+          n_jxw_samples > 1 ? cast_int<unsigned int>((static_cast<std::size_t>(s) * (n_elem - 1)) /
+                                                     (n_jxw_samples - 1))
+                            : 0;
+      problem.vector_fe->reinit(elems[e]);
+      const auto & elem_jxw = problem.vector_fe->get_JxW();
+      for (unsigned int q = 0; q != shared.n_qp; ++q)
+        libmesh_error_msg_if(std::abs(elem_jxw[q] - shared.jxw[q]) > 1.e-12,
+                             "vector_fe_ex9 Kokkos HDG assembly currently requires identical "
+                             "volume JxW values across a batch. elem="
+                                 << elems[e]->id() << " qp=" << q << " expected=" << shared.jxw[q]
+                                 << " actual=" << elem_jxw[q]);
+    }
+
+    shared.coords.resize(static_cast<std::size_t>(n_elem) * shared.n_geom_nodes * 3);
+    for (unsigned int e = 0; e != n_elem; ++e)
+      for (unsigned int n = 0; n != shared.n_geom_nodes; ++n)
+        for (unsigned int d = 0; d != 3; ++d)
+          shared.coords[(e * shared.n_geom_nodes + n) * 3 + d] = elems[e]->point(n)(d);
+
+    shared.u_forcing.assign(static_cast<std::size_t>(n_elem) * shared.n_qp, Real(0));
+    shared.v_forcing.assign(static_cast<std::size_t>(n_elem) * shared.n_qp, Real(0));
+    shared.pressure_forcing.assign(static_cast<std::size_t>(n_elem) * shared.n_qp, Real(0));
+    if (problem.mms)
+      for (unsigned int e = 0; e != n_elem; ++e)
+      {
+        // Quadrature-point physical coordinates from the affine vertex map; the sampled
+        // JxW check above enforces the affine-batch requirement, so a per-element FE
+        // reinit sweep is not needed here.
+        const Point & v0 = elems[e]->point(0);
+        const Point & v1 = elems[e]->point(1);
+        const Point & v2 = elems[e]->point(2);
+        for (unsigned int q = 0; q != shared.n_qp; ++q)
+        {
+          Point qp_point(v0);
+          qp_point *= (1 - shared.xi[q] - shared.eta[q]);
+          qp_point.add_scaled(v1, shared.xi[q]);
+          qp_point.add_scaled(v2, shared.eta[q]);
+          const std::size_t idx = static_cast<std::size_t>(e) * shared.n_qp + q;
+          shared.u_forcing[idx] = problem.u_true_soln.forcing(qp_point);
+          shared.v_forcing[idx] = problem.v_true_soln.forcing(qp_point);
+          shared.pressure_forcing[idx] = problem.p_true_soln.forcing(qp_point);
+        }
+      }
+  }
+
+  {
+    Ex9KokkosTimer timer("shared side tabulation", false);
+    problem.vector_fe_face->reinit(&first_elem, static_cast<unsigned int>(0));
+    shared.n_side_qp = cast_int<unsigned int>(problem.vector_fe_face->get_JxW().size());
+    const std::size_t side_values_size =
+        static_cast<std::size_t>(n_elem) * shared.n_sides * shared.n_side_qp;
+    shared.parent_xi.resize(side_values_size);
+    shared.parent_eta.resize(side_values_size);
+    shared.parent_zeta.resize(side_values_size);
+    shared.side_jxw.resize(side_values_size);
+    shared.normal_x.resize(side_values_size);
+    shared.normal_y.resize(side_values_size);
+    shared.normal_z.resize(side_values_size);
+    shared.dirichlet_u.assign(side_values_size, Real(0));
+    shared.dirichlet_v.assign(side_values_size, Real(0));
+    shared.dirichlet_vdotn.assign(side_values_size, Real(0));
+    shared.orientations.assign(static_cast<std::size_t>(n_elem) * shared.n_sides, 1);
+    shared.side_types.assign(static_cast<std::size_t>(n_elem) * shared.n_sides,
+                             Kokkos::detail::hdg_linear_side_interior);
+
+    std::vector<boundary_id_type> boundary_ids;
+    const BoundaryInfo & boundary_info = problem.mesh->get_boundary_info();
+    const auto & geometry_cache = problem.mesh->get_kokkos_geometry_cache();
+    const auto h_edge_orientations =
+        geometry_cache.element_edge_positive_orientations_dual.view_host();
+
+    for (unsigned int e = 0; e != n_elem; ++e)
+      for (unsigned int s = 0; s != shared.n_sides; ++s)
+      {
+        auto side = elems[e]->build_side_ptr(s);
+        problem.vector_fe_face->reinit(elems[e], s);
+        const auto & elem_side_jxw = problem.vector_fe_face->get_JxW();
+        const auto & normals = problem.vector_fe_face->get_normals();
+        if (!elems[e]->neighbor_ptr(s))
+        {
+          boundary_ids.clear();
+          boundary_info.boundary_ids(elems[e], s, boundary_ids);
+          libmesh_assert_equal_to(boundary_ids.size(), 1);
+          shared.side_types[e * shared.n_sides + s] =
+              (!problem.cavity && boundary_ids[0] == problem.right_bnd)
+                  ? Kokkos::detail::hdg_linear_side_outlet
+                  : Kokkos::detail::hdg_linear_side_dirichlet;
+        }
+        shared.orientations[e * shared.n_sides + s] =
+            h_edge_orientations(problem.mesh->get_kokkos_elem_index(*elems[e]), s);
+
+        for (unsigned int q = 0; q != shared.n_side_qp; ++q)
+        {
+          const Point & face_qp_point = problem.qface->qp(q);
+          const Kokkos::RealVector face_qp = Kokkos::make_vector(face_qp_point(0), 0, 0);
+          const Kokkos::RealVector parent_qp =
+              Kokkos::map_face_qp_to_parent(*side, LAGRANGE_MAP, side->type(), face_qp);
+          const std::size_t idx = (e * shared.n_sides + s) * shared.n_side_qp + q;
+          shared.parent_xi[idx] = parent_qp(0);
+          shared.parent_eta[idx] = parent_qp(1);
+          shared.parent_zeta[idx] = parent_qp(2);
+          shared.side_jxw[idx] = elem_side_jxw[q];
+          shared.normal_x[idx] = normals[q](0);
+          shared.normal_y[idx] = normals[q](1);
+          shared.normal_z[idx] = normals[q](2);
+
+          if (shared.side_types[e * shared.n_sides + s] ==
+              Kokkos::detail::hdg_linear_side_dirichlet)
+          {
+            const Point & qp_point = problem.vector_fe_face->get_xyz()[q];
+            Real dirichlet_u = Real(0);
+            Real dirichlet_v = Real(0);
+            if (problem.mms)
+            {
+              dirichlet_u = problem.u_true_soln(qp_point);
+              dirichlet_v = problem.v_true_soln(qp_point);
+            }
+            else if (problem.cavity)
+              dirichlet_u = boundary_ids[0] == problem.top_bnd ? Real(1) : Real(0);
+            else
+              dirichlet_u = boundary_ids[0] == problem.left_bnd ? Real(1) : Real(0);
+            shared.dirichlet_u[idx] = dirichlet_u;
+            shared.dirichlet_v[idx] = dirichlet_v;
+            shared.dirichlet_vdotn[idx] =
+                dirichlet_u * shared.normal_x[idx] + dirichlet_v * shared.normal_y[idx];
+          }
+        }
+      }
+  }
+
+  return shared;
+}
+
 std::unique_ptr<DeviceAssemblyData>
 make_device_assembly_data(NonlinearImplicitSystem & system,
                           HDGProblem & problem,
                           const AssemblyPurpose purpose,
                           const std::vector<const Elem *> & elems,
                           const ElemType elem_type,
+                          const Ex9SharedAssemblyInputs & shared,
                           const unsigned int q_var,
                           const unsigned int u_var,
                           const unsigned int lm_var,
@@ -754,28 +986,19 @@ make_device_assembly_data(NonlinearImplicitSystem & system,
   data.n_elem = n_elem;
   DeviceAssemblyData & cache = data;
 
-  const Elem & first_elem = *elems.front();
-  cache.n_geom_nodes = first_elem.n_nodes();
-  cache.n_sides = first_elem.n_sides();
+  cache.n_geom_nodes = shared.n_geom_nodes;
+  cache.n_sides = shared.n_sides;
   cache.elems = elems;
 
-  cache.q_indices.resize(n_elem);
-  cache.u_indices.resize(n_elem);
-  cache.p_indices.resize(n_elem);
-  cache.lm_indices.resize(n_elem);
-  cache.other_u_indices.resize(n_elem);
-  cache.other_lm_indices.resize(n_elem);
-
-  const DofMap & dof_map = system.get_dof_map();
-  for (unsigned int e = 0; e != n_elem; ++e)
-  {
-    dof_map.dof_indices(elems[e], cache.q_indices[e], q_var);
-    dof_map.dof_indices(elems[e], cache.u_indices[e], u_var);
-    dof_map.dof_indices(elems[e], cache.p_indices[e], p_var);
-    dof_map.dof_indices(elems[e], cache.lm_indices[e], lm_var);
-    dof_map.dof_indices(elems[e], cache.other_u_indices[e], other_u_var);
-    dof_map.dof_indices(elems[e], cache.other_lm_indices[e], other_lm_var);
-  }
+  // Dof indices were tabulated once for every variable in the shared inputs; pick out
+  // this component's role assignment instead of re-querying the DofMap.
+  const bool is_u_component = velocity_component == 0;
+  cache.q_indices = is_u_component ? shared.qu_indices : shared.qv_indices;
+  cache.u_indices = is_u_component ? shared.u_indices : shared.v_indices;
+  cache.p_indices = shared.p_indices;
+  cache.lm_indices = is_u_component ? shared.lm_u_indices : shared.lm_v_indices;
+  cache.other_u_indices = is_u_component ? shared.v_indices : shared.u_indices;
+  cache.other_lm_indices = is_u_component ? shared.lm_v_indices : shared.lm_u_indices;
 
   cache.layout = Kokkos::detail::make_hdg_linear_block_layout(
       cast_int<unsigned int>(cache.q_indices.front().size()),
@@ -786,123 +1009,13 @@ make_device_assembly_data(NonlinearImplicitSystem & system,
   cache.scalar_key = variable_shape_key(system, system.variable_name(u_var).c_str(), elem_type);
   cache.lm_key = variable_shape_key(system, system.variable_name(lm_var).c_str(), elem_type);
 
-  problem.vector_fe->reinit(&first_elem);
-  const auto & first_jxw = problem.vector_fe->get_JxW();
-  cache.n_qp = cast_int<unsigned int>(first_jxw.size());
-  std::vector<Real> xi(cache.n_qp), eta(cache.n_qp), zeta(cache.n_qp), jxw(cache.n_qp);
-  std::vector<Real> scalar_forcing(n_elem * cache.n_qp, Real(0));
-  std::vector<Real> pressure_forcing(n_elem * cache.n_qp, Real(0));
-  for (unsigned int q = 0; q != cache.n_qp; ++q)
-  {
-    const Point & qp = problem.qrule->qp(q);
-    xi[q] = qp(0);
-    eta[q] = qp(1);
-    zeta[q] = 0;
-    jxw[q] = first_jxw[q];
-  }
+  cache.n_qp = shared.n_qp;
+  const std::vector<Real> & scalar_forcing = is_u_component ? shared.u_forcing : shared.v_forcing;
+  const std::vector<Real> & pressure_forcing = shared.pressure_forcing;
 
-  for (const Elem * elem : elems)
-  {
-    problem.vector_fe->reinit(elem);
-    const auto & elem_jxw = problem.vector_fe->get_JxW();
-    for (unsigned int q = 0; q != cache.n_qp; ++q)
-      libmesh_error_msg_if(std::abs(elem_jxw[q] - jxw[q]) > 1.e-12,
-                           "vector_fe_ex9 Kokkos HDG assembly currently requires identical "
-                           "volume JxW values across a batch. elem="
-                               << elem->id() << " qp=" << q << " expected=" << jxw[q]
-                               << " actual=" << elem_jxw[q]);
-  }
-
-  if (problem.mms)
-    for (unsigned int e = 0; e != n_elem; ++e)
-    {
-      problem.vector_fe->reinit(elems[e]);
-      const auto & q_points = problem.vector_fe->get_xyz();
-      for (unsigned int q = 0; q != cache.n_qp; ++q)
-      {
-        scalar_forcing[e * cache.n_qp + q] = velocity_component == 0
-                                                 ? problem.u_true_soln.forcing(q_points[q])
-                                                 : problem.v_true_soln.forcing(q_points[q]);
-        pressure_forcing[e * cache.n_qp + q] = problem.p_true_soln.forcing(q_points[q]);
-      }
-    }
-
-  std::vector<Real> coords(n_elem * cache.n_geom_nodes * 3);
-  for (unsigned int e = 0; e != n_elem; ++e)
-    for (unsigned int n = 0; n != cache.n_geom_nodes; ++n)
-      for (unsigned int d = 0; d != 3; ++d)
-        coords[(e * cache.n_geom_nodes + n) * 3 + d] = elems[e]->point(n)(d);
-
-  problem.vector_fe_face->reinit(&first_elem, static_cast<unsigned int>(0));
-  cache.n_side_qp = cast_int<unsigned int>(problem.vector_fe_face->get_JxW().size());
-  const std::size_t side_values_size =
-      static_cast<std::size_t>(n_elem) * cache.n_sides * cache.n_side_qp;
-  std::vector<Real> parent_xi(side_values_size), parent_eta(side_values_size),
-      parent_zeta(side_values_size), side_jxw(side_values_size), normal_x(side_values_size),
-      normal_y(side_values_size), normal_z(side_values_size),
-      dirichlet_component(side_values_size, Real(0)), dirichlet_vdotn(side_values_size, Real(0));
-  std::vector<unsigned char> orientations(n_elem * cache.n_sides, 1);
-  std::vector<int> side_types(n_elem * cache.n_sides, Kokkos::detail::hdg_linear_side_interior);
-  std::vector<boundary_id_type> boundary_ids;
-  const BoundaryInfo & boundary_info = problem.mesh->get_boundary_info();
-  const auto & geometry_cache = problem.mesh->get_kokkos_geometry_cache();
-  const auto h_edge_orientations =
-      geometry_cache.element_edge_positive_orientations_dual.view_host();
-
-  for (unsigned int e = 0; e != n_elem; ++e)
-    for (unsigned int s = 0; s != cache.n_sides; ++s)
-    {
-      auto side = elems[e]->build_side_ptr(s);
-      problem.vector_fe_face->reinit(elems[e], s);
-      const auto & elem_side_jxw = problem.vector_fe_face->get_JxW();
-      const auto & normals = problem.vector_fe_face->get_normals();
-      if (!elems[e]->neighbor_ptr(s))
-      {
-        boundary_ids.clear();
-        boundary_info.boundary_ids(elems[e], s, boundary_ids);
-        libmesh_assert_equal_to(boundary_ids.size(), 1);
-        side_types[e * cache.n_sides + s] =
-            (!problem.cavity && boundary_ids[0] == problem.right_bnd)
-                ? Kokkos::detail::hdg_linear_side_outlet
-                : Kokkos::detail::hdg_linear_side_dirichlet;
-      }
-      orientations[e * cache.n_sides + s] =
-          h_edge_orientations(problem.mesh->get_kokkos_elem_index(*elems[e]), s);
-
-      for (unsigned int q = 0; q != cache.n_side_qp; ++q)
-      {
-        const Point & face_qp_point = problem.qface->qp(q);
-        const Kokkos::RealVector face_qp = Kokkos::make_vector(face_qp_point(0), 0, 0);
-        const Kokkos::RealVector parent_qp =
-            Kokkos::map_face_qp_to_parent(*side, LAGRANGE_MAP, side->type(), face_qp);
-        const std::size_t idx = (e * cache.n_sides + s) * cache.n_side_qp + q;
-        parent_xi[idx] = parent_qp(0);
-        parent_eta[idx] = parent_qp(1);
-        parent_zeta[idx] = parent_qp(2);
-        side_jxw[idx] = elem_side_jxw[q];
-        normal_x[idx] = normals[q](0);
-        normal_y[idx] = normals[q](1);
-        normal_z[idx] = normals[q](2);
-
-        if (side_types[e * cache.n_sides + s] == Kokkos::detail::hdg_linear_side_dirichlet)
-        {
-          const Point & qp_point = problem.vector_fe_face->get_xyz()[q];
-          Real dirichlet_u = Real(0);
-          Real dirichlet_v = Real(0);
-          if (problem.mms)
-          {
-            dirichlet_u = problem.u_true_soln(qp_point);
-            dirichlet_v = problem.v_true_soln(qp_point);
-          }
-          else if (problem.cavity)
-            dirichlet_u = boundary_ids[0] == problem.top_bnd ? Real(1) : Real(0);
-          else
-            dirichlet_u = boundary_ids[0] == problem.left_bnd ? Real(1) : Real(0);
-          dirichlet_component[idx] = velocity_component == 0 ? dirichlet_u : dirichlet_v;
-          dirichlet_vdotn[idx] = dirichlet_u * normal_x[idx] + dirichlet_v * normal_y[idx];
-        }
-      }
-    }
+  cache.n_side_qp = shared.n_side_qp;
+  const std::vector<Real> & dirichlet_component =
+      is_u_component ? shared.dirichlet_u : shared.dirichlet_v;
 
   cache.q_dof_ids =
       DeviceDofId2D("vector_fe_ex9_hdg_q_dof_ids", n_elem, cache.layout.vector_n_dofs);
@@ -927,17 +1040,17 @@ make_device_assembly_data(NonlinearImplicitSystem & system,
   for (unsigned int e = 0; e != n_elem; ++e)
     for (unsigned int n = 0; n != cache.n_geom_nodes; ++n)
       for (unsigned int d = 0; d != 3; ++d)
-        h_coords(e, n, d) = coords[(e * cache.n_geom_nodes + n) * 3 + d];
+        h_coords(e, n, d) = shared.coords[(e * cache.n_geom_nodes + n) * 3 + d];
   ::Kokkos::deep_copy(cache.coords, h_coords);
 
   cache.xi = DeviceReal1D("vector_fe_ex9_hdg_xi", cache.n_qp);
   cache.eta = DeviceReal1D("vector_fe_ex9_hdg_eta", cache.n_qp);
   cache.zeta = DeviceReal1D("vector_fe_ex9_hdg_zeta", cache.n_qp);
   cache.jxw = DeviceReal1D("vector_fe_ex9_hdg_jxw", cache.n_qp);
-  copy_vector_to_view(xi, cache.xi);
-  copy_vector_to_view(eta, cache.eta);
-  copy_vector_to_view(zeta, cache.zeta);
-  copy_vector_to_view(jxw, cache.jxw);
+  copy_vector_to_view(shared.xi, cache.xi);
+  copy_vector_to_view(shared.eta, cache.eta);
+  copy_vector_to_view(shared.zeta, cache.zeta);
+  copy_vector_to_view(shared.jxw, cache.jxw);
 
   cache.scalar_forcing = DeviceReal2D("vector_fe_ex9_hdg_scalar_forcing", n_elem, cache.n_qp);
   cache.pressure_forcing = DeviceReal2D("vector_fe_ex9_hdg_pressure_forcing", n_elem, cache.n_qp);
@@ -970,30 +1083,33 @@ make_device_assembly_data(NonlinearImplicitSystem & system,
       DeviceReal3D("vector_fe_ex9_hdg_dirichlet_component", n_elem, cache.n_sides, cache.n_side_qp);
   cache.dirichlet_vdotn =
       DeviceReal3D("vector_fe_ex9_hdg_dirichlet_vdotn", n_elem, cache.n_sides, cache.n_side_qp);
-  copy_vector_to_side_view(parent_xi, n_elem, cache.n_sides, cache.n_side_qp, cache.parent_xi);
-  copy_vector_to_side_view(parent_eta, n_elem, cache.n_sides, cache.n_side_qp, cache.parent_eta);
-  copy_vector_to_side_view(parent_zeta, n_elem, cache.n_sides, cache.n_side_qp, cache.parent_zeta);
-  copy_vector_to_side_view(side_jxw, n_elem, cache.n_sides, cache.n_side_qp, cache.side_jxw);
-  copy_vector_to_side_view(normal_x, n_elem, cache.n_sides, cache.n_side_qp, cache.normal_x);
-  copy_vector_to_side_view(normal_y, n_elem, cache.n_sides, cache.n_side_qp, cache.normal_y);
-  copy_vector_to_side_view(normal_z, n_elem, cache.n_sides, cache.n_side_qp, cache.normal_z);
+  copy_vector_to_side_view(
+      shared.parent_xi, n_elem, cache.n_sides, cache.n_side_qp, cache.parent_xi);
+  copy_vector_to_side_view(
+      shared.parent_eta, n_elem, cache.n_sides, cache.n_side_qp, cache.parent_eta);
+  copy_vector_to_side_view(
+      shared.parent_zeta, n_elem, cache.n_sides, cache.n_side_qp, cache.parent_zeta);
+  copy_vector_to_side_view(shared.side_jxw, n_elem, cache.n_sides, cache.n_side_qp, cache.side_jxw);
+  copy_vector_to_side_view(shared.normal_x, n_elem, cache.n_sides, cache.n_side_qp, cache.normal_x);
+  copy_vector_to_side_view(shared.normal_y, n_elem, cache.n_sides, cache.n_side_qp, cache.normal_y);
+  copy_vector_to_side_view(shared.normal_z, n_elem, cache.n_sides, cache.n_side_qp, cache.normal_z);
   copy_vector_to_side_view(
       dirichlet_component, n_elem, cache.n_sides, cache.n_side_qp, cache.dirichlet_component);
   copy_vector_to_side_view(
-      dirichlet_vdotn, n_elem, cache.n_sides, cache.n_side_qp, cache.dirichlet_vdotn);
+      shared.dirichlet_vdotn, n_elem, cache.n_sides, cache.n_side_qp, cache.dirichlet_vdotn);
 
   cache.orientations = DeviceUChar2D("vector_fe_ex9_hdg_edge_orientations", n_elem, cache.n_sides);
   auto h_orientations = ::Kokkos::create_mirror_view(cache.orientations);
   for (unsigned int e = 0; e != n_elem; ++e)
     for (unsigned int s = 0; s != cache.n_sides; ++s)
-      h_orientations(e, s) = orientations[e * cache.n_sides + s];
+      h_orientations(e, s) = shared.orientations[e * cache.n_sides + s];
   ::Kokkos::deep_copy(cache.orientations, h_orientations);
 
   cache.side_types = DeviceInt2D("vector_fe_ex9_hdg_side_types", n_elem, cache.n_sides);
   auto h_side_types = ::Kokkos::create_mirror_view(cache.side_types);
   for (unsigned int e = 0; e != n_elem; ++e)
     for (unsigned int s = 0; s != cache.n_sides; ++s)
-      h_side_types(e, s) = side_types[e * cache.n_sides + s];
+      h_side_types(e, s) = shared.side_types[e * cache.n_sides + s];
   ::Kokkos::deep_copy(cache.side_types, h_side_types);
 
   return data_ptr;
@@ -1004,13 +1120,7 @@ make_ex9_device_assembly_data(NonlinearImplicitSystem & system,
                               HDGProblem & problem,
                               const std::vector<const Elem *> & elems,
                               const ElemType elem_type,
-                              const unsigned int qu_var,
-                              const unsigned int qv_var,
-                              const unsigned int u_var,
-                              const unsigned int v_var,
-                              const unsigned int p_var,
-                              const unsigned int lm_u_var,
-                              const unsigned int lm_v_var,
+                              const Ex9SharedAssemblyInputs & shared,
                               const unsigned int global_lm_var)
 {
   const unsigned int n_elem = cast_int<unsigned int>(elems.size());
@@ -1022,32 +1132,16 @@ make_ex9_device_assembly_data(NonlinearImplicitSystem & system,
   data.n_elem = n_elem;
   data.elems = elems;
 
-  data.qu_indices.resize(n_elem);
-  data.qv_indices.resize(n_elem);
-  data.u_indices.resize(n_elem);
-  data.v_indices.resize(n_elem);
-  data.p_indices.resize(n_elem);
-  data.lm_u_indices.resize(n_elem);
-  data.lm_v_indices.resize(n_elem);
-  data.global_lm_indices.resize(n_elem);
-
-  const DofMap & dof_map = system.get_dof_map();
+  // These host copies are kept because the COO-plan builders index into them later.
   const bool has_global_lm = global_lm_var != invalid_uint;
-  for (unsigned int e = 0; e != n_elem; ++e)
-  {
-    dof_map.dof_indices(elems[e], data.qu_indices[e], qu_var);
-    dof_map.dof_indices(elems[e], data.qv_indices[e], qv_var);
-    dof_map.dof_indices(elems[e], data.u_indices[e], u_var);
-    dof_map.dof_indices(elems[e], data.v_indices[e], v_var);
-    dof_map.dof_indices(elems[e], data.p_indices[e], p_var);
-    dof_map.dof_indices(elems[e], data.lm_u_indices[e], lm_u_var);
-    dof_map.dof_indices(elems[e], data.lm_v_indices[e], lm_v_var);
-    if (has_global_lm)
-    {
-      dof_map.dof_indices(elems[e], data.global_lm_indices[e], global_lm_var);
-      libmesh_assert_equal_to(data.global_lm_indices[e].size(), 1);
-    }
-  }
+  data.qu_indices = shared.qu_indices;
+  data.qv_indices = shared.qv_indices;
+  data.u_indices = shared.u_indices;
+  data.v_indices = shared.v_indices;
+  data.p_indices = shared.p_indices;
+  data.lm_u_indices = shared.lm_u_indices;
+  data.lm_v_indices = shared.lm_v_indices;
+  data.global_lm_indices = shared.global_lm_indices;
 
   libmesh_assert_equal_to(data.qu_indices.front().size(), data.qv_indices.front().size());
   libmesh_assert_equal_to(data.u_indices.front().size(), data.v_indices.front().size());
@@ -1361,13 +1455,68 @@ assemble_component_pair_volume_blocks_range(const DeviceAssemblyData & data,
   const unsigned int n_qp = data.n_qp;
   const Real nu = data.problem->nu;
 
+  // Reference shape values depend only on (dof, qp) and the physical scalar
+  // gradients only on (elem, dof, qp), so tabulate both up front.  This
+  // evaluates the geometric Jacobian once per (elem, qp) instead of once per
+  // matrix entry per qp, and reduces the block kernel below to table lookups.
+  const unsigned int scalar_n_dofs = layout.scalar_n_dofs;
+  const unsigned int vector_n_dofs = layout.vector_n_dofs;
+  DeviceReal2D phi_s("vector_fe_ex9_volume_phi_s", scalar_n_dofs, n_qp);
+  DeviceReal2D phi_v("vector_fe_ex9_volume_phi_v", vector_n_dofs, n_qp * LIBMESH_DIM);
+  DeviceReal3D grad_phys(
+      "vector_fe_ex9_volume_grad_phys", n_elem, scalar_n_dofs, n_qp * LIBMESH_DIM);
+
+  ::Kokkos::parallel_for(
+      "vector_fe_ex9_volume_shape_tables",
+      ::Kokkos::RangePolicy<>(0, cast_int<int>(n_qp)),
+      KOKKOS_LAMBDA(const int raw_q) {
+        const unsigned int q = static_cast<unsigned int>(raw_q);
+        for (unsigned int i = 0; i != scalar_n_dofs; ++i)
+          phi_s(i, q) = libMesh::Kokkos::shape(scalar_key, i, xi(q), eta(q), zeta(q));
+        for (unsigned int j = 0; j != vector_n_dofs; ++j)
+        {
+          const libMesh::Kokkos::RealVector phi =
+              libMesh::Kokkos::vector_shape(vector_key, j, xi(q), eta(q), zeta(q));
+          for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+            phi_v(j, q * LIBMESH_DIM + d) = Kokkos::detail::component_or_zero(phi, d);
+        }
+      });
+
+  ::Kokkos::parallel_for(
+      "vector_fe_ex9_volume_physical_gradients",
+      ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * n_qp)),
+      KOKKOS_LAMBDA(const int raw_entry) {
+        const unsigned int entry = static_cast<unsigned int>(raw_entry);
+        // Element-fastest mapping for coalesced grad_phys writes.
+        const unsigned int e = entry % n_elem;
+        const unsigned int q = entry / n_elem;
+        const libMesh::Kokkos::RealTensor J =
+            libMesh::Kokkos::jacobian<libMesh::LAGRANGE, ExactTopo>(
+                Kokkos::detail::HDGElementNodeView<DeviceReal3D>{coords, e},
+                n_geom_nodes,
+                xi(q),
+                eta(q),
+                zeta(q));
+        const libMesh::Kokkos::RealTensor Jinv =
+            libMesh::Kokkos::inverse<libMesh::Kokkos::RealTensor>(J, 2);
+        for (unsigned int i = 0; i != scalar_n_dofs; ++i)
+        {
+          const libMesh::Kokkos::RealVector grad =
+              Jinv * libMesh::Kokkos::grad_shape(scalar_key, i, xi(q), eta(q), zeta(q));
+          for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+            grad_phys(e, i, q * LIBMESH_DIM + d) = Kokkos::detail::component_or_zero(grad, d);
+        }
+      });
+
   ::Kokkos::parallel_for(
       "vector_fe_ex9_split_component_volume_blocks",
       ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * 2 * n_entries)),
       KOKKOS_LAMBDA(const int raw_entry) {
         const unsigned int entry = static_cast<unsigned int>(raw_entry);
-        const unsigned int e = entry / (2 * n_entries);
-        const unsigned int component_entry = entry - e * 2 * n_entries;
+        // Element-fastest mapping: coalesced table reads and block writes,
+        // warp-uniform block-type branching.
+        const unsigned int e = entry % n_elem;
+        const unsigned int component_entry = entry / n_elem;
         const unsigned int component = component_entry / n_entries;
         const unsigned int idx = component_entry - component * n_entries;
         Real value = Real(0);
@@ -1379,14 +1528,9 @@ assemble_component_pair_volume_blocks_range(const DeviceAssemblyData & data,
           const unsigned int j = local % layout.vector_n_dofs;
           for (unsigned int q = 0; q != n_qp; ++q)
           {
-            const libMesh::Kokkos::RealVector phi_i =
-                libMesh::Kokkos::vector_shape(vector_key, i, xi(q), eta(q), zeta(q));
-            const libMesh::Kokkos::RealVector phi_j =
-                libMesh::Kokkos::vector_shape(vector_key, j, xi(q), eta(q), zeta(q));
             Real dot = Real(0);
             for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
-              dot += Kokkos::detail::component_or_zero(phi_i, d) *
-                     Kokkos::detail::component_or_zero(phi_j, d);
+              dot += phi_v(i, q * LIBMESH_DIM + d) * phi_v(j, q * LIBMESH_DIM + d);
             value += jxw(q) * dot;
           }
         }
@@ -1395,24 +1539,11 @@ assemble_component_pair_volume_blocks_range(const DeviceAssemblyData & data,
           const unsigned int local = idx - layout.off_Jqu;
           const unsigned int i = local / layout.scalar_n_dofs;
           const unsigned int j = local % layout.scalar_n_dofs;
+          const unsigned int scalar_i = i / 2;
+          const unsigned int grad_component = i - scalar_i * 2;
           for (unsigned int q = 0; q != n_qp; ++q)
-          {
-            const unsigned int scalar_i = i / 2;
-            const unsigned int grad_component = i - scalar_i * 2;
-            const libMesh::Kokkos::RealTensor J =
-                libMesh::Kokkos::jacobian<libMesh::LAGRANGE, ExactTopo>(
-                    Kokkos::detail::HDGElementNodeView<DeviceReal3D>{coords, e},
-                    n_geom_nodes,
-                    xi(q),
-                    eta(q),
-                    zeta(q));
-            const libMesh::Kokkos::RealTensor Jinv =
-                libMesh::Kokkos::inverse<libMesh::Kokkos::RealTensor>(J, 2);
-            const libMesh::Kokkos::RealVector grad_phys =
-                Jinv * libMesh::Kokkos::grad_shape(scalar_key, scalar_i, xi(q), eta(q), zeta(q));
-            value += jxw(q) * Kokkos::detail::component_or_zero(grad_phys, grad_component) *
-                     libMesh::Kokkos::shape(scalar_key, j, xi(q), eta(q), zeta(q));
-          }
+            value += jxw(q) * grad_phys(e, scalar_i, q * LIBMESH_DIM + grad_component) *
+                     phi_s(j, q);
         }
         else if (idx < layout.off_Jup)
         {
@@ -1421,23 +1552,9 @@ assemble_component_pair_volume_blocks_range(const DeviceAssemblyData & data,
           const unsigned int j = local % layout.vector_n_dofs;
           for (unsigned int q = 0; q != n_qp; ++q)
           {
-            const libMesh::Kokkos::RealTensor J =
-                libMesh::Kokkos::jacobian<libMesh::LAGRANGE, ExactTopo>(
-                    Kokkos::detail::HDGElementNodeView<DeviceReal3D>{coords, e},
-                    n_geom_nodes,
-                    xi(q),
-                    eta(q),
-                    zeta(q));
-            const libMesh::Kokkos::RealTensor Jinv =
-                libMesh::Kokkos::inverse<libMesh::Kokkos::RealTensor>(J, 2);
-            const libMesh::Kokkos::RealVector grad_phys =
-                Jinv * libMesh::Kokkos::grad_shape(scalar_key, i, xi(q), eta(q), zeta(q));
-            const libMesh::Kokkos::RealVector phi_j =
-                libMesh::Kokkos::vector_shape(vector_key, j, xi(q), eta(q), zeta(q));
             Real dot = Real(0);
             for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
-              dot += Kokkos::detail::component_or_zero(grad_phys, d) *
-                     Kokkos::detail::component_or_zero(phi_j, d);
+              dot += grad_phys(e, i, q * LIBMESH_DIM + d) * phi_v(j, q * LIBMESH_DIM + d);
             value += jxw(q) * nu * dot;
           }
         }
@@ -1448,21 +1565,7 @@ assemble_component_pair_volume_blocks_range(const DeviceAssemblyData & data,
           const unsigned int i = local / layout.scalar_n_dofs;
           const unsigned int j = local % layout.scalar_n_dofs;
           for (unsigned int q = 0; q != n_qp; ++q)
-          {
-            const libMesh::Kokkos::RealTensor J =
-                libMesh::Kokkos::jacobian<libMesh::LAGRANGE, ExactTopo>(
-                    Kokkos::detail::HDGElementNodeView<DeviceReal3D>{coords, e},
-                    n_geom_nodes,
-                    xi(q),
-                    eta(q),
-                    zeta(q));
-            const libMesh::Kokkos::RealTensor Jinv =
-                libMesh::Kokkos::inverse<libMesh::Kokkos::RealTensor>(J, 2);
-            const libMesh::Kokkos::RealVector grad_phys =
-                Jinv * libMesh::Kokkos::grad_shape(scalar_key, i, xi(q), eta(q), zeta(q));
-            value -= jxw(q) * Kokkos::detail::component_or_zero(grad_phys, component) *
-                     libMesh::Kokkos::shape(scalar_key, j, xi(q), eta(q), zeta(q));
-          }
+            value -= jxw(q) * grad_phys(e, i, q * LIBMESH_DIM + component) * phi_s(j, q);
         }
 
         if (component == 0)
@@ -1497,20 +1600,73 @@ assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
   const Real nu = data.problem->nu;
   const Real tau = Real(1);
 
+  // Tabulate the side shape data once per (elem, side, qp): scalar shapes,
+  // vector shapes pre-dotted with the outward normal (every vector use below
+  // is a normal dot product), and LM side traces.  The block kernel below
+  // then reduces to table lookups instead of re-evaluating shapes for every
+  // matrix entry at every side quadrature point.
+  const unsigned int scalar_n_dofs = layout.scalar_n_dofs;
+  const unsigned int vector_n_dofs = layout.vector_n_dofs;
+  const unsigned int lm_n_dofs = layout.lm_n_dofs;
+  DeviceReal2D phi_s_side(
+      "vector_fe_ex9_side_phi_s", n_elem, n_sides * n_side_qp * scalar_n_dofs);
+  DeviceReal2D vn_side(
+      "vector_fe_ex9_side_vec_normal", n_elem, n_sides * n_side_qp * vector_n_dofs);
+  DeviceReal2D tr_side("vector_fe_ex9_side_trace", n_elem, n_sides * n_side_qp * lm_n_dofs);
+
+  ::Kokkos::parallel_for(
+      "vector_fe_ex9_side_shape_tables",
+      ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * n_sides * n_side_qp)),
+      KOKKOS_LAMBDA(const int raw_entry) {
+        const unsigned int entry = static_cast<unsigned int>(raw_entry);
+        // Element-fastest mapping for coalesced table writes.
+        const unsigned int e = entry % n_elem;
+        const unsigned int sq = entry / n_elem;
+        const unsigned int side = sq / n_side_qp;
+        const unsigned int q = sq - side * n_side_qp;
+        const bool positive_edge_orientation = static_cast<bool>(orientations(e, side));
+        const Real px = parent_xi(e, side, q);
+        const Real py = parent_eta(e, side, q);
+        const Real pz = parent_zeta(e, side, q);
+        for (unsigned int i = 0; i != scalar_n_dofs; ++i)
+          phi_s_side(e, sq * scalar_n_dofs + i) =
+              libMesh::Kokkos::shape(scalar_key, i, px, py, pz);
+        for (unsigned int j = 0; j != vector_n_dofs; ++j)
+        {
+          const libMesh::Kokkos::RealVector phi =
+              libMesh::Kokkos::vector_shape(vector_key, j, px, py, pz);
+          Real vector_normal = Kokkos::detail::component_or_zero(phi, 0) *
+                               normal_x(e, side, q);
+#if LIBMESH_DIM > 1
+          vector_normal += Kokkos::detail::component_or_zero(phi, 1) *
+                           normal_y(e, side, q);
+#endif
+#if LIBMESH_DIM > 2
+          vector_normal += Kokkos::detail::component_or_zero(phi, 2) *
+                           normal_z(e, side, q);
+#endif
+          vn_side(e, sq * vector_n_dofs + j) = vector_normal;
+        }
+        for (unsigned int k = 0; k != lm_n_dofs; ++k)
+          tr_side(e, sq * lm_n_dofs + k) =
+              libMesh::Kokkos::side_trace_shape(
+                  lm_key, k, side, positive_edge_orientation, px, py, pz);
+      });
+
   ::Kokkos::parallel_for(
       "vector_fe_ex9_split_component_side_blocks",
       ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * n_sides * 2 * n_entries)),
       KOKKOS_LAMBDA(const int raw_entry) {
         const unsigned int entry = static_cast<unsigned int>(raw_entry);
-        const unsigned int entries_per_elem = n_sides * 2 * n_entries;
-        const unsigned int e = entry / entries_per_elem;
-        const unsigned int elem_entry = entry - e * entries_per_elem;
+        // Element-fastest mapping: coalesced table reads and block updates,
+        // warp-uniform block-type branching.
+        const unsigned int e = entry % n_elem;
+        const unsigned int elem_entry = entry / n_elem;
         const unsigned int side = elem_entry / (2 * n_entries);
         const unsigned int side_entry = elem_entry - side * 2 * n_entries;
         const unsigned int component = side_entry / n_entries;
         const unsigned int idx = side_entry - component * n_entries + layout.off_Juq;
         const unsigned int velocity_component = component;
-        const bool positive_edge_orientation = static_cast<bool>(orientations(e, side));
         const int side_type = side_types(e, side);
         const bool is_outlet = side_type == Kokkos::detail::hdg_linear_side_outlet;
         const bool is_dirichlet = side_type == Kokkos::detail::hdg_linear_side_dirichlet;
@@ -1525,23 +1681,9 @@ assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
             const unsigned int j = local % layout.vector_n_dofs;
             for (unsigned int q = 0; q != n_side_qp; ++q)
             {
-              const Real px = parent_xi(e, side, q);
-              const Real py = parent_eta(e, side, q);
-              const Real pz = parent_zeta(e, side, q);
-              const libMesh::Kokkos::RealVector phi_j =
-                  libMesh::Kokkos::vector_shape(vector_key, j, px, py, pz);
-              Real vector_normal = Kokkos::detail::component_or_zero(phi_j, 0) *
-                                   normal_x(e, side, q);
-#if LIBMESH_DIM > 1
-              vector_normal += Kokkos::detail::component_or_zero(phi_j, 1) *
-                               normal_y(e, side, q);
-#endif
-#if LIBMESH_DIM > 2
-              vector_normal += Kokkos::detail::component_or_zero(phi_j, 2) *
-                               normal_z(e, side, q);
-#endif
-              value -= side_jxw(e, side, q) * nu *
-                       libMesh::Kokkos::shape(scalar_key, i, px, py, pz) * vector_normal;
+              const unsigned int sq = side * n_side_qp + q;
+              value -= side_jxw(e, side, q) * nu * phi_s_side(e, sq * scalar_n_dofs + i) *
+                       vn_side(e, sq * vector_n_dofs + j);
             }
           }
         }
@@ -1554,9 +1696,7 @@ assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
             const unsigned int j = local % layout.scalar_n_dofs;
             for (unsigned int q = 0; q != n_side_qp; ++q)
             {
-              const Real px = parent_xi(e, side, q);
-              const Real py = parent_eta(e, side, q);
-              const Real pz = parent_zeta(e, side, q);
+              const unsigned int sq = side * n_side_qp + q;
               const Real normal_component =
                   velocity_component == 0 ? normal_x(e, side, q)
 #if LIBMESH_DIM > 1
@@ -1565,9 +1705,8 @@ assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
                                           : Real(0)
 #endif
                   ;
-              value += side_jxw(e, side, q) *
-                       libMesh::Kokkos::shape(scalar_key, i, px, py, pz) *
-                       libMesh::Kokkos::shape(scalar_key, j, px, py, pz) * normal_component;
+              value += side_jxw(e, side, q) * phi_s_side(e, sq * scalar_n_dofs + i) *
+                       phi_s_side(e, sq * scalar_n_dofs + j) * normal_component;
             }
           }
         }
@@ -1583,9 +1722,7 @@ assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
             const unsigned int j = local % layout.lm_n_dofs;
             for (unsigned int q = 0; q != n_side_qp; ++q)
             {
-              const Real px = parent_xi(e, side, q);
-              const Real py = parent_eta(e, side, q);
-              const Real pz = parent_zeta(e, side, q);
+              const unsigned int sq = side * n_side_qp + q;
               const Real normal_component =
                   velocity_component == 0 ? normal_x(e, side, q)
 #if LIBMESH_DIM > 1
@@ -1594,11 +1731,8 @@ assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
                                           : Real(0)
 #endif
                   ;
-              value += side_jxw(e, side, q) *
-                       libMesh::Kokkos::shape(scalar_key, i, px, py, pz) *
-                       libMesh::Kokkos::side_trace_shape(
-                           lm_key, j, side, positive_edge_orientation, px, py, pz) *
-                       normal_component;
+              value += side_jxw(e, side, q) * phi_s_side(e, sq * scalar_n_dofs + i) *
+                       tr_side(e, sq * lm_n_dofs + j) * normal_component;
             }
           }
         }
@@ -1611,24 +1745,9 @@ assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
             const unsigned int j = local % layout.lm_n_dofs;
             for (unsigned int q = 0; q != n_side_qp; ++q)
             {
-              const Real px = parent_xi(e, side, q);
-              const Real py = parent_eta(e, side, q);
-              const Real pz = parent_zeta(e, side, q);
-              const libMesh::Kokkos::RealVector phi_i =
-                  libMesh::Kokkos::vector_shape(vector_key, i, px, py, pz);
-              Real vector_normal = Kokkos::detail::component_or_zero(phi_i, 0) *
-                                   normal_x(e, side, q);
-#if LIBMESH_DIM > 1
-              vector_normal += Kokkos::detail::component_or_zero(phi_i, 1) *
-                               normal_y(e, side, q);
-#endif
-#if LIBMESH_DIM > 2
-              vector_normal += Kokkos::detail::component_or_zero(phi_i, 2) *
-                               normal_z(e, side, q);
-#endif
-              value -= side_jxw(e, side, q) * vector_normal *
-                       libMesh::Kokkos::side_trace_shape(
-                           lm_key, j, side, positive_edge_orientation, px, py, pz);
+              const unsigned int sq = side * n_side_qp + q;
+              value -= side_jxw(e, side, q) * vn_side(e, sq * vector_n_dofs + i) *
+                       tr_side(e, sq * lm_n_dofs + j);
             }
           }
         }
@@ -1641,25 +1760,9 @@ assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
             const unsigned int j = local % layout.vector_n_dofs;
             for (unsigned int q = 0; q != n_side_qp; ++q)
             {
-              const Real px = parent_xi(e, side, q);
-              const Real py = parent_eta(e, side, q);
-              const Real pz = parent_zeta(e, side, q);
-              const libMesh::Kokkos::RealVector phi_j =
-                  libMesh::Kokkos::vector_shape(vector_key, j, px, py, pz);
-              Real vector_normal = Kokkos::detail::component_or_zero(phi_j, 0) *
-                                   normal_x(e, side, q);
-#if LIBMESH_DIM > 1
-              vector_normal += Kokkos::detail::component_or_zero(phi_j, 1) *
-                               normal_y(e, side, q);
-#endif
-#if LIBMESH_DIM > 2
-              vector_normal += Kokkos::detail::component_or_zero(phi_j, 2) *
-                               normal_z(e, side, q);
-#endif
-              value -= side_jxw(e, side, q) * nu *
-                       libMesh::Kokkos::side_trace_shape(
-                           lm_key, i, side, positive_edge_orientation, px, py, pz) *
-                       vector_normal;
+              const unsigned int sq = side * n_side_qp + q;
+              value -= side_jxw(e, side, q) * nu * tr_side(e, sq * lm_n_dofs + i) *
+                       vn_side(e, sq * vector_n_dofs + j);
             }
           }
         }
@@ -1672,9 +1775,7 @@ assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
             const unsigned int j = local % layout.scalar_n_dofs;
             for (unsigned int q = 0; q != n_side_qp; ++q)
             {
-              const Real px = parent_xi(e, side, q);
-              const Real py = parent_eta(e, side, q);
-              const Real pz = parent_zeta(e, side, q);
+              const unsigned int sq = side * n_side_qp + q;
               const Real normal_component =
                   velocity_component == 0 ? normal_x(e, side, q)
 #if LIBMESH_DIM > 1
@@ -1683,10 +1784,8 @@ assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
                                           : Real(0)
 #endif
                   ;
-              value += side_jxw(e, side, q) *
-                       libMesh::Kokkos::side_trace_shape(
-                           lm_key, i, side, positive_edge_orientation, px, py, pz) *
-                       libMesh::Kokkos::shape(scalar_key, j, px, py, pz) * normal_component;
+              value += side_jxw(e, side, q) * tr_side(e, sq * lm_n_dofs + i) *
+                       phi_s_side(e, sq * scalar_n_dofs + j) * normal_component;
             }
           }
         }
@@ -1699,9 +1798,7 @@ assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
             const unsigned int j = local % layout.scalar_n_dofs;
             for (unsigned int q = 0; q != n_side_qp; ++q)
             {
-              const Real px = parent_xi(e, side, q);
-              const Real py = parent_eta(e, side, q);
-              const Real pz = parent_zeta(e, side, q);
+              const unsigned int sq = side * n_side_qp + q;
               Real normal_norm2 = normal_x(e, side, q) * normal_x(e, side, q);
 #if LIBMESH_DIM > 1
               normal_norm2 += normal_y(e, side, q) * normal_y(e, side, q);
@@ -1709,10 +1806,8 @@ assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
 #if LIBMESH_DIM > 2
               normal_norm2 += normal_z(e, side, q) * normal_z(e, side, q);
 #endif
-              value += side_jxw(e, side, q) *
-                       libMesh::Kokkos::side_trace_shape(
-                           lm_key, i, side, positive_edge_orientation, px, py, pz) *
-                       tau * libMesh::Kokkos::shape(scalar_key, j, px, py, pz) * normal_norm2;
+              value += side_jxw(e, side, q) * tr_side(e, sq * lm_n_dofs + i) * tau *
+                       phi_s_side(e, sq * scalar_n_dofs + j) * normal_norm2;
             }
           }
         }
@@ -1723,15 +1818,9 @@ assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
           const unsigned int j = local % layout.lm_n_dofs;
           for (unsigned int q = 0; q != n_side_qp; ++q)
           {
-            const Real px = parent_xi(e, side, q);
-            const Real py = parent_eta(e, side, q);
-            const Real pz = parent_zeta(e, side, q);
-            const Real trace_i =
-                libMesh::Kokkos::side_trace_shape(
-                    lm_key, i, side, positive_edge_orientation, px, py, pz);
-            const Real trace_j =
-                libMesh::Kokkos::side_trace_shape(
-                    lm_key, j, side, positive_edge_orientation, px, py, pz);
+            const unsigned int sq = side * n_side_qp + q;
+            const Real trace_i = tr_side(e, sq * lm_n_dofs + i);
+            const Real trace_j = tr_side(e, sq * lm_n_dofs + j);
             if (is_dirichlet)
             {
               value -= side_jxw(e, side, q) * trace_i * trace_j;
@@ -1756,9 +1845,7 @@ assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
             const unsigned int j = local % layout.scalar_n_dofs;
             for (unsigned int q = 0; q != n_side_qp; ++q)
             {
-              const Real px = parent_xi(e, side, q);
-              const Real py = parent_eta(e, side, q);
-              const Real pz = parent_zeta(e, side, q);
+              const unsigned int sq = side * n_side_qp + q;
               Real normal_norm2 = normal_x(e, side, q) * normal_x(e, side, q);
 #if LIBMESH_DIM > 1
               normal_norm2 += normal_y(e, side, q) * normal_y(e, side, q);
@@ -1766,9 +1853,8 @@ assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
 #if LIBMESH_DIM > 2
               normal_norm2 += normal_z(e, side, q) * normal_z(e, side, q);
 #endif
-              value += side_jxw(e, side, q) *
-                       libMesh::Kokkos::shape(scalar_key, i, px, py, pz) * tau *
-                       libMesh::Kokkos::shape(scalar_key, j, px, py, pz) * normal_norm2;
+              value += side_jxw(e, side, q) * phi_s_side(e, sq * scalar_n_dofs + i) * tau *
+                       phi_s_side(e, sq * scalar_n_dofs + j) * normal_norm2;
             }
           }
         }
@@ -1781,9 +1867,7 @@ assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
             const unsigned int j = local % layout.lm_n_dofs;
             for (unsigned int q = 0; q != n_side_qp; ++q)
             {
-              const Real px = parent_xi(e, side, q);
-              const Real py = parent_eta(e, side, q);
-              const Real pz = parent_zeta(e, side, q);
+              const unsigned int sq = side * n_side_qp + q;
               Real normal_norm2 = normal_x(e, side, q) * normal_x(e, side, q);
 #if LIBMESH_DIM > 1
               normal_norm2 += normal_y(e, side, q) * normal_y(e, side, q);
@@ -1791,11 +1875,8 @@ assemble_component_pair_side_blocks_range(const DeviceAssemblyData & data,
 #if LIBMESH_DIM > 2
               normal_norm2 += normal_z(e, side, q) * normal_z(e, side, q);
 #endif
-              value -= side_jxw(e, side, q) *
-                       libMesh::Kokkos::shape(scalar_key, i, px, py, pz) * tau *
-                       libMesh::Kokkos::side_trace_shape(
-                           lm_key, j, side, positive_edge_orientation, px, py, pz) *
-                       normal_norm2;
+              value -= side_jxw(e, side, q) * phi_s_side(e, sq * scalar_n_dofs + i) * tau *
+                       tr_side(e, sq * lm_n_dofs + j) * normal_norm2;
             }
           }
         }
@@ -1843,13 +1924,98 @@ assemble_component_pair_volume_residual_range(const DeviceAssemblyData & u_data,
   const DeviceReal2D v_u_dofs = v_dofs.u_dofs;
   const DeviceReal2D v_other_u_dofs = v_dofs.other_u_dofs;
 
+  // Tabulate reference shapes and physical scalar gradients as in the block
+  // kernel, plus the interpolated field values (q, u, other-u, p) which
+  // depend only on (elem, qp): hoisting them removes the nested dof loops
+  // from the per-entry residual kernel.
+  const unsigned int scalar_n_dofs = layout.scalar_n_dofs;
+  const unsigned int vector_n_dofs = layout.vector_n_dofs;
+  DeviceReal2D phi_s("vector_fe_ex9_residual_phi_s", scalar_n_dofs, n_qp);
+  DeviceReal2D phi_v("vector_fe_ex9_residual_phi_v", vector_n_dofs, n_qp * LIBMESH_DIM);
+  DeviceReal3D grad_phys(
+      "vector_fe_ex9_residual_grad_phys", n_elem, scalar_n_dofs, n_qp * LIBMESH_DIM);
+  DeviceReal3D q_vals("vector_fe_ex9_residual_q_vals", n_elem, 2, n_qp * LIBMESH_DIM);
+  DeviceReal3D u_vals("vector_fe_ex9_residual_u_vals", n_elem, 2, n_qp);
+  DeviceReal3D other_u_vals("vector_fe_ex9_residual_other_u_vals", n_elem, 2, n_qp);
+  DeviceReal2D p_vals("vector_fe_ex9_residual_p_vals", n_elem, n_qp);
+
+  ::Kokkos::parallel_for(
+      "vector_fe_ex9_residual_shape_tables",
+      ::Kokkos::RangePolicy<>(0, cast_int<int>(n_qp)),
+      KOKKOS_LAMBDA(const int raw_q) {
+        const unsigned int q = static_cast<unsigned int>(raw_q);
+        for (unsigned int i = 0; i != scalar_n_dofs; ++i)
+          phi_s(i, q) = libMesh::Kokkos::shape(scalar_key, i, xi(q), eta(q), zeta(q));
+        for (unsigned int j = 0; j != vector_n_dofs; ++j)
+        {
+          const libMesh::Kokkos::RealVector phi =
+              libMesh::Kokkos::vector_shape(vector_key, j, xi(q), eta(q), zeta(q));
+          for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+            phi_v(j, q * LIBMESH_DIM + d) = Kokkos::detail::component_or_zero(phi, d);
+        }
+      });
+
+  ::Kokkos::parallel_for(
+      "vector_fe_ex9_residual_field_values",
+      ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * n_qp)),
+      KOKKOS_LAMBDA(const int raw_entry) {
+        const unsigned int entry = static_cast<unsigned int>(raw_entry);
+        // Element-fastest mapping for coalesced writes.
+        const unsigned int e = entry % n_elem;
+        const unsigned int q = entry / n_elem;
+        const libMesh::Kokkos::RealTensor J =
+            libMesh::Kokkos::jacobian<libMesh::LAGRANGE, ExactTopo>(
+                Kokkos::detail::HDGElementNodeView<DeviceReal3D>{coords, e},
+                n_geom_nodes,
+                xi(q),
+                eta(q),
+                zeta(q));
+        const libMesh::Kokkos::RealTensor Jinv =
+            libMesh::Kokkos::inverse<libMesh::Kokkos::RealTensor>(J, 2);
+        for (unsigned int i = 0; i != scalar_n_dofs; ++i)
+        {
+          const libMesh::Kokkos::RealVector grad =
+              Jinv * libMesh::Kokkos::grad_shape(scalar_key, i, xi(q), eta(q), zeta(q));
+          for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+            grad_phys(e, i, q * LIBMESH_DIM + d) = Kokkos::detail::component_or_zero(grad, d);
+        }
+        for (unsigned int component = 0; component != 2; ++component)
+        {
+          for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+          {
+            Real q_value = Real(0);
+            for (unsigned int j = 0; j != vector_n_dofs; ++j)
+            {
+              const Real q_dof = component == 0 ? u_q_dofs(e, j) : v_q_dofs(e, j);
+              q_value += phi_v(j, q * LIBMESH_DIM + d) * q_dof;
+            }
+            q_vals(e, component, q * LIBMESH_DIM + d) = q_value;
+          }
+          Real u_value = Real(0);
+          Real other_u = Real(0);
+          for (unsigned int j = 0; j != scalar_n_dofs; ++j)
+          {
+            const Real phi = phi_s(j, q);
+            u_value += phi * (component == 0 ? u_u_dofs(e, j) : v_u_dofs(e, j));
+            other_u += phi * (component == 0 ? u_other_u_dofs(e, j) : v_other_u_dofs(e, j));
+          }
+          u_vals(e, component, q) = u_value;
+          other_u_vals(e, component, q) = other_u;
+        }
+        Real p_value = Real(0);
+        for (unsigned int j = 0; j != scalar_n_dofs; ++j)
+          p_value += phi_s(j, q) * u_p_dofs(e, j);
+        p_vals(e, q) = p_value;
+      });
+
   ::Kokkos::parallel_for(
       "vector_fe_ex9_split_component_volume_residual",
       ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * 2 * n_entries)),
       KOKKOS_LAMBDA(const int raw_entry) {
         const unsigned int entry = static_cast<unsigned int>(raw_entry);
-        const unsigned int e = entry / (2 * n_entries);
-        const unsigned int component_entry = entry - e * 2 * n_entries;
+        // Element-fastest mapping: coalesced table reads and residual writes.
+        const unsigned int e = entry % n_elem;
+        const unsigned int component_entry = entry / n_elem;
         const unsigned int component = component_entry / n_entries;
         const unsigned int idx = component_entry - component * n_entries;
         const unsigned int velocity_component = component;
@@ -1858,51 +2024,18 @@ assemble_component_pair_volume_residual_range(const DeviceAssemblyData & u_data,
         if (idx < u0)
         {
           const unsigned int i = idx;
+          const unsigned int scalar_i = i / 2;
+          const unsigned int grad_component = i - scalar_i * 2;
           for (unsigned int q = 0; q != n_qp; ++q)
           {
-            const Real xiq = xi(q);
-            const Real etaq = eta(q);
-            const Real zetaq = zeta(q);
-            const unsigned int scalar_i = i / 2;
-            const unsigned int grad_component = i - scalar_i * 2;
-            const libMesh::Kokkos::RealTensor J =
-                libMesh::Kokkos::jacobian<libMesh::LAGRANGE, ExactTopo>(
-                    Kokkos::detail::HDGElementNodeView<DeviceReal3D>{coords, e},
-                    n_geom_nodes,
-                    xiq,
-                    etaq,
-                    zetaq);
-            const libMesh::Kokkos::RealTensor Jinv =
-                libMesh::Kokkos::inverse<libMesh::Kokkos::RealTensor>(J, 2);
-            const libMesh::Kokkos::RealVector grad_phys =
-                Jinv * libMesh::Kokkos::grad_shape(scalar_key, scalar_i, xiq, etaq, zetaq);
-            const libMesh::Kokkos::RealVector phi_i =
-                libMesh::Kokkos::vector_shape(vector_key, i, xiq, etaq, zetaq);
             Real phi_dot_q = Real(0);
             for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
-            {
-              Real q_value = Real(0);
-              for (unsigned int j = 0; j != layout.vector_n_dofs; ++j)
-              {
-                const libMesh::Kokkos::RealVector phi_j =
-                    libMesh::Kokkos::vector_shape(vector_key, j, xiq, etaq, zetaq);
-                const Real q_dof = component == 0 ? u_q_dofs(e, j) : v_q_dofs(e, j);
-                q_value += Kokkos::detail::component_or_zero(phi_j, d) * q_dof;
-              }
-              phi_dot_q += Kokkos::detail::component_or_zero(phi_i, d) * q_value;
-            }
-
-            Real u_value = Real(0);
-            for (unsigned int j = 0; j != layout.scalar_n_dofs; ++j)
-            {
-              const Real phi = libMesh::Kokkos::shape(scalar_key, j, xiq, etaq, zetaq);
-              const Real u_dof = component == 0 ? u_u_dofs(e, j) : v_u_dofs(e, j);
-              u_value += phi * u_dof;
-            }
-
+              phi_dot_q += phi_v(i, q * LIBMESH_DIM + d) *
+                           q_vals(e, component, q * LIBMESH_DIM + d);
             value += jxw(q) *
                      (phi_dot_q +
-                      Kokkos::detail::component_or_zero(grad_phys, grad_component) * u_value);
+                      grad_phys(e, scalar_i, q * LIBMESH_DIM + grad_component) *
+                          u_vals(e, component, q));
           }
         }
         else if (idx < p0)
@@ -1910,57 +2043,17 @@ assemble_component_pair_volume_residual_range(const DeviceAssemblyData & u_data,
           const unsigned int i = idx - u0;
           for (unsigned int q = 0; q != n_qp; ++q)
           {
-            const Real xiq = xi(q);
-            const Real etaq = eta(q);
-            const Real zetaq = zeta(q);
-            const libMesh::Kokkos::RealTensor J =
-                libMesh::Kokkos::jacobian<libMesh::LAGRANGE, ExactTopo>(
-                    Kokkos::detail::HDGElementNodeView<DeviceReal3D>{coords, e},
-                    n_geom_nodes,
-                    xiq,
-                    etaq,
-                    zetaq);
-            const libMesh::Kokkos::RealTensor Jinv =
-                libMesh::Kokkos::inverse<libMesh::Kokkos::RealTensor>(J, 2);
-            const libMesh::Kokkos::RealVector grad_phys =
-                Jinv * libMesh::Kokkos::grad_shape(scalar_key, i, xiq, etaq, zetaq);
-
             Real grad_dot_stress = Real(0);
             for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
             {
-              Real q_value = Real(0);
-              for (unsigned int j = 0; j != layout.vector_n_dofs; ++j)
-              {
-                const libMesh::Kokkos::RealVector phi_j =
-                    libMesh::Kokkos::vector_shape(vector_key, j, xiq, etaq, zetaq);
-                const Real q_dof = component == 0 ? u_q_dofs(e, j) : v_q_dofs(e, j);
-                q_value += Kokkos::detail::component_or_zero(phi_j, d) * q_dof;
-              }
-
-              Real p_value = Real(0);
-              for (unsigned int j = 0; j != layout.scalar_n_dofs; ++j)
-                p_value +=
-                    libMesh::Kokkos::shape(scalar_key, j, xiq, etaq, zetaq) * u_p_dofs(e, j);
-
-              Real stress_component = nu * q_value;
+              Real stress_component = nu * q_vals(e, component, q * LIBMESH_DIM + d);
               if (d == velocity_component)
-                stress_component -= p_value;
-              grad_dot_stress +=
-                  Kokkos::detail::component_or_zero(grad_phys, d) * stress_component;
+                stress_component -= p_vals(e, q);
+              grad_dot_stress += grad_phys(e, i, q * LIBMESH_DIM + d) * stress_component;
             }
 
-            Real active_u = Real(0);
-            Real other_u = Real(0);
-            for (unsigned int j = 0; j != layout.scalar_n_dofs; ++j)
-            {
-              const Real phi = libMesh::Kokkos::shape(scalar_key, j, xiq, etaq, zetaq);
-              const Real u_dof = component == 0 ? u_u_dofs(e, j) : v_u_dofs(e, j);
-              const Real other_u_dof =
-                  component == 0 ? u_other_u_dofs(e, j) : v_other_u_dofs(e, j);
-              active_u += phi * u_dof;
-              other_u += phi * other_u_dof;
-            }
-
+            const Real active_u = u_vals(e, component, q);
+            const Real other_u = other_u_vals(e, component, q);
             const libMesh::Kokkos::RealVector convective_flux =
                 include_convection
                     ? Kokkos::detail::hdg_velocity_from_components(
@@ -1970,14 +2063,13 @@ assemble_component_pair_volume_residual_range(const DeviceAssemblyData & u_data,
             Real grad_dot_convective_flux = Real(0);
             for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
               grad_dot_convective_flux +=
-                  Kokkos::detail::component_or_zero(grad_phys, d) *
+                  grad_phys(e, i, q * LIBMESH_DIM + d) *
                   Kokkos::detail::component_or_zero(convective_flux, d);
             const Real forcing =
                 component == 0 ? scalar_forcing_0(e, q) : scalar_forcing_1(e, q);
 
             value += jxw(q) *
-                     (grad_dot_stress - grad_dot_convective_flux -
-                      libMesh::Kokkos::shape(scalar_key, i, xiq, etaq, zetaq) * forcing);
+                     (grad_dot_stress - grad_dot_convective_flux - phi_s(i, q) * forcing);
           }
         }
         else
@@ -1985,34 +2077,11 @@ assemble_component_pair_volume_residual_range(const DeviceAssemblyData & u_data,
           const unsigned int i = idx - p0;
           for (unsigned int q = 0; q != n_qp; ++q)
           {
-            const Real xiq = xi(q);
-            const Real etaq = eta(q);
-            const Real zetaq = zeta(q);
-            const libMesh::Kokkos::RealTensor J =
-                libMesh::Kokkos::jacobian<libMesh::LAGRANGE, ExactTopo>(
-                    Kokkos::detail::HDGElementNodeView<DeviceReal3D>{coords, e},
-                    n_geom_nodes,
-                    xiq,
-                    etaq,
-                    zetaq);
-            const libMesh::Kokkos::RealTensor Jinv =
-                libMesh::Kokkos::inverse<libMesh::Kokkos::RealTensor>(J, 2);
-            const libMesh::Kokkos::RealVector grad_phys =
-                Jinv * libMesh::Kokkos::grad_shape(scalar_key, i, xiq, etaq, zetaq);
-            Real u_value = Real(0);
-            for (unsigned int j = 0; j != layout.scalar_n_dofs; ++j)
-            {
-              const Real phi = libMesh::Kokkos::shape(scalar_key, j, xiq, etaq, zetaq);
-              const Real u_dof = component == 0 ? u_u_dofs(e, j) : v_u_dofs(e, j);
-              u_value += phi * u_dof;
-            }
-
             value -= jxw(q) *
-                     Kokkos::detail::component_or_zero(grad_phys, velocity_component) * u_value;
+                     grad_phys(e, i, q * LIBMESH_DIM + velocity_component) *
+                     u_vals(e, component, q);
             if (velocity_component == 0)
-              value -= jxw(q) *
-                       libMesh::Kokkos::shape(scalar_key, i, xiq, etaq, zetaq) *
-                       pressure_forcing(e, q);
+              value -= jxw(q) * phi_s(i, q) * pressure_forcing(e, q);
           }
         }
 
@@ -2067,20 +2136,138 @@ assemble_component_pair_side_residual_range(const DeviceAssemblyData & u_data,
   const DeviceReal2D v_lm_dofs = v_dofs.lm_dofs;
   const DeviceReal2D v_other_lm_dofs = v_dofs.other_lm_dofs;
 
+  // Tabulate side shape data and interpolated side field values once per
+  // (elem, side, qp): scalar shapes, vector shapes pre-dotted with the
+  // normal, LM traces, and the interpolated lm / other-lm / q.n / u / p
+  // values that every residual entry below consumes.
+  const unsigned int scalar_n_dofs = layout.scalar_n_dofs;
+  const unsigned int vector_n_dofs = layout.vector_n_dofs;
+  const unsigned int lm_n_dofs = layout.lm_n_dofs;
+  const unsigned int n_sq = n_sides * n_side_qp;
+  DeviceReal2D phi_s_side("vector_fe_ex9_side_res_phi_s", n_elem, n_sq * scalar_n_dofs);
+  DeviceReal2D vn_side("vector_fe_ex9_side_res_vec_normal", n_elem, n_sq * vector_n_dofs);
+  DeviceReal2D tr_side("vector_fe_ex9_side_res_trace", n_elem, n_sq * lm_n_dofs);
+  DeviceReal3D lm_vals("vector_fe_ex9_side_res_lm_vals", n_elem, 2, n_sq);
+  DeviceReal3D other_lm_vals("vector_fe_ex9_side_res_other_lm_vals", n_elem, 2, n_sq);
+  DeviceReal3D qn_vals("vector_fe_ex9_side_res_qn_vals", n_elem, 2, n_sq);
+  DeviceReal3D u_vals("vector_fe_ex9_side_res_u_vals", n_elem, 2, n_sq);
+  DeviceReal2D p_vals("vector_fe_ex9_side_res_p_vals", n_elem, n_sq);
+
+  ::Kokkos::parallel_for(
+      "vector_fe_ex9_side_residual_tables",
+      ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * n_sq)),
+      KOKKOS_LAMBDA(const int raw_entry) {
+        const unsigned int entry = static_cast<unsigned int>(raw_entry);
+        // Element-fastest mapping for coalesced table writes.
+        const unsigned int e = entry % n_elem;
+        const unsigned int sq = entry / n_elem;
+        const unsigned int side = sq / n_side_qp;
+        const unsigned int q = sq - side * n_side_qp;
+        const bool positive_edge_orientation = static_cast<bool>(orientations(e, side));
+        const Real px = parent_xi(e, side, q);
+        const Real py = parent_eta(e, side, q);
+        const Real pz = parent_zeta(e, side, q);
+        const Real nx = normal_x(e, side, q);
+#if LIBMESH_DIM > 1
+        const Real ny = normal_y(e, side, q);
+#else
+        const Real ny = Real(0);
+#endif
+#if LIBMESH_DIM > 2
+        const Real nz = normal_z(e, side, q);
+#else
+        const Real nz = Real(0);
+#endif
+
+        for (unsigned int i = 0; i != scalar_n_dofs; ++i)
+          phi_s_side(e, sq * scalar_n_dofs + i) =
+              libMesh::Kokkos::shape(scalar_key, i, px, py, pz);
+
+        Real u_qv[2][LIBMESH_DIM];
+        for (unsigned int component = 0; component != 2; ++component)
+          for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+            u_qv[component][d] = Real(0);
+        for (unsigned int j = 0; j != vector_n_dofs; ++j)
+        {
+          const libMesh::Kokkos::RealVector phi =
+              libMesh::Kokkos::vector_shape(vector_key, j, px, py, pz);
+          Real vector_normal = Kokkos::detail::component_or_zero(phi, 0) * nx;
+#if LIBMESH_DIM > 1
+          vector_normal += Kokkos::detail::component_or_zero(phi, 1) * ny;
+#endif
+#if LIBMESH_DIM > 2
+          vector_normal += Kokkos::detail::component_or_zero(phi, 2) * nz;
+#endif
+          vn_side(e, sq * vector_n_dofs + j) = vector_normal;
+          for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+          {
+            const Real phi_d = Kokkos::detail::component_or_zero(phi, d);
+            u_qv[0][d] += phi_d * u_q_dofs(e, j);
+            u_qv[1][d] += phi_d * v_q_dofs(e, j);
+          }
+        }
+        for (unsigned int component = 0; component != 2; ++component)
+        {
+          Real q_normal = Real(0);
+          for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+          {
+            const Real normal_component =
+                d == 0 ? nx :
+#if LIBMESH_DIM > 1
+                         d == 1 ? ny :
+#endif
+                                  nz;
+            q_normal += u_qv[component][d] * normal_component;
+          }
+          qn_vals(e, component, sq) = q_normal;
+        }
+
+        for (unsigned int component = 0; component != 2; ++component)
+        {
+          Real u_value = Real(0);
+          for (unsigned int j = 0; j != scalar_n_dofs; ++j)
+            u_value += phi_s_side(e, sq * scalar_n_dofs + j) *
+                       (component == 0 ? u_u_dofs(e, j) : v_u_dofs(e, j));
+          u_vals(e, component, sq) = u_value;
+        }
+        Real p_value = Real(0);
+        for (unsigned int j = 0; j != scalar_n_dofs; ++j)
+          p_value += phi_s_side(e, sq * scalar_n_dofs + j) * u_p_dofs(e, j);
+        p_vals(e, sq) = p_value;
+
+        for (unsigned int k = 0; k != lm_n_dofs; ++k)
+          tr_side(e, sq * lm_n_dofs + k) =
+              libMesh::Kokkos::side_trace_shape(
+                  lm_key, k, side, positive_edge_orientation, px, py, pz);
+        for (unsigned int component = 0; component != 2; ++component)
+        {
+          Real lm_value = Real(0);
+          Real other_lm_value = Real(0);
+          for (unsigned int j = 0; j != lm_n_dofs; ++j)
+          {
+            const Real trace = tr_side(e, sq * lm_n_dofs + j);
+            lm_value += trace * (component == 0 ? u_lm_dofs(e, j) : v_lm_dofs(e, j));
+            other_lm_value +=
+                trace * (component == 0 ? u_other_lm_dofs(e, j) : v_other_lm_dofs(e, j));
+          }
+          lm_vals(e, component, sq) = lm_value;
+          other_lm_vals(e, component, sq) = other_lm_value;
+        }
+      });
+
   ::Kokkos::parallel_for(
       "vector_fe_ex9_split_component_side_residual",
       ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * n_sides * 2 * n_entries)),
       KOKKOS_LAMBDA(const int raw_entry) {
         const unsigned int entry = static_cast<unsigned int>(raw_entry);
-        const unsigned int entries_per_elem = n_sides * 2 * n_entries;
-        const unsigned int e = entry / entries_per_elem;
-        const unsigned int elem_entry = entry - e * entries_per_elem;
+        // Element-fastest mapping: coalesced table reads and residual updates.
+        const unsigned int e = entry % n_elem;
+        const unsigned int elem_entry = entry / n_elem;
         const unsigned int side = elem_entry / (2 * n_entries);
         const unsigned int side_entry = elem_entry - side * 2 * n_entries;
         const unsigned int component = side_entry / n_entries;
         const unsigned int idx = side_entry - component * n_entries;
         const unsigned int velocity_component = component;
-        const bool positive_edge_orientation = static_cast<bool>(orientations(e, side));
         const int side_type = side_types(e, side);
         const bool is_outlet = side_type == Kokkos::detail::hdg_linear_side_outlet;
         const bool is_dirichlet = side_type == Kokkos::detail::hdg_linear_side_dirichlet;
@@ -2091,45 +2278,14 @@ assemble_component_pair_side_residual_range(const DeviceAssemblyData & u_data,
           const unsigned int i = idx;
           for (unsigned int q = 0; q != n_side_qp; ++q)
           {
-            const Real px = parent_xi(e, side, q);
-            const Real py = parent_eta(e, side, q);
-            const Real pz = parent_zeta(e, side, q);
-            const libMesh::Kokkos::RealVector phi_i =
-                libMesh::Kokkos::vector_shape(vector_key, i, px, py, pz);
-            const Real nx = normal_x(e, side, q);
-#if LIBMESH_DIM > 1
-            const Real ny = normal_y(e, side, q);
-#else
-            const Real ny = Real(0);
-#endif
-#if LIBMESH_DIM > 2
-            const Real nz = normal_z(e, side, q);
-#else
-            const Real nz = Real(0);
-#endif
-            const Real boundary_value =
+            const unsigned int sq = side * n_side_qp + q;
+            const Real active_boundary_value =
                 is_dirichlet
                     ? (component == 0 ? dirichlet_component_0(e, side, q)
                                       : dirichlet_component_1(e, side, q))
-                    : Real(0);
-            Real lm_value = Real(0);
-            if (!is_dirichlet)
-              for (unsigned int j = 0; j != layout.lm_n_dofs; ++j)
-              {
-                const Real trace = libMesh::Kokkos::side_trace_shape(
-                    lm_key, j, side, positive_edge_orientation, px, py, pz);
-                const Real lm_dof = component == 0 ? u_lm_dofs(e, j) : v_lm_dofs(e, j);
-                lm_value += trace * lm_dof;
-              }
-            const Real active_boundary_value = is_dirichlet ? boundary_value : lm_value;
-            Real vector_normal = Kokkos::detail::component_or_zero(phi_i, 0) * nx;
-#if LIBMESH_DIM > 1
-            vector_normal += Kokkos::detail::component_or_zero(phi_i, 1) * ny;
-#endif
-#if LIBMESH_DIM > 2
-            vector_normal += Kokkos::detail::component_or_zero(phi_i, 2) * nz;
-#endif
-            value -= side_jxw(e, side, q) * vector_normal * active_boundary_value;
+                    : lm_vals(e, component, sq);
+            value -= side_jxw(e, side, q) * vn_side(e, sq * vector_n_dofs + i) *
+                     active_boundary_value;
           }
         }
         else if (idx < p0)
@@ -2137,9 +2293,7 @@ assemble_component_pair_side_residual_range(const DeviceAssemblyData & u_data,
           const unsigned int i = idx - u0;
           for (unsigned int q = 0; q != n_side_qp; ++q)
           {
-            const Real px = parent_xi(e, side, q);
-            const Real py = parent_eta(e, side, q);
-            const Real pz = parent_zeta(e, side, q);
+            const unsigned int sq = side * n_side_qp + q;
             const Real nx = normal_x(e, side, q);
 #if LIBMESH_DIM > 1
             const Real ny = normal_y(e, side, q);
@@ -2158,49 +2312,8 @@ assemble_component_pair_side_residual_range(const DeviceAssemblyData & u_data,
 #if LIBMESH_DIM > 2
             normal_norm2 += nz * nz;
 #endif
-            Real q_normal = Real(0);
-            for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
-            {
-              Real q_value = Real(0);
-              for (unsigned int j = 0; j != layout.vector_n_dofs; ++j)
-              {
-                const libMesh::Kokkos::RealVector phi_j =
-                    libMesh::Kokkos::vector_shape(vector_key, j, px, py, pz);
-                const Real q_dof = component == 0 ? u_q_dofs(e, j) : v_q_dofs(e, j);
-                q_value += Kokkos::detail::component_or_zero(phi_j, d) * q_dof;
-              }
-              const Real normal_component =
-                  d == 0 ? nx :
-#if LIBMESH_DIM > 1
-                           d == 1 ? ny :
-#endif
-                                    nz;
-              q_normal += q_value * normal_component;
-            }
-
-            Real u_value = Real(0);
-            Real p_value = Real(0);
-            for (unsigned int j = 0; j != layout.scalar_n_dofs; ++j)
-            {
-              const Real phi = libMesh::Kokkos::shape(scalar_key, j, px, py, pz);
-              const Real u_dof = component == 0 ? u_u_dofs(e, j) : v_u_dofs(e, j);
-              u_value += phi * u_dof;
-              p_value += phi * u_p_dofs(e, j);
-            }
-
-            Real lm_value = Real(0);
-            Real other_lm_value = Real(0);
-            for (unsigned int j = 0; j != layout.lm_n_dofs; ++j)
-            {
-              const Real trace = libMesh::Kokkos::side_trace_shape(
-                  lm_key, j, side, positive_edge_orientation, px, py, pz);
-              const Real lm_dof = component == 0 ? u_lm_dofs(e, j) : v_lm_dofs(e, j);
-              const Real other_lm_dof =
-                  component == 0 ? u_other_lm_dofs(e, j) : v_other_lm_dofs(e, j);
-              lm_value += trace * lm_dof;
-              other_lm_value += trace * other_lm_dof;
-            }
-
+            const Real lm_value = lm_vals(e, component, sq);
+            const Real other_lm_value = other_lm_vals(e, component, sq);
             const Real boundary_value =
                 is_dirichlet
                     ? (component == 0 ? dirichlet_component_0(e, side, q)
@@ -2216,10 +2329,11 @@ assemble_component_pair_side_residual_range(const DeviceAssemblyData & u_data,
             const Real normal_component = velocity_component == 0 ? nx : ny;
             const Real linear_flux =
                 is_outlet ? Real(0)
-                          : -nu * q_normal + p_value * normal_component +
-                                tau * (u_value - boundary_value) * normal_norm2;
-            value += side_jxw(e, side, q) *
-                     libMesh::Kokkos::shape(scalar_key, i, px, py, pz) *
+                          : -nu * qn_vals(e, component, sq) +
+                                p_vals(e, sq) * normal_component +
+                                tau * (u_vals(e, component, sq) - boundary_value) *
+                                    normal_norm2;
+            value += side_jxw(e, side, q) * phi_s_side(e, sq * scalar_n_dofs + i) *
                      (linear_flux + advective_flux);
           }
         }
@@ -2228,33 +2342,21 @@ assemble_component_pair_side_residual_range(const DeviceAssemblyData & u_data,
           const unsigned int i = idx - p0;
           for (unsigned int q = 0; q != n_side_qp; ++q)
           {
-            const Real px = parent_xi(e, side, q);
-            const Real py = parent_eta(e, side, q);
-            const Real pz = parent_zeta(e, side, q);
+            const unsigned int sq = side * n_side_qp + q;
             const Real nx = normal_x(e, side, q);
 #if LIBMESH_DIM > 1
             const Real ny = normal_y(e, side, q);
 #else
             const Real ny = Real(0);
 #endif
-            Real lm_value = Real(0);
-            if (!is_dirichlet)
-              for (unsigned int j = 0; j != layout.lm_n_dofs; ++j)
-              {
-                const Real trace = libMesh::Kokkos::side_trace_shape(
-                    lm_key, j, side, positive_edge_orientation, px, py, pz);
-                const Real lm_dof = component == 0 ? u_lm_dofs(e, j) : v_lm_dofs(e, j);
-                lm_value += trace * lm_dof;
-              }
             const Real boundary_value =
                 is_dirichlet
                     ? (component == 0 ? dirichlet_component_0(e, side, q)
                                       : dirichlet_component_1(e, side, q))
-                    : lm_value;
+                    : lm_vals(e, component, sq);
             const Real normal_component = velocity_component == 0 ? nx : ny;
-            value += side_jxw(e, side, q) *
-                     libMesh::Kokkos::shape(scalar_key, i, px, py, pz) * boundary_value *
-                     normal_component;
+            value += side_jxw(e, side, q) * phi_s_side(e, sq * scalar_n_dofs + i) *
+                     boundary_value * normal_component;
           }
         }
         else
@@ -2262,19 +2364,9 @@ assemble_component_pair_side_residual_range(const DeviceAssemblyData & u_data,
           const unsigned int i = idx - lm0;
           for (unsigned int q = 0; q != n_side_qp; ++q)
           {
-            const Real px = parent_xi(e, side, q);
-            const Real py = parent_eta(e, side, q);
-            const Real pz = parent_zeta(e, side, q);
-            const Real phi_i = libMesh::Kokkos::side_trace_shape(
-                lm_key, i, side, positive_edge_orientation, px, py, pz);
-            Real lm_value = Real(0);
-            for (unsigned int j = 0; j != layout.lm_n_dofs; ++j)
-            {
-              const Real trace = libMesh::Kokkos::side_trace_shape(
-                  lm_key, j, side, positive_edge_orientation, px, py, pz);
-              const Real lm_dof = component == 0 ? u_lm_dofs(e, j) : v_lm_dofs(e, j);
-              lm_value += trace * lm_dof;
-            }
+            const unsigned int sq = side * n_side_qp + q;
+            const Real phi_i = tr_side(e, sq * lm_n_dofs + i);
+            const Real lm_value = lm_vals(e, component, sq);
 
             if (is_dirichlet)
             {
@@ -2300,46 +2392,7 @@ assemble_component_pair_side_residual_range(const DeviceAssemblyData & u_data,
 #if LIBMESH_DIM > 2
             normal_norm2 += nz * nz;
 #endif
-            Real q_normal = Real(0);
-            for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
-            {
-              Real q_value = Real(0);
-              for (unsigned int j = 0; j != layout.vector_n_dofs; ++j)
-              {
-                const libMesh::Kokkos::RealVector phi_j =
-                    libMesh::Kokkos::vector_shape(vector_key, j, px, py, pz);
-                const Real q_dof = component == 0 ? u_q_dofs(e, j) : v_q_dofs(e, j);
-                q_value += Kokkos::detail::component_or_zero(phi_j, d) * q_dof;
-              }
-              const Real normal_component =
-                  d == 0 ? nx :
-#if LIBMESH_DIM > 1
-                           d == 1 ? ny :
-#endif
-                                    nz;
-              q_normal += q_value * normal_component;
-            }
-
-            Real u_value = Real(0);
-            Real p_value = Real(0);
-            for (unsigned int j = 0; j != layout.scalar_n_dofs; ++j)
-            {
-              const Real phi = libMesh::Kokkos::shape(scalar_key, j, px, py, pz);
-              const Real u_dof = component == 0 ? u_u_dofs(e, j) : v_u_dofs(e, j);
-              u_value += phi * u_dof;
-              p_value += phi * u_p_dofs(e, j);
-            }
-
-            Real other_lm_value = Real(0);
-            for (unsigned int j = 0; j != layout.lm_n_dofs; ++j)
-            {
-              const Real trace = libMesh::Kokkos::side_trace_shape(
-                  lm_key, j, side, positive_edge_orientation, px, py, pz);
-              const Real other_lm_dof =
-                  component == 0 ? u_other_lm_dofs(e, j) : v_other_lm_dofs(e, j);
-              other_lm_value += trace * other_lm_dof;
-            }
-
+            const Real other_lm_value = other_lm_vals(e, component, sq);
             const Real advective_vdotn =
                 velocity_component == 0 ? nx * lm_value + ny * other_lm_value
                                         : nx * other_lm_value + ny * lm_value;
@@ -2347,8 +2400,10 @@ assemble_component_pair_side_residual_range(const DeviceAssemblyData & u_data,
                 (!include_convection || is_outlet) ? Real(0) : advective_vdotn * lm_value;
             const Real normal_component = velocity_component == 0 ? nx : ny;
             value += side_jxw(e, side, q) * phi_i *
-                     (-nu * q_normal + p_value * normal_component +
-                      tau * (u_value - lm_value) * normal_norm2 + advective_flux);
+                     (-nu * qn_vals(e, component, sq) +
+                      p_vals(e, sq) * normal_component +
+                      tau * (u_vals(e, component, sq) - lm_value) * normal_norm2 +
+                      advective_flux);
           }
         }
 
@@ -2382,13 +2437,69 @@ assemble_full_convective_volume_blocks_range(const DeviceAssemblyData & data,
   const DeviceReal2D v_values = v_dofs.u_dofs;
   const unsigned int n_full = full_layout.n_dofs;
 
+  // Tabulate scalar shapes, physical gradients, and the interpolated u/v
+  // velocities once per (elem, qp) so the convective block kernel below is
+  // pure table lookups.
+  const unsigned int scalar_n_dofs = layout.scalar_n_dofs;
+  DeviceReal2D phi_s("vector_fe_ex9_conv_phi_s", scalar_n_dofs, n_qp);
+  DeviceReal3D grad_phys(
+      "vector_fe_ex9_conv_grad_phys", n_elem, scalar_n_dofs, n_qp * LIBMESH_DIM);
+  DeviceReal2D uq_vals("vector_fe_ex9_conv_u_vals", n_elem, n_qp);
+  DeviceReal2D vq_vals("vector_fe_ex9_conv_v_vals", n_elem, n_qp);
+
+  ::Kokkos::parallel_for(
+      "vector_fe_ex9_conv_shape_tables",
+      ::Kokkos::RangePolicy<>(0, cast_int<int>(n_qp)),
+      KOKKOS_LAMBDA(const int raw_q) {
+        const unsigned int q = static_cast<unsigned int>(raw_q);
+        for (unsigned int i = 0; i != scalar_n_dofs; ++i)
+          phi_s(i, q) = libMesh::Kokkos::shape(scalar_key, i, xi(q), eta(q), zeta(q));
+      });
+
+  ::Kokkos::parallel_for(
+      "vector_fe_ex9_conv_field_values",
+      ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * n_qp)),
+      KOKKOS_LAMBDA(const int raw_entry) {
+        const unsigned int entry = static_cast<unsigned int>(raw_entry);
+        // Element-fastest mapping for coalesced writes.
+        const unsigned int e = entry % n_elem;
+        const unsigned int q = entry / n_elem;
+        const libMesh::Kokkos::RealTensor J =
+            libMesh::Kokkos::jacobian<libMesh::LAGRANGE, ExactTopo>(
+                Kokkos::detail::HDGElementNodeView<DeviceReal3D>{coords, e},
+                n_geom_nodes,
+                xi(q),
+                eta(q),
+                zeta(q));
+        const libMesh::Kokkos::RealTensor Jinv =
+            libMesh::Kokkos::inverse<libMesh::Kokkos::RealTensor>(J, 2);
+        for (unsigned int i = 0; i != scalar_n_dofs; ++i)
+        {
+          const libMesh::Kokkos::RealVector grad =
+              Jinv * libMesh::Kokkos::grad_shape(scalar_key, i, xi(q), eta(q), zeta(q));
+          for (unsigned int d = 0; d != LIBMESH_DIM; ++d)
+            grad_phys(e, i, q * LIBMESH_DIM + d) = Kokkos::detail::component_or_zero(grad, d);
+        }
+        Real u_value = Real(0);
+        Real v_value = Real(0);
+        for (unsigned int k = 0; k != scalar_n_dofs; ++k)
+        {
+          const Real phi_k = phi_s(k, q);
+          u_value += phi_k * u_values(e, k);
+          v_value += phi_k * v_values(e, k);
+        }
+        uq_vals(e, q) = u_value;
+        vq_vals(e, q) = v_value;
+      });
+
   ::Kokkos::parallel_for(
       "vector_fe_ex9_split_full_convective_volume_blocks",
       ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * n_entries)),
       KOKKOS_LAMBDA(const int raw_entry) {
         const unsigned int entry = static_cast<unsigned int>(raw_entry);
-        const unsigned int e = entry / n_entries;
-        const unsigned int idx = entry - e * n_entries;
+        // Element-fastest mapping: coalesced table reads and block writes.
+        const unsigned int e = entry % n_elem;
+        const unsigned int idx = entry / n_elem;
         const unsigned int i = idx / layout.scalar_n_dofs;
         const unsigned int j = idx - i * layout.scalar_n_dofs;
         Real u_u_col = Real(0);
@@ -2398,32 +2509,11 @@ assemble_full_convective_volume_blocks_range(const DeviceAssemblyData & data,
 
         for (unsigned int q = 0; q != n_qp; ++q)
         {
-          const Real xiq = xi(q);
-          const Real etaq = eta(q);
-          const Real zetaq = zeta(q);
-          const libMesh::Kokkos::RealTensor J =
-              libMesh::Kokkos::jacobian<libMesh::LAGRANGE, ExactTopo>(
-                  Kokkos::detail::HDGElementNodeView<DeviceReal3D>{coords, e},
-                  n_geom_nodes,
-                  xiq,
-                  etaq,
-                  zetaq);
-          const libMesh::Kokkos::RealTensor Jinv =
-              libMesh::Kokkos::inverse<libMesh::Kokkos::RealTensor>(J, 2);
-          const libMesh::Kokkos::RealVector grad_phys =
-              Jinv * libMesh::Kokkos::grad_shape(scalar_key, i, xiq, etaq, zetaq);
-          const Real phi_j = libMesh::Kokkos::shape(scalar_key, j, xiq, etaq, zetaq);
-          Real u_value = Real(0);
-          Real v_value = Real(0);
-          for (unsigned int k = 0; k != layout.scalar_n_dofs; ++k)
-          {
-            const Real phi_k = libMesh::Kokkos::shape(scalar_key, k, xiq, etaq, zetaq);
-            u_value += phi_k * u_values(e, k);
-            v_value += phi_k * v_values(e, k);
-          }
-
-          const Real grad_x = Kokkos::detail::component_or_zero(grad_phys, 0);
-          const Real grad_y = Kokkos::detail::component_or_zero(grad_phys, 1);
+          const Real phi_j = phi_s(j, q);
+          const Real u_value = uq_vals(e, q);
+          const Real v_value = vq_vals(e, q);
+          const Real grad_x = grad_phys(e, i, q * LIBMESH_DIM + 0);
+          const Real grad_y = grad_phys(e, i, q * LIBMESH_DIM + 1);
           u_u_col -= jxw(q) * phi_j * (Real(2) * grad_x * u_value + grad_y * v_value);
           ux_v_col -= jxw(q) * grad_y * phi_j * u_value;
           vy_u_col -= jxw(q) * grad_x * phi_j * v_value;
@@ -2465,17 +2555,59 @@ assemble_full_convective_side_blocks_range(const DeviceAssemblyData & data,
   const DeviceReal2D lm_v_values = v_dofs.lm_dofs;
   const unsigned int n_full = full_layout.n_dofs;
 
+  // Tabulate side scalar shapes, LM traces, and the interpolated lm_u/lm_v
+  // trace velocities once per (elem, side, qp) so the convective side block
+  // kernel below is pure table lookups.
+  const unsigned int scalar_n_dofs = layout.scalar_n_dofs;
+  const unsigned int lm_n_dofs = layout.lm_n_dofs;
+  const unsigned int n_sq = n_sides * n_side_qp;
+  DeviceReal2D phi_s_side("vector_fe_ex9_conv_side_phi_s", n_elem, n_sq * scalar_n_dofs);
+  DeviceReal2D tr_side("vector_fe_ex9_conv_side_trace", n_elem, n_sq * lm_n_dofs);
+  DeviceReal2D lm_u_vals("vector_fe_ex9_conv_side_lm_u", n_elem, n_sq);
+  DeviceReal2D lm_v_vals("vector_fe_ex9_conv_side_lm_v", n_elem, n_sq);
+
+  ::Kokkos::parallel_for(
+      "vector_fe_ex9_conv_side_tables",
+      ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * n_sq)),
+      KOKKOS_LAMBDA(const int raw_entry) {
+        const unsigned int entry = static_cast<unsigned int>(raw_entry);
+        // Element-fastest mapping for coalesced table writes.
+        const unsigned int e = entry % n_elem;
+        const unsigned int sq = entry / n_elem;
+        const unsigned int side = sq / n_side_qp;
+        const unsigned int q = sq - side * n_side_qp;
+        const bool positive_edge_orientation = static_cast<bool>(orientations(e, side));
+        const Real px = parent_xi(e, side, q);
+        const Real py = parent_eta(e, side, q);
+        const Real pz = parent_zeta(e, side, q);
+        for (unsigned int i = 0; i != scalar_n_dofs; ++i)
+          phi_s_side(e, sq * scalar_n_dofs + i) =
+              libMesh::Kokkos::shape(scalar_key, i, px, py, pz);
+        Real lm_u_value = Real(0);
+        Real lm_v_value = Real(0);
+        for (unsigned int k = 0; k != lm_n_dofs; ++k)
+        {
+          const Real trace_k =
+              libMesh::Kokkos::side_trace_shape(
+                  lm_key, k, side, positive_edge_orientation, px, py, pz);
+          tr_side(e, sq * lm_n_dofs + k) = trace_k;
+          lm_u_value += trace_k * lm_u_values(e, k);
+          lm_v_value += trace_k * lm_v_values(e, k);
+        }
+        lm_u_vals(e, sq) = lm_u_value;
+        lm_v_vals(e, sq) = lm_v_value;
+      });
+
   ::Kokkos::parallel_for(
       "vector_fe_ex9_split_full_convective_side_blocks",
       ::Kokkos::RangePolicy<>(0, cast_int<int>(n_elem * n_sides * entries_per_side)),
       KOKKOS_LAMBDA(const int raw_entry) {
         const unsigned int entry = static_cast<unsigned int>(raw_entry);
-        const unsigned int entries_per_elem = n_sides * entries_per_side;
-        const unsigned int e = entry / entries_per_elem;
-        const unsigned int elem_entry = entry - e * entries_per_elem;
+        // Element-fastest mapping: coalesced table reads and block writes.
+        const unsigned int e = entry % n_elem;
+        const unsigned int elem_entry = entry / n_elem;
         const unsigned int side = elem_entry / entries_per_side;
         const unsigned int side_entry = elem_entry - side * entries_per_side;
-        const bool positive_edge_orientation = static_cast<bool>(orientations(e, side));
         const int side_type = side_types(e, side);
         const bool is_dirichlet = side_type == Kokkos::detail::hdg_linear_side_dirichlet;
         const bool is_outlet = side_type == Kokkos::detail::hdg_linear_side_outlet;
@@ -2494,23 +2626,11 @@ assemble_full_convective_side_blocks_range(const DeviceAssemblyData & data,
 
           for (unsigned int q = 0; q != n_side_qp; ++q)
           {
-            const Real px = parent_xi(e, side, q);
-            const Real py = parent_eta(e, side, q);
-            const Real pz = parent_zeta(e, side, q);
-            const Real phi_i = libMesh::Kokkos::shape(scalar_key, i, px, py, pz);
-            const Real trace_j =
-                libMesh::Kokkos::side_trace_shape(
-                    lm_key, j, side, positive_edge_orientation, px, py, pz);
-            Real lm_u_value = Real(0);
-            Real lm_v_value = Real(0);
-            for (unsigned int k = 0; k != layout.lm_n_dofs; ++k)
-            {
-              const Real trace_k =
-                  libMesh::Kokkos::side_trace_shape(
-                      lm_key, k, side, positive_edge_orientation, px, py, pz);
-              lm_u_value += trace_k * lm_u_values(e, k);
-              lm_v_value += trace_k * lm_v_values(e, k);
-            }
+            const unsigned int sq = side * n_side_qp + q;
+            const Real phi_i = phi_s_side(e, sq * scalar_n_dofs + i);
+            const Real trace_j = tr_side(e, sq * lm_n_dofs + j);
+            const Real lm_u_value = lm_u_vals(e, sq);
+            const Real lm_v_value = lm_v_vals(e, sq);
             const Real nx = normal_x(e, side, q);
             const Real ny = normal_y(e, side, q);
 
@@ -2542,25 +2662,11 @@ assemble_full_convective_side_blocks_range(const DeviceAssemblyData & data,
 
         for (unsigned int q = 0; q != n_side_qp; ++q)
         {
-          const Real px = parent_xi(e, side, q);
-          const Real py = parent_eta(e, side, q);
-          const Real pz = parent_zeta(e, side, q);
-          const Real trace_i =
-              libMesh::Kokkos::side_trace_shape(
-                  lm_key, i, side, positive_edge_orientation, px, py, pz);
-          const Real trace_j =
-              libMesh::Kokkos::side_trace_shape(
-                  lm_key, j, side, positive_edge_orientation, px, py, pz);
-          Real lm_u_value = Real(0);
-          Real lm_v_value = Real(0);
-          for (unsigned int k = 0; k != layout.lm_n_dofs; ++k)
-          {
-            const Real trace_k =
-                libMesh::Kokkos::side_trace_shape(
-                    lm_key, k, side, positive_edge_orientation, px, py, pz);
-            lm_u_value += trace_k * lm_u_values(e, k);
-            lm_v_value += trace_k * lm_v_values(e, k);
-          }
+          const unsigned int sq = side * n_side_qp + q;
+          const Real trace_i = tr_side(e, sq * lm_n_dofs + i);
+          const Real trace_j = tr_side(e, sq * lm_n_dofs + j);
+          const Real lm_u_value = lm_u_vals(e, sq);
+          const Real lm_v_value = lm_v_vals(e, sq);
           const Real nx = normal_x(e, side, q);
           const Real ny = normal_y(e, side, q);
 
@@ -2785,239 +2891,319 @@ condense_ex9_full_on_device(const Ex9FullBlockLayout layout,
   constexpr unsigned int max_external = Kokkos::detail::hdg_linear_condense_max_external;
   constexpr unsigned int max_cols = Kokkos::detail::hdg_linear_condense_max_cols;
 
+  // One team per element with the augmented system held in team scratch
+  // (shared memory).  The previous one-thread-per-element version kept ~8 KB
+  // of matrices in thread-local (spilled) memory, serializing the whole
+  // factorization; here the pivot search, row elimination, per-RHS back
+  // substitutions, and Schur complement are all team-parallel.
+  const unsigned int n_internal_h = layout.internal_n_dofs;
+  const unsigned int n_external_h = layout.external_n_dofs;
+  const unsigned int n_cols_h = n_internal_h + n_external_h;
+  using CondenseTeamPolicy = ::Kokkos::TeamPolicy<>;
+  using CondenseTeamMember = CondenseTeamPolicy::member_type;
+  using ScratchReal1D =
+      ::Kokkos::View<Real *,
+                     ::Kokkos::DefaultExecutionSpace::scratch_memory_space,
+                     ::Kokkos::MemoryTraits<::Kokkos::Unmanaged>>;
+  using ScratchUInt1D =
+      ::Kokkos::View<unsigned int *,
+                     ::Kokkos::DefaultExecutionSpace::scratch_memory_space,
+                     ::Kokkos::MemoryTraits<::Kokkos::Unmanaged>>;
+  using ScratchInt1D =
+      ::Kokkos::View<int *,
+                     ::Kokkos::DefaultExecutionSpace::scratch_memory_space,
+                     ::Kokkos::MemoryTraits<::Kokkos::Unmanaged>>;
+  const std::size_t condense_scratch_bytes =
+      ScratchReal1D::shmem_size(n_internal_h * n_cols_h) +
+      ScratchReal1D::shmem_size(n_internal_h * n_internal_h) +
+      ScratchReal1D::shmem_size(n_internal_h * n_external_h) +
+      ScratchUInt1D::shmem_size(n_internal_h) + ScratchInt1D::shmem_size(2);
+  CondenseTeamPolicy condense_policy =
+      CondenseTeamPolicy(static_cast<int>(n_elem), ::Kokkos::AUTO)
+          .set_scratch_size(0, ::Kokkos::PerTeam(condense_scratch_bytes));
+
   ::Kokkos::parallel_for(
       "vector_fe_ex9_full_condense",
-      ::Kokkos::RangePolicy<>(0, static_cast<int>(n_elem)),
-      KOKKOS_LAMBDA(const int raw_e) {
-        const unsigned int e = static_cast<unsigned int>(raw_e);
+      condense_policy,
+      KOKKOS_LAMBDA(const CondenseTeamMember & team) {
+        const unsigned int e = static_cast<unsigned int>(team.league_rank());
         const unsigned int n_internal = layout.internal_n_dofs;
         const unsigned int n_external = layout.external_n_dofs;
+        const unsigned int n_cols = n_internal + n_external;
 
-        for (unsigned int i = 0; i != n_external * n_external; ++i)
-          condensed_blocks(e, i) = Real(0);
-        for (unsigned int i = 0; i != n_internal * n_internal; ++i)
-          internal_inverse(e, i) = Real(0);
-        for (unsigned int i = 0; i != n_internal * n_external; ++i)
-          internal_external_solve(e, i) = Real(0);
-        failure_pivot(e) = -1;
-        failure_pivot_abs(e) = Real(0);
-        failure_initial_diag(e) = Real(0);
-        failure_initial_row_abs(e) = Real(0);
+        ::Kokkos::parallel_for(
+            ::Kokkos::TeamThreadRange(team, n_external * n_external),
+            [&](const int i) { condensed_blocks(e, i) = Real(0); });
+        ::Kokkos::parallel_for(
+            ::Kokkos::TeamThreadRange(team, n_internal * n_internal),
+            [&](const int i) { internal_inverse(e, i) = Real(0); });
+        ::Kokkos::parallel_for(
+            ::Kokkos::TeamThreadRange(team, n_internal * n_external),
+            [&](const int i) { internal_external_solve(e, i) = Real(0); });
+        ::Kokkos::single(::Kokkos::PerTeam(team), [&]() {
+          failure_pivot(e) = -1;
+          failure_pivot_abs(e) = Real(0);
+          failure_initial_diag(e) = Real(0);
+          failure_initial_row_abs(e) = Real(0);
+        });
 
         if (n_internal > max_internal || n_external > max_external ||
             n_internal + n_external > max_cols)
         {
-          block_status(e) = 2;
-          failure_pivot(e) = static_cast<int>(n_internal);
+          ::Kokkos::single(::Kokkos::PerTeam(team), [&]() {
+            block_status(e) = 2;
+            failure_pivot(e) = static_cast<int>(n_internal);
+          });
           return;
         }
 
-        Real aug_blocks[max_internal * max_cols];
-        Real aug_inverse[max_internal * max_internal];
-        Real block_solve[max_internal * max_external];
-        Real work_solution[max_internal];
-        unsigned int col_perm[max_internal];
+        ScratchReal1D aug_blocks(team.team_scratch(0), n_internal * n_cols);
+        ScratchReal1D aug_inverse(team.team_scratch(0), n_internal * n_internal);
+        ScratchReal1D block_solve(team.team_scratch(0), n_internal * n_external);
+        ScratchUInt1D col_perm(team.team_scratch(0), n_internal);
+        // team_flags(0): factorization failed, team_flags(1): batched solved
+        ScratchInt1D team_flags(team.team_scratch(0), 2);
 
-        for (unsigned int i = 0; i != n_internal; ++i)
-          col_perm[i] = i;
+        ::Kokkos::parallel_for(::Kokkos::TeamThreadRange(team, n_internal),
+                               [&](const int i) { col_perm(i) = i; });
+        ::Kokkos::parallel_for(
+            ::Kokkos::TeamThreadRange(team, n_internal * n_cols), [&](const int flat) {
+              const unsigned int i = static_cast<unsigned int>(flat) / n_cols;
+              const unsigned int j = static_cast<unsigned int>(flat) - i * n_cols;
+              aug_blocks(flat) =
+                  j < n_internal
+                      ? blocks(e, i * layout.n_dofs + j)
+                      : blocks(e,
+                               i * layout.n_dofs +
+                                   ex9_external_full_offset(layout, j - n_internal));
+            });
+        ::Kokkos::parallel_for(
+            ::Kokkos::TeamThreadRange(team, n_internal * n_internal), [&](const int flat) {
+              const unsigned int i = static_cast<unsigned int>(flat) / n_internal;
+              const unsigned int j = static_cast<unsigned int>(flat) - i * n_internal;
+              aug_inverse(flat) = i == j ? Real(1) : Real(0);
+            });
+        ::Kokkos::single(::Kokkos::PerTeam(team), [&]() {
+          team_flags(0) = 0;
+          team_flags(1) = 0;
+          block_status(e) = 0;
+        });
+        team.team_barrier();
 
-        for (unsigned int i = 0; i != n_internal; ++i)
-        {
-          for (unsigned int j = 0; j != n_internal; ++j)
-          {
-            const Real value = blocks(e, i * layout.n_dofs + j);
-            aug_blocks[i * max_cols + j] = value;
-            aug_inverse[i * max_internal + j] = i == j ? Real(1) : Real(0);
-          }
-          for (unsigned int j = 0; j != n_external; ++j)
-            aug_blocks[i * max_cols + n_internal + j] =
-                blocks(e, i * layout.n_dofs + ex9_external_full_offset(layout, j));
-        }
-
-        bool solved_with_batched = false;
 #if LIBMESH_EX9_HAVE_KOKKOS_BATCHED_GESV
         if (condense_solver == static_cast<int>(ex9_condense_solver_kokkos_batched_gesv))
         {
-          using MatrixView =
-              ::Kokkos::View<Real **, ::Kokkos::LayoutRight, ::Kokkos::MemoryTraits<::Kokkos::Unmanaged>>;
-          using VectorView = ::Kokkos::View<Real *, ::Kokkos::MemoryTraits<::Kokkos::Unmanaged>>;
-          Real batched_matrix[max_internal * max_internal];
-          Real batched_tmp[max_internal * (max_internal + 4)];
-          Real batched_rhs[max_internal];
-          bool batched_failed = false;
+          // Optional debugging path: run the serial batched solver on a
+          // single team member, preserving the original semantics.
+          ::Kokkos::single(::Kokkos::PerTeam(team), [&]() {
+            using MatrixView =
+                ::Kokkos::View<Real **, ::Kokkos::LayoutRight, ::Kokkos::MemoryTraits<::Kokkos::Unmanaged>>;
+            using VectorView = ::Kokkos::View<Real *, ::Kokkos::MemoryTraits<::Kokkos::Unmanaged>>;
+            Real batched_matrix[max_internal * max_internal];
+            Real batched_tmp[max_internal * (max_internal + 4)];
+            Real batched_rhs[max_internal];
+            Real work_solution[max_internal];
+            bool batched_failed = false;
 
-          block_status(e) = 0;
-          for (unsigned int rhs = 0; rhs != n_external; ++rhs)
-          {
-            for (unsigned int r = 0; r != n_internal; ++r)
-            {
-              batched_rhs[r] = aug_blocks[r * max_cols + n_internal + rhs];
-              for (unsigned int c = 0; c != n_internal; ++c)
-                batched_matrix[r * n_internal + c] = aug_blocks[r * max_cols + c];
-            }
-            MatrixView A(batched_matrix, n_internal, n_internal);
-            MatrixView tmp(batched_tmp, n_internal, n_internal + 4);
-            VectorView x(work_solution, n_internal);
-            VectorView y(batched_rhs, n_internal);
-            const int info =
-                KokkosBatched::SerialGesv<KokkosBatched::Gesv::StaticPivoting>::invoke(A, x, y, tmp);
-            if (info)
-            {
-              batched_failed = true;
-              break;
-            }
-            for (unsigned int r = 0; r != n_internal; ++r)
-              block_solve[r * max_external + rhs] = work_solution[r];
-          }
-
-          for (unsigned int rhs = 0; !batched_failed && rhs != n_internal; ++rhs)
-          {
-            for (unsigned int r = 0; r != n_internal; ++r)
-            {
-              batched_rhs[r] = r == rhs ? Real(1) : Real(0);
-              for (unsigned int c = 0; c != n_internal; ++c)
-                batched_matrix[r * n_internal + c] = aug_blocks[r * max_cols + c];
-            }
-            MatrixView A(batched_matrix, n_internal, n_internal);
-            MatrixView tmp(batched_tmp, n_internal, n_internal + 4);
-            VectorView x(work_solution, n_internal);
-            VectorView y(batched_rhs, n_internal);
-            const int info =
-                KokkosBatched::SerialGesv<KokkosBatched::Gesv::StaticPivoting>::invoke(A, x, y, tmp);
-            if (info)
-            {
-              batched_failed = true;
-              break;
-            }
-            for (unsigned int r = 0; r != n_internal; ++r)
-              internal_inverse(e, r * n_internal + rhs) = work_solution[r];
-          }
-
-          solved_with_batched = !batched_failed;
-        }
-#endif
-
-        if (!solved_with_batched)
-        {
-          block_status(e) = 0;
-          for (unsigned int k = 0; k != n_internal; ++k)
-          {
-            unsigned int pivot_row = k;
-            unsigned int pivot_col = k;
-            Real pivot_abs = Real(0);
-            for (unsigned int r = k; r != n_internal; ++r)
-              for (unsigned int c = k; c != n_internal; ++c)
-              {
-                const Real candidate = Kokkos::detail::abs_real(aug_blocks[r * max_cols + c]);
-                if (candidate > pivot_abs)
-                {
-                  pivot_abs = candidate;
-                  pivot_row = r;
-                  pivot_col = c;
-                }
-              }
-
-            if (pivot_abs <= Real(1.e-20))
-            {
-              block_status(e) = 1;
-              failure_pivot(e) = static_cast<int>(k);
-              failure_pivot_abs(e) = pivot_abs;
-              failure_initial_diag(e) = blocks(e, k * layout.n_dofs + k);
-              Real row_abs = Real(0);
-              for (unsigned int c = 0; c != n_internal; ++c)
-              {
-                const Real candidate = Kokkos::detail::abs_real(blocks(e, k * layout.n_dofs + c));
-                if (candidate > row_abs)
-                  row_abs = candidate;
-              }
-              failure_initial_row_abs(e) = row_abs;
-              return;
-            }
-
-            if (pivot_row != k)
-              for (unsigned int c = 0; c != n_internal + n_external; ++c)
-              {
-                const Real tmp = aug_blocks[k * max_cols + c];
-                aug_blocks[k * max_cols + c] = aug_blocks[pivot_row * max_cols + c];
-                aug_blocks[pivot_row * max_cols + c] = tmp;
-              }
-            if (pivot_row != k)
-              for (unsigned int c = 0; c != n_internal; ++c)
-              {
-                const Real tmp = aug_inverse[k * max_internal + c];
-                aug_inverse[k * max_internal + c] = aug_inverse[pivot_row * max_internal + c];
-                aug_inverse[pivot_row * max_internal + c] = tmp;
-              }
-
-            if (pivot_col != k)
+            for (unsigned int rhs = 0; rhs != n_external; ++rhs)
             {
               for (unsigned int r = 0; r != n_internal; ++r)
               {
-                const Real tmp = aug_blocks[r * max_cols + k];
-                aug_blocks[r * max_cols + k] = aug_blocks[r * max_cols + pivot_col];
-                aug_blocks[r * max_cols + pivot_col] = tmp;
+                batched_rhs[r] = aug_blocks(r * n_cols + n_internal + rhs);
+                for (unsigned int c = 0; c != n_internal; ++c)
+                  batched_matrix[r * n_internal + c] = aug_blocks(r * n_cols + c);
               }
-              const unsigned int tmp = col_perm[k];
-              col_perm[k] = col_perm[pivot_col];
-              col_perm[pivot_col] = tmp;
+              MatrixView A(batched_matrix, n_internal, n_internal);
+              MatrixView tmp(batched_tmp, n_internal, n_internal + 4);
+              VectorView x(work_solution, n_internal);
+              VectorView y(batched_rhs, n_internal);
+              const int info =
+                  KokkosBatched::SerialGesv<KokkosBatched::Gesv::StaticPivoting>::invoke(A, x, y, tmp);
+              if (info)
+              {
+                batched_failed = true;
+                break;
+              }
+              for (unsigned int r = 0; r != n_internal; ++r)
+                block_solve(r * n_external + rhs) = work_solution[r];
             }
 
-            const Real pivot = aug_blocks[k * max_cols + k];
-            for (unsigned int r = k + 1; r != n_internal; ++r)
+            for (unsigned int rhs = 0; !batched_failed && rhs != n_internal; ++rhs)
             {
-              const Real factor = aug_blocks[r * max_cols + k] / pivot;
-              aug_blocks[r * max_cols + k] = Real(0);
-
-              for (unsigned int c = k + 1; c != n_internal + n_external; ++c)
-                aug_blocks[r * max_cols + c] -= factor * aug_blocks[k * max_cols + c];
-              for (unsigned int c = 0; c != n_internal; ++c)
-                aug_inverse[r * max_internal + c] -= factor * aug_inverse[k * max_internal + c];
+              for (unsigned int r = 0; r != n_internal; ++r)
+              {
+                batched_rhs[r] = r == rhs ? Real(1) : Real(0);
+                for (unsigned int c = 0; c != n_internal; ++c)
+                  batched_matrix[r * n_internal + c] = aug_blocks(r * n_cols + c);
+              }
+              MatrixView A(batched_matrix, n_internal, n_internal);
+              MatrixView tmp(batched_tmp, n_internal, n_internal + 4);
+              VectorView x(work_solution, n_internal);
+              VectorView y(batched_rhs, n_internal);
+              const int info =
+                  KokkosBatched::SerialGesv<KokkosBatched::Gesv::StaticPivoting>::invoke(A, x, y, tmp);
+              if (info)
+              {
+                batched_failed = true;
+                break;
+              }
+              for (unsigned int r = 0; r != n_internal; ++r)
+                internal_inverse(e, r * n_internal + rhs) = work_solution[r];
             }
-          }
 
-          for (unsigned int rhs = 0; rhs != n_external; ++rhs)
+            team_flags(1) = batched_failed ? 0 : 1;
+          });
+          team.team_barrier();
+        }
+#endif
+
+        if (!team_flags(1))
+        {
+          for (unsigned int k = 0; k != n_internal; ++k)
           {
-            for (unsigned int rr = n_internal; rr != 0; --rr)
+            // Full-pivot search over the remaining submatrix.
+            const unsigned int sub = n_internal - k;
+            typename ::Kokkos::MaxLoc<Real, unsigned int>::value_type pivot_result;
+            ::Kokkos::parallel_reduce(
+                ::Kokkos::TeamThreadRange(team, sub * sub),
+                [&](const int flat,
+                    typename ::Kokkos::MaxLoc<Real, unsigned int>::value_type & update) {
+                  const unsigned int r = k + static_cast<unsigned int>(flat) / sub;
+                  const unsigned int c = k + static_cast<unsigned int>(flat) % sub;
+                  const Real candidate = Kokkos::detail::abs_real(aug_blocks(r * n_cols + c));
+                  if (candidate > update.val)
+                  {
+                    update.val = candidate;
+                    update.loc = static_cast<unsigned int>(flat);
+                  }
+                },
+                ::Kokkos::MaxLoc<Real, unsigned int>(pivot_result));
+            const Real pivot_abs = pivot_result.val;
+            const unsigned int pivot_row = k + pivot_result.loc / sub;
+            const unsigned int pivot_col = k + pivot_result.loc % sub;
+
+            if (pivot_abs <= Real(1.e-20))
             {
-              const unsigned int r = rr - 1;
-              Real value = aug_blocks[r * max_cols + n_internal + rhs];
-              for (unsigned int c = r + 1; c != n_internal; ++c)
-                value -= aug_blocks[r * max_cols + c] * work_solution[c];
-              work_solution[r] = value / aug_blocks[r * max_cols + r];
+              ::Kokkos::single(::Kokkos::PerTeam(team), [&]() {
+                block_status(e) = 1;
+                failure_pivot(e) = static_cast<int>(k);
+                failure_pivot_abs(e) = pivot_abs;
+                failure_initial_diag(e) = blocks(e, k * layout.n_dofs + k);
+                Real row_abs = Real(0);
+                for (unsigned int c = 0; c != n_internal; ++c)
+                {
+                  const Real candidate =
+                      Kokkos::detail::abs_real(blocks(e, k * layout.n_dofs + c));
+                  if (candidate > row_abs)
+                    row_abs = candidate;
+                }
+                failure_initial_row_abs(e) = row_abs;
+                team_flags(0) = 1;
+              });
+              team.team_barrier();
+              break;
             }
-            for (unsigned int r = 0; r != n_internal; ++r)
-              block_solve[col_perm[r] * max_external + rhs] = work_solution[r];
+
+            if (pivot_row != k)
+            {
+              ::Kokkos::parallel_for(::Kokkos::TeamThreadRange(team, n_cols), [&](const int c) {
+                const Real tmp = aug_blocks(k * n_cols + c);
+                aug_blocks(k * n_cols + c) = aug_blocks(pivot_row * n_cols + c);
+                aug_blocks(pivot_row * n_cols + c) = tmp;
+              });
+              ::Kokkos::parallel_for(
+                  ::Kokkos::TeamThreadRange(team, n_internal), [&](const int c) {
+                    const Real tmp = aug_inverse(k * n_internal + c);
+                    aug_inverse(k * n_internal + c) = aug_inverse(pivot_row * n_internal + c);
+                    aug_inverse(pivot_row * n_internal + c) = tmp;
+                  });
+            }
+            // The column swap reads entries the row swap may move; order them.
+            team.team_barrier();
+
+            if (pivot_col != k)
+            {
+              ::Kokkos::parallel_for(
+                  ::Kokkos::TeamThreadRange(team, n_internal), [&](const int r) {
+                    const Real tmp = aug_blocks(r * n_cols + k);
+                    aug_blocks(r * n_cols + k) = aug_blocks(r * n_cols + pivot_col);
+                    aug_blocks(r * n_cols + pivot_col) = tmp;
+                  });
+              ::Kokkos::single(::Kokkos::PerTeam(team), [&]() {
+                const unsigned int tmp = col_perm(k);
+                col_perm(k) = col_perm(pivot_col);
+                col_perm(pivot_col) = tmp;
+              });
+            }
+            team.team_barrier();
+
+            const Real pivot = aug_blocks(k * n_cols + k);
+            ::Kokkos::parallel_for(
+                ::Kokkos::TeamThreadRange(team, n_internal - k - 1), [&](const int rr) {
+                  const unsigned int r = k + 1 + static_cast<unsigned int>(rr);
+                  const Real factor = aug_blocks(r * n_cols + k) / pivot;
+                  aug_blocks(r * n_cols + k) = Real(0);
+
+                  for (unsigned int c = k + 1; c != n_cols; ++c)
+                    aug_blocks(r * n_cols + c) -= factor * aug_blocks(k * n_cols + c);
+                  for (unsigned int c = 0; c != n_internal; ++c)
+                    aug_inverse(r * n_internal + c) -= factor * aug_inverse(k * n_internal + c);
+                });
+            team.team_barrier();
           }
 
-          for (unsigned int rhs = 0; rhs != n_internal; ++rhs)
-          {
-            for (unsigned int rr = n_internal; rr != 0; --rr)
-            {
-              const unsigned int r = rr - 1;
-              Real value = aug_inverse[r * max_internal + rhs];
-              for (unsigned int c = r + 1; c != n_internal; ++c)
-                value -= aug_blocks[r * max_cols + c] * work_solution[c];
-              work_solution[r] = value / aug_blocks[r * max_cols + r];
-            }
-            for (unsigned int r = 0; r != n_internal; ++r)
-              internal_inverse(e, col_perm[r] * n_internal + rhs) = work_solution[r];
-          }
+          if (team_flags(0))
+            return;
+
+          // Independent triangular solves: one RHS per team member.
+          ::Kokkos::parallel_for(
+              ::Kokkos::TeamThreadRange(team, n_external), [&](const int rhs) {
+                Real work_solution[max_internal];
+                for (unsigned int rr = n_internal; rr != 0; --rr)
+                {
+                  const unsigned int r = rr - 1;
+                  Real value = aug_blocks(r * n_cols + n_internal + rhs);
+                  for (unsigned int c = r + 1; c != n_internal; ++c)
+                    value -= aug_blocks(r * n_cols + c) * work_solution[c];
+                  work_solution[r] = value / aug_blocks(r * n_cols + r);
+                }
+                for (unsigned int r = 0; r != n_internal; ++r)
+                  block_solve(col_perm(r) * n_external + rhs) = work_solution[r];
+              });
+
+          ::Kokkos::parallel_for(
+              ::Kokkos::TeamThreadRange(team, n_internal), [&](const int rhs) {
+                Real work_solution[max_internal];
+                for (unsigned int rr = n_internal; rr != 0; --rr)
+                {
+                  const unsigned int r = rr - 1;
+                  Real value = aug_inverse(r * n_internal + rhs);
+                  for (unsigned int c = r + 1; c != n_internal; ++c)
+                    value -= aug_blocks(r * n_cols + c) * work_solution[c];
+                  work_solution[r] = value / aug_blocks(r * n_cols + r);
+                }
+                for (unsigned int r = 0; r != n_internal; ++r)
+                  internal_inverse(e, col_perm(r) * n_internal + rhs) = work_solution[r];
+              });
+          team.team_barrier();
         }
 
-        for (unsigned int i = 0; i != n_internal; ++i)
-          for (unsigned int j = 0; j != n_external; ++j)
-            internal_external_solve(e, i * n_external + j) = block_solve[i * max_external + j];
+        ::Kokkos::parallel_for(
+            ::Kokkos::TeamThreadRange(team, n_internal * n_external), [&](const int flat) {
+              internal_external_solve(e, flat) = block_solve(flat);
+            });
 
-        for (unsigned int i = 0; i != n_external; ++i)
-          for (unsigned int j = 0; j != n_external; ++j)
-          {
-            const unsigned int full_i = ex9_external_full_offset(layout, i);
-            const unsigned int full_j = ex9_external_full_offset(layout, j);
-            Real value = blocks(e, full_i * layout.n_dofs + full_j);
-            for (unsigned int k = 0; k != n_internal; ++k)
-              value -= blocks(e, full_i * layout.n_dofs + k) * block_solve[k * max_external + j];
-            condensed_blocks(e, i * n_external + j) = value;
-          }
+        ::Kokkos::parallel_for(
+            ::Kokkos::TeamThreadRange(team, n_external * n_external), [&](const int flat) {
+              const unsigned int i = static_cast<unsigned int>(flat) / n_external;
+              const unsigned int j = static_cast<unsigned int>(flat) - i * n_external;
+              const unsigned int full_i = ex9_external_full_offset(layout, i);
+              const unsigned int full_j = ex9_external_full_offset(layout, j);
+              Real value = blocks(e, full_i * layout.n_dofs + full_j);
+              for (unsigned int k = 0; k != n_internal; ++k)
+                value -= blocks(e, full_i * layout.n_dofs + k) * block_solve(k * n_external + j);
+              condensed_blocks(e, i * n_external + j) = value;
+            });
       });
 }
 
@@ -3354,6 +3540,7 @@ public:
       _p_num(system.variable_number("pressure")),
       _global_lm_num(problem.cavity ? system.variable_number("global_lm") : invalid_uint)
   {
+    Ex9KokkosTimer setup_timer("ex9 device operator setup total");
     libmesh_error_msg_if(!_problem.mesh || !_problem.system || !_problem.dof_map ||
                              !_problem.vector_fe || !_problem.vector_fe_face || !_problem.qrule ||
                              !_problem.qface || _problem.system != &_system ||
@@ -3365,23 +3552,25 @@ public:
                          "vector_fe_ex9 Kokkos HDG assembly supports only nonempty homogeneous "
                          "TRI6/TRI7 element batches.");
 
-    _full_data = make_ex9_device_assembly_data(_system,
-                                               _problem,
-                                               _elems,
-                                               _elem_type,
-                                               _qu_num,
-                                               _qv_num,
-                                               _u_num,
-                                               _v_num,
-                                               _p_num,
-                                               _lm_u_num,
-                                               _lm_v_num,
-                                               _global_lm_num);
+    const Ex9SharedAssemblyInputs shared = make_ex9_shared_assembly_inputs(_system,
+                                                                           _problem,
+                                                                           _elems,
+                                                                           _qu_num,
+                                                                           _qv_num,
+                                                                           _u_num,
+                                                                           _v_num,
+                                                                           _p_num,
+                                                                           _lm_u_num,
+                                                                           _lm_v_num,
+                                                                           _global_lm_num);
+    _full_data =
+        make_ex9_device_assembly_data(_system, _problem, _elems, _elem_type, shared, _global_lm_num);
     _u_data = make_device_assembly_data(_system,
                                         _problem,
                                         AssemblyPurpose::residual,
                                         _elems,
                                         _elem_type,
+                                        shared,
                                         _qu_num,
                                         _u_num,
                                         _lm_u_num,
@@ -3394,6 +3583,7 @@ public:
                                         AssemblyPurpose::residual,
                                         _elems,
                                         _elem_type,
+                                        shared,
                                         _qv_num,
                                         _v_num,
                                         _lm_v_num,
