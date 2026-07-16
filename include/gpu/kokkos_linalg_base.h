@@ -29,9 +29,6 @@ template <typename T>
 using remove_cvref_t =
   typename std::remove_cv<typename std::remove_reference<T>::type>::type;
 
-template <typename T>
-using remove_ref_t = typename std::remove_reference<T>::type;
-
 template <typename ViewType>
 using vector_view_value_t =
   remove_cvref_t<decltype(std::declval<ViewType &>()(0, 0))>;
@@ -102,52 +99,6 @@ public:
     return _view(_index, component);
   }
 
-  template <typename RightVector>
-  LIBMESH_DEVICE_INLINE
-  void assign(const RightVector & right);
-
-  template <typename RightVector>
-  LIBMESH_DEVICE_INLINE
-  void add(const RightVector & right);
-
-  template <typename RightVector>
-  LIBMESH_DEVICE_INLINE
-  void add_scaled(const RightVector & right, const value_type & factor);
-
-  template <typename RightVector>
-  LIBMESH_DEVICE_INLINE
-  void subtract(const RightVector & right);
-
-  template <typename RightVector>
-  LIBMESH_DEVICE_INLINE
-  void subtract_scaled(const RightVector & right, const value_type & factor);
-
-  LIBMESH_DEVICE_INLINE
-  void zero();
-
-  template <typename RightVector>
-  LIBMESH_DEVICE_INLINE
-  auto contract(const RightVector & right) const;
-
-  LIBMESH_DEVICE_INLINE
-  auto norm() const;
-
-  LIBMESH_DEVICE_INLINE
-  auto norm_sq() const;
-
-  LIBMESH_DEVICE_INLINE
-  auto l1_norm() const;
-
-  LIBMESH_DEVICE_INLINE
-  bool is_zero() const;
-
-  LIBMESH_DEVICE_INLINE
-  auto unit() const;
-
-  template <typename RightVector>
-  LIBMESH_DEVICE_INLINE
-  auto cross(const RightVector & right) const;
-
   LIBMESH_DEVICE_INLINE
   unsigned int index() const
   {
@@ -180,68 +131,6 @@ public:
   {
     return _view(_index, row, col);
   }
-
-  template <typename RightTensor>
-  LIBMESH_DEVICE_INLINE
-  void assign(const RightTensor & right);
-
-  template <typename RightTensor>
-  LIBMESH_DEVICE_INLINE
-  void add(const RightTensor & right);
-
-  template <typename RightTensor>
-  LIBMESH_DEVICE_INLINE
-  void add_scaled(const RightTensor & right, const value_type & factor);
-
-  template <typename RightTensor>
-  LIBMESH_DEVICE_INLINE
-  void subtract(const RightTensor & right);
-
-  template <typename RightTensor>
-  LIBMESH_DEVICE_INLINE
-  void subtract_scaled(const RightTensor & right, const value_type & factor);
-
-  LIBMESH_DEVICE_INLINE
-  void zero();
-
-  template <typename RightTensor>
-  LIBMESH_DEVICE_INLINE
-  auto contract(const RightTensor & right) const;
-
-  LIBMESH_DEVICE_INLINE
-  auto norm() const;
-
-  LIBMESH_DEVICE_INLINE
-  auto norm_sq() const;
-
-  LIBMESH_DEVICE_INLINE
-  bool is_zero() const;
-
-  LIBMESH_DEVICE_INLINE
-  auto transpose() const;
-
-  LIBMESH_DEVICE_INLINE
-  auto det(const unsigned int dim = LIBMESH_DIM) const;
-
-  LIBMESH_DEVICE_INLINE
-  auto tr() const;
-
-  LIBMESH_DEVICE_INLINE
-  auto inverse(const unsigned int dim = LIBMESH_DIM) const;
-
-  template <typename VectorLike, typename ResultVector>
-  LIBMESH_DEVICE_INLINE
-  void solve(const VectorLike & b, ResultVector & x) const;
-
-  LIBMESH_DEVICE_INLINE
-  auto row(const unsigned int i) const;
-
-  LIBMESH_DEVICE_INLINE
-  auto column(const unsigned int i) const;
-
-  template <typename VectorLike>
-  LIBMESH_DEVICE_INLINE
-  auto left_multiply(const VectorLike & v) const;
 
   LIBMESH_DEVICE_INLINE
   unsigned int index() const
@@ -351,25 +240,29 @@ using tensor_semantic_type_t = typename tensor_traits<detail::remove_cvref_t<T>>
 
 template <typename ViewType>
 LIBMESH_DEVICE_INLINE
-vector_ref<typename detail::remove_ref_t<ViewType>>
+vector_ref<typename std::remove_reference<ViewType>::type>
 make_vector_ref(ViewType && view, const unsigned int index)
 {
-  return vector_ref<typename detail::remove_ref_t<ViewType>>(std::forward<ViewType>(view), index);
+  return vector_ref<typename std::remove_reference<ViewType>::type>(std::forward<ViewType>(view),
+                                                                    index);
 }
 
 template <typename ViewType>
 LIBMESH_DEVICE_INLINE
-tensor_ref<typename detail::remove_ref_t<ViewType>>
+tensor_ref<typename std::remove_reference<ViewType>::type>
 make_tensor_ref(ViewType && view, const unsigned int index)
 {
-  return tensor_ref<typename detail::remove_ref_t<ViewType>>(std::forward<ViewType>(view), index);
+  return tensor_ref<typename std::remove_reference<ViewType>::type>(std::forward<ViewType>(view),
+                                                                    index);
 }
 
 template <typename OutputVector, typename VectorLike>
 LIBMESH_DEVICE_INLINE
 OutputVector materialize_vector(const VectorLike & v)
 {
-  static_assert(is_vector_like<detail::remove_cvref_t<VectorLike>>::value,
+  static_assert(is_vector_like_v<OutputVector>,
+                "materialize_vector() requires a vector-like output type");
+  static_assert(is_vector_like_v<VectorLike>,
                 "materialize_vector() requires a vector-like input type");
 
   OutputVector out;
@@ -385,7 +278,9 @@ template <typename OutputTensor, typename TensorLike>
 LIBMESH_DEVICE_INLINE
 OutputTensor materialize_tensor(const TensorLike & T_in)
 {
-  static_assert(is_tensor_like<detail::remove_cvref_t<TensorLike>>::value,
+  static_assert(is_tensor_like_v<OutputTensor>,
+                "materialize_tensor() requires a tensor-like output type");
+  static_assert(is_tensor_like_v<TensorLike>,
                 "materialize_tensor() requires a tensor-like input type");
 
   OutputTensor out;
