@@ -471,7 +471,7 @@ endif
 # Make sure we build the library before we test it
 SUBDIRS += .
 
-if LIBMESH_ENABLE_CPPUNIT
+if LIBMESH_ENABLE_TESTS_DIR
  SUBDIRS += tests
 endif
 
