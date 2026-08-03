@@ -24,6 +24,9 @@
 
 #include "libmesh/kokkos_storage_policy.h"
 
+#include <cstddef>
+#include <vector>
+
 namespace libMesh
 {
 
@@ -54,6 +57,102 @@ struct DofMap::KokkosLocalIndexCache
   elem_local_index_view element_local_indices;
   unsigned int max_dofs = 0;
 };
+
+#if defined(LIBMESH_HAVE_PETSC) && !defined(LIBMESH_USE_COMPLEX_NUMBERS)
+
+template <typename T> class PetscMatrixBase;
+template <typename T> class PetscVector;
+
+/**
+ * Controls how a Kokkos element assembly plan applies DoF constraints.
+ */
+struct KokkosConstraintAssemblyOptions
+{
+  bool asymmetric_constraint_rows = true;
+  bool heterogeneous = false;
+  int qoi_index = -1;
+};
+
+/**
+ * A reusable mapping from unconstrained element matrices and vectors to a
+ * constrained global COO stream.
+ *
+ * Physics kernels fill element_matrices and element_rhs.  A subsequent
+ * device kernel applies C^T K C and C^T(F-KH), including libMesh's constraint
+ * equations, into matrix_values and rhs_values.  The same plan and storage can
+ * be reused until the associated KokkosDofIndexCache or DofMap constraints
+ * change.
+ */
+struct KokkosConstraintAssemblyPlan
+{
+  using memory_space = typename ::Kokkos::DefaultExecutionSpace::memory_space;
+  using real_view = ::Kokkos::View<Real *, memory_space>;
+  using element_real_view = ::Kokkos::View<Real **, memory_space>;
+  using size_view = ::Kokkos::View<std::size_t *, memory_space>;
+  using uint_view = ::Kokkos::View<unsigned int *, memory_space>;
+
+  // Retaining this shallow view both identifies the source cache and prevents
+  // its allocation address from being recycled while the plan is alive.
+  DofMap::KokkosDofIndexCache::elem_dof_id_view dof_index_identity;
+  unsigned int n_elements = 0;
+  unsigned int max_element_dofs = 0;
+  KokkosConstraintAssemblyOptions options;
+
+  uint_view expanded_dof_counts;
+  size_view rhs_offsets;
+  size_view matrix_offsets;
+  size_view constraint_matrix_offsets;
+  real_view constraint_matrix_values;
+  real_view constraint_shifts;
+  size_view constraint_row_offsets;
+  uint_view constraint_row_columns;
+  real_view constraint_row_values;
+  real_view constraint_row_rhs_values;
+
+  element_real_view element_matrices;
+  element_real_view element_rhs;
+  real_view rhs_values;
+  real_view matrix_values;
+  std::vector<dof_id_type> host_rhs_rows;
+  std::vector<dof_id_type> host_matrix_rows;
+  std::vector<dof_id_type> host_matrix_columns;
+
+  const void * matrix_target = nullptr;
+  const void * rhs_target = nullptr;
+};
+
+bool kokkos_constraint_assembly_plan_matches(
+    const KokkosConstraintAssemblyPlan & plan,
+    const DofMap::KokkosDofIndexCache & dof_index_cache,
+    const KokkosConstraintAssemblyOptions & options = {});
+
+void build_kokkos_constraint_assembly_plan(
+    const DofMap & dof_map,
+    const DofMap::KokkosDofIndexCache & dof_index_cache,
+    KokkosConstraintAssemblyPlan & plan,
+    const KokkosConstraintAssemblyOptions & options = {});
+
+/**
+ * Transform values previously written to plan.element_matrices and
+ * plan.element_rhs.  Set transform_matrix=false to retain already-computed COO
+ * matrix values while refreshing only the RHS.
+ */
+void transform_kokkos_element_values(
+    KokkosConstraintAssemblyPlan & plan,
+    const DofMap::KokkosDofIndexCache & dof_index_cache,
+    bool transform_matrix = true);
+
+void prepare_kokkos_petsc_coo(const Parallel::Communicator & comm,
+                              KokkosConstraintAssemblyPlan & plan,
+                              PetscMatrixBase<Number> & matrix,
+                              PetscVector<Number> & rhs);
+
+void add_kokkos_petsc_coo_values(const Parallel::Communicator & comm,
+                                 const KokkosConstraintAssemblyPlan & plan,
+                                 PetscMatrixBase<Number> & matrix,
+                                 PetscVector<Number> & rhs);
+
+#endif
 
 } // namespace libMesh
 

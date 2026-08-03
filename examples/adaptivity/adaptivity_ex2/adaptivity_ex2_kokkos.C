@@ -26,6 +26,7 @@ using namespace libMesh;
 
 #ifdef LIBMESH_ENABLE_AMR
 void assemble_cd_kokkos(EquationSystems &, const std::string &);
+void clear_adaptivity_ex2_kokkos_assembly_cache();
 #endif
 
 Real adaptivity_ex2_kokkos_exact_solution(Real x, Real y, Real t)
@@ -251,5 +252,9 @@ int main(int argc, char ** argv)
   }
 #endif
 
+#ifdef LIBMESH_ENABLE_AMR
+  // Release persistent device views before LibMeshInit finalizes Kokkos.
+  clear_adaptivity_ex2_kokkos_assembly_cache();
+#endif
   return 0;
 }

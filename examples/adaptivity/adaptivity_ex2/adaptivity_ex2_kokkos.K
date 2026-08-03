@@ -20,6 +20,7 @@
 #include "libmesh/mesh_base.h"
 #include "libmesh/mesh_base_kokkos.h"
 #include "libmesh/numeric_vector.h"
+#include "libmesh/petsc_matrix_base.h"
 #include "libmesh/petsc_vector.h"
 #include "libmesh/sparse_matrix.h"
 #include "libmesh/static_condensation.h"
@@ -32,6 +33,7 @@
 #include <Kokkos_Core.hpp>
 #include <Kokkos_Profiling_ScopedRegion.hpp>
 
+#include <memory>
 #include <vector>
 
 using namespace libMesh;
@@ -42,6 +44,21 @@ namespace
 
 constexpr unsigned int kokkos_max_dofs = 9;
 constexpr unsigned int kokkos_max_nodes = 9;
+
+using RealView2D = KokkosConstraintAssemblyPlan::element_real_view;
+
+struct AdaptivityKokkosAssemblyCache
+{
+  const void * geometry_data = nullptr;
+  KokkosConstraintAssemblyPlan plan;
+  bool matrix_values_valid = false;
+  Real matrix_dt = 0.;
+  Real matrix_diffusivity = 0.;
+  Real matrix_velocity_x = 0.;
+  Real matrix_velocity_y = 0.;
+};
+
+std::unique_ptr<AdaptivityKokkosAssemblyCache> adaptivity_kokkos_assembly_cache;
 
 template <typename CoordinateView, typename ElementNodeView> struct ElementNodeAccess
 {
@@ -83,16 +100,19 @@ KOKKOS_INLINE_FUNCTION Real kokkos_exact_solution(const Real x, const Real y, co
   return ::Kokkos::exp(-(dx * dx + dy * dy) / (0.01 * scale)) / scale;
 }
 
-bool supported_element(const Elem & elem, const FEType & fe_type, const unsigned int n_dofs,
+bool supported_element(const ElemType elem_type, const ElemMappingType mapping_type,
+                       const unsigned int n_nodes, const unsigned int p_level,
+                       const FEType & fe_type, const unsigned int n_dofs,
                        const unsigned int quadrature_order)
 {
-  const int effective_order = fe_type.order.get_order() + cast_int<int>(elem.p_level());
+  const int effective_order = fe_type.order.get_order() + cast_int<int>(p_level);
   if (effective_order < 1 || effective_order > 2 || fe_type.family != LAGRANGE ||
-      elem.mapping_type() != LAGRANGE_MAP || elem.dim() != 2 || elem.n_nodes() > kokkos_max_nodes ||
+      mapping_type != LAGRANGE_MAP || topology_dim_or_zero(elem_type) != 2 ||
+      n_nodes > kokkos_max_nodes ||
       n_dofs > kokkos_max_dofs)
     return false;
 
-  switch (elem.type())
+  switch (elem_type)
   {
     case TRI3:
     case TRI6:
@@ -103,13 +123,18 @@ bool supported_element(const Elem & elem, const FEType & fe_type, const unsigned
       return false;
   }
 
-  const FEShapeKey key{fe_type.family, elem.type(), static_cast<Order>(effective_order)};
+  const FEShapeKey key{fe_type.family, elem_type, static_cast<Order>(effective_order)};
   return supports_shape_with_lagrange_map(key) && supports_grad_shape(key) &&
          libMesh::n_dofs_or_zero(key) == n_dofs &&
-         libMesh::Kokkos::GaussQuadrature::n_points(elem.type(), quadrature_order) != 0;
+         libMesh::Kokkos::GaussQuadrature::n_points(elem_type, quadrature_order) != 0;
 }
 
 } // anonymous namespace
+
+void clear_adaptivity_ex2_kokkos_assembly_cache()
+{
+  adaptivity_kokkos_assembly_cache.reset();
+}
 
 void assemble_cd_kokkos(EquationSystems & es, const std::string & libmesh_dbg_var(system_name))
 {
@@ -140,28 +165,64 @@ void assemble_cd_kokkos(EquationSystems & es, const std::string & libmesh_dbg_va
                        "vector accessible from the active Kokkos execution space");
 
   const unsigned int n_elements = cast_int<unsigned int>(geometry_cache.host_element_ids.size());
+  const unsigned int max_element_dofs = dof_index_cache->max_dofs;
+  libmesh_assert_less_equal(max_element_dofs, kokkos_max_dofs);
   libmesh_assert_equal_to(n_elements, dof_index_cache->host_element_ids.size());
   libmesh_assert_equal_to(n_elements, dof_index_cache->host_element_n_dofs.size());
 
   for (unsigned int e = 0; e != n_elements; ++e)
   {
-    const Elem * elem = mesh.query_elem_ptr(geometry_cache.host_element_ids[e]);
-    libmesh_assert(elem);
+    const ElemType elem_type = geometry_cache.host_element_types[e];
+    const ElemMappingType mapping_type = geometry_cache.host_element_mapping_types[e];
+    const unsigned int n_nodes = geometry_cache.host_element_n_nodes[e];
+    const unsigned int p_level = geometry_cache.host_element_p_levels[e];
     const unsigned int elem_n_dofs = dof_index_cache->host_element_n_dofs[e];
-    libmesh_error_msg_if(!supported_element(*elem, fe_type, elem_n_dofs, quadrature_order),
+    libmesh_error_msg_if(!supported_element(elem_type, mapping_type, n_nodes, p_level, fe_type,
+                                            elem_n_dofs, quadrature_order),
                          "Unsupported element in adaptivity_ex2 Kokkos order-1/2 assembly: type="
-                             << Utility::enum_to_string(elem->type())
-                             << ", p_level=" << elem->p_level() << ", n_dofs=" << elem_n_dofs);
+                             << Utility::enum_to_string(elem_type) << ", p_level=" << p_level
+                             << ", n_dofs=" << elem_n_dofs);
   }
 
-  using RealView2D = ::Kokkos::View<Real **>;
-  using RealView3D = ::Kokkos::View<Real ***>;
-  RealView3D element_matrices("adaptivity_ex2 element matrices", n_elements, kokkos_max_dofs,
-                              kokkos_max_dofs);
-  RealView2D element_rhs("adaptivity_ex2 element rhs", n_elements, kokkos_max_dofs);
+  StaticCondensation * static_condensation =
+      system.has_static_condensation() ? &system.get_static_condensation() : nullptr;
+  SparseMatrix<Number> & matrix = system.get_system_matrix();
+  auto * petsc_matrix = dynamic_cast<PetscMatrixBase<Number> *>(&matrix);
+  auto * petsc_rhs = dynamic_cast<PetscVector<Number> *>(system.rhs);
+  const bool use_petsc_coo = petsc_matrix && petsc_rhs && !static_condensation;
 
-  ::Kokkos::deep_copy(element_matrices, 0.);
-  ::Kokkos::deep_copy(element_rhs, 0.);
+  AdaptivityKokkosAssemblyCache * assembly_cache = nullptr;
+  KokkosConstraintAssemblyPlan * assembly_plan = nullptr;
+  if (use_petsc_coo)
+  {
+    if (!adaptivity_kokkos_assembly_cache)
+      adaptivity_kokkos_assembly_cache = std::make_unique<AdaptivityKokkosAssemblyCache>();
+    assembly_cache = adaptivity_kokkos_assembly_cache.get();
+    if (!kokkos_constraint_assembly_plan_matches(assembly_cache->plan, *dof_index_cache))
+    {
+      build_kokkos_constraint_assembly_plan(dof_map, *dof_index_cache, assembly_cache->plan);
+      assembly_cache->matrix_values_valid = false;
+    }
+    if (assembly_cache->geometry_data != geometry_cache.node_coordinates.data())
+    {
+      assembly_cache->geometry_data = geometry_cache.node_coordinates.data();
+      assembly_cache->matrix_values_valid = false;
+    }
+    assembly_plan = &assembly_cache->plan;
+    prepare_kokkos_petsc_coo(system.comm(), *assembly_plan, *petsc_matrix, *petsc_rhs);
+  }
+
+  // The shared constraint assembly plan owns and reuses raw element storage.
+  // The host/static-condensation fallback gets the same layout for this call.
+  const unsigned int matrix_stride = max_element_dofs;
+  RealView2D element_matrices =
+      use_petsc_coo
+          ? assembly_plan->element_matrices
+          : RealView2D("adaptivity_ex2 element matrices", n_elements,
+                       matrix_stride * matrix_stride);
+  RealView2D element_rhs =
+      use_petsc_coo ? assembly_plan->element_rhs
+                    : RealView2D("adaptivity_ex2 element RHS", n_elements, max_element_dofs);
 
   const auto node_coordinates = geometry_cache.node_coordinates;
   const auto element_node_ids = geometry_cache.element_node_ids;
@@ -185,6 +246,11 @@ void assemble_cd_kokkos(EquationSystems & es, const std::string & libmesh_dbg_va
   const Real time = system.time;
   const int base_order = fe_type.order.get_order();
   constexpr Real penalty = 1.e10;
+  const bool assemble_matrix =
+      !use_petsc_coo || !assembly_cache->matrix_values_valid || assembly_cache->matrix_dt != dt ||
+      assembly_cache->matrix_diffusivity != diffusivity ||
+      assembly_cache->matrix_velocity_x != velocity_x ||
+      assembly_cache->matrix_velocity_y != velocity_y;
 
   using ExecutionSpace = typename RealView2D::execution_space;
   {
@@ -200,10 +266,27 @@ void assemble_cd_kokkos(EquationSystems & es, const std::string & libmesh_dbg_va
           const ElemType elem_type = elem_types(e);
           const FEShapeKey shape_key{LAGRANGE, elem_type,
                                      static_cast<Order>(base_order + p_levels(e))};
+          const ElemType shape_topology =
+              libMesh::Kokkos::lagrange_shape_topology_for_key(shape_key);
           const ElementNodeAccess<decltype(node_coordinates), decltype(element_node_ids)>
               elem_nodes{node_coordinates, element_node_ids, e};
           const unsigned int n_qpoints =
               libMesh::Kokkos::GaussQuadrature::n_points(elem_type, quadrature_order);
+
+          // The transient state is constant throughout this element integration.
+          // Gather it once instead of reloading the PETSc view at every quadrature
+          // point.  Initialize the output here as well, folding two whole-buffer
+          // zeroing kernels into the integration launch.
+          Real element_old_values[kokkos_max_dofs];
+          Real local_rhs[kokkos_max_dofs];
+          for (unsigned int i = 0; i != elem_n_dofs; ++i)
+          {
+            element_old_values[i] = old_values(old_local_indices(e, i));
+            local_rhs[i] = 0.;
+            if (assemble_matrix)
+              for (unsigned int j = 0; j != elem_n_dofs; ++j)
+                element_matrices(e, i * matrix_stride + j) = 0.;
+          }
 
           for (unsigned int qp = 0; qp != n_qpoints; ++qp)
           {
@@ -227,12 +310,13 @@ void assemble_cd_kokkos(EquationSystems & es, const std::string & libmesh_dbg_va
 
             for (unsigned int i = 0; i != elem_n_dofs; ++i)
             {
-              phi[i] = libMesh::Kokkos::shape(shape_key, i, reference_point(0), reference_point(1),
-                                              reference_point(2));
+              phi[i] = libMesh::Kokkos::eval_lagrange_shape(
+                  shape_topology, i, reference_point(0), reference_point(1), reference_point(2));
               dphi[i] = inverse_jacobian *
-                        libMesh::Kokkos::grad_shape(shape_key, i, reference_point(0),
-                                                    reference_point(1), reference_point(2));
-              const Real old_value = old_values(old_local_indices(e, i));
+                        libMesh::Kokkos::eval_lagrange_grad_shape(
+                            shape_topology, i, reference_point(0), reference_point(1),
+                            reference_point(2));
+              const Real old_value = element_old_values[i];
               u_old += phi[i] * old_value;
               grad_u_old.add_scaled(dphi[i], old_value);
             }
@@ -242,18 +326,19 @@ void assemble_cd_kokkos(EquationSystems & es, const std::string & libmesh_dbg_va
             {
               const Real old_diffusion =
                   diffusivity * (grad_u_old(0) * dphi[i](0) + grad_u_old(1) * dphi[i](1));
-              element_rhs(e, i) +=
+              local_rhs[i] +=
                   jxw * (u_old * phi[i] - 0.5 * dt * (old_convection * phi[i] + old_diffusion));
 
-              for (unsigned int j = 0; j != elem_n_dofs; ++j)
-              {
-                const Real convection =
-                    (velocity_x * dphi[j](0) + velocity_y * dphi[j](1)) * phi[i];
-                const Real diffusion =
-                    diffusivity * (dphi[i](0) * dphi[j](0) + dphi[i](1) * dphi[j](1));
-                element_matrices(e, i, j) +=
-                    jxw * (phi[i] * phi[j] + 0.5 * dt * (convection + diffusion));
-              }
+              if (assemble_matrix)
+                for (unsigned int j = 0; j != elem_n_dofs; ++j)
+                {
+                  const Real convection =
+                      (velocity_x * dphi[j](0) + velocity_y * dphi[j](1)) * phi[i];
+                  const Real diffusion =
+                      diffusivity * (dphi[i](0) * dphi[j](0) + dphi[i](1) * dphi[j](1));
+                  element_matrices(e, i * matrix_stride + j) +=
+                      jxw * (phi[i] * phi[j] + 0.5 * dt * (convection + diffusion));
+                }
             }
           }
 
@@ -301,19 +386,37 @@ void assemble_cd_kokkos(EquationSystems & es, const std::string & libmesh_dbg_va
 
               Real face_phi[kokkos_max_dofs];
               for (unsigned int i = 0; i != elem_n_dofs; ++i)
-                face_phi[i] = libMesh::Kokkos::shape(shape_key, i, parent_point(0), parent_point(1),
-                                                     parent_point(2));
+                face_phi[i] = libMesh::Kokkos::eval_lagrange_shape(
+                    shape_topology, i, parent_point(0), parent_point(1), parent_point(2));
 
               for (unsigned int i = 0; i != elem_n_dofs; ++i)
               {
-                element_rhs(e, i) += penalty * face_jxw * boundary_value * face_phi[i];
-                for (unsigned int j = 0; j != elem_n_dofs; ++j)
-                  element_matrices(e, i, j) += penalty * face_jxw * face_phi[i] * face_phi[j];
+                local_rhs[i] += penalty * face_jxw * boundary_value * face_phi[i];
+                if (assemble_matrix)
+                  for (unsigned int j = 0; j != elem_n_dofs; ++j)
+                    element_matrices(e, i * matrix_stride + j) +=
+                        penalty * face_jxw * face_phi[i] * face_phi[j];
               }
             }
           }
+
+          for (unsigned int i = 0; i != elem_n_dofs; ++i)
+            element_rhs(e, i) = local_rhs[i];
         });
     ::Kokkos::fence();
+  }
+
+  if (use_petsc_coo)
+  {
+    transform_kokkos_element_values(*assembly_plan, *dof_index_cache, assemble_matrix);
+    assembly_cache->matrix_values_valid = true;
+    assembly_cache->matrix_dt = dt;
+    assembly_cache->matrix_diffusivity = diffusivity;
+    assembly_cache->matrix_velocity_x = velocity_x;
+    assembly_cache->matrix_velocity_y = velocity_y;
+    add_kokkos_petsc_coo_values(
+        system.comm(), *assembly_plan, *petsc_matrix, *petsc_rhs);
+    return;
   }
 
   auto h_element_matrices = ::Kokkos::create_mirror_view(element_matrices);
@@ -324,10 +427,6 @@ void assemble_cd_kokkos(EquationSystems & es, const std::string & libmesh_dbg_va
     ::Kokkos::deep_copy(h_element_rhs, element_rhs);
   }
 
-  StaticCondensation * static_condensation =
-      system.has_static_condensation() ? &system.get_static_condensation() : nullptr;
-  SparseMatrix<Number> & matrix = system.get_system_matrix();
-
   DenseMatrix<Number> Ke;
   DenseVector<Number> Fe;
   std::vector<dof_id_type> dof_indices;
@@ -335,10 +434,12 @@ void assemble_cd_kokkos(EquationSystems & es, const std::string & libmesh_dbg_va
   {
     ::Kokkos::Profiling::ScopedRegion host_region(
         "adaptivity_ex2 host constraints and insertion");
-    for (unsigned int e = 0; e != n_elements; ++e)
+    unsigned int e = 0;
+    for (const Elem * elem : mesh.active_local_element_ptr_range())
     {
-      const Elem * elem = mesh.query_elem_ptr(geometry_cache.host_element_ids[e]);
       libmesh_assert(elem);
+      libmesh_assert_less(e, n_elements);
+      libmesh_assert_equal_to(elem->id(), geometry_cache.host_element_ids[e]);
       const unsigned int elem_n_dofs = dof_index_cache->host_element_n_dofs[e];
       const auto dof_begin =
           dof_index_cache->host_element_dof_indices.begin() + e * dof_index_cache->max_dofs;
@@ -350,7 +451,7 @@ void assemble_cd_kokkos(EquationSystems & es, const std::string & libmesh_dbg_va
       {
         Fe(i) = h_element_rhs(e, i);
         for (unsigned int j = 0; j != elem_n_dofs; ++j)
-          Ke(i, j) = h_element_matrices(e, i, j);
+          Ke(i, j) = h_element_matrices(e, i * matrix_stride + j);
       }
 
       dof_map.constrain_element_matrix_and_vector(Ke, Fe, dof_indices);
@@ -358,7 +459,9 @@ void assemble_cd_kokkos(EquationSystems & es, const std::string & libmesh_dbg_va
         static_condensation->set_current_elem(*elem);
       matrix.add_matrix(Ke, dof_indices);
       system.rhs->add_vector(Fe, dof_indices);
+      ++e;
     }
+    libmesh_assert_equal_to(e, n_elements);
   }
 }
 #endif // LIBMESH_ENABLE_AMR
