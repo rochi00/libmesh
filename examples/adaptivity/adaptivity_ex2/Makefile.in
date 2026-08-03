@@ -96,12 +96,27 @@ target_triplet = @target@
 @LIBMESH_VPATH_BUILD_TRUE@am__append_1 = .linkstamp
 @LIBMESH_VPATH_BUILD_TRUE@am__append_2 = mesh.xda .linkstamp
 check_PROGRAMS = $(am__EXEEXT_1) $(am__EXEEXT_2) $(am__EXEEXT_3) \
-	$(am__EXEEXT_4) $(am__EXEEXT_5)
+	$(am__EXEEXT_4) $(am__EXEEXT_5) $(am__EXEEXT_6) \
+	$(am__EXEEXT_7) $(am__EXEEXT_8) $(am__EXEEXT_9) \
+	$(am__EXEEXT_10)
 @LIBMESH_DBG_MODE_TRUE@am__append_3 = example-dbg
 @LIBMESH_DEVEL_MODE_TRUE@am__append_4 = example-devel
 @LIBMESH_OPT_MODE_TRUE@am__append_5 = example-opt
 @LIBMESH_PROF_MODE_TRUE@am__append_6 = example-prof
 @LIBMESH_OPROF_MODE_TRUE@am__append_7 = example-oprof
+
+##############################################
+# include common example environment
+
+# Keep the CPU example and the Kokkos port as separate executables.  In
+# particular, adaptivity_ex2.C is never compiled into an example-kokkos-*
+# target, and the .K translation unit is always compiled with KOKKOS_CXX.
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_8 = run_kokkos.sh
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_9 = example-kokkos-dbg
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_10 = example-kokkos-devel
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@am__append_11 = example-kokkos-opt
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@am__append_12 = example-kokkos-prof
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@am__append_13 = example-kokkos-oprof
 subdir = examples/adaptivity/adaptivity_ex2
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \
@@ -176,12 +191,16 @@ CONFIG_CLEAN_VPATH_FILES =
 @LIBMESH_OPT_MODE_TRUE@am__EXEEXT_3 = example-opt$(EXEEXT)
 @LIBMESH_PROF_MODE_TRUE@am__EXEEXT_4 = example-prof$(EXEEXT)
 @LIBMESH_OPROF_MODE_TRUE@am__EXEEXT_5 = example-oprof$(EXEEXT)
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@am__EXEEXT_6 = example-kokkos-dbg$(EXEEXT)
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@am__EXEEXT_7 = example-kokkos-devel$(EXEEXT)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@am__EXEEXT_8 = example-kokkos-opt$(EXEEXT)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@am__EXEEXT_9 = example-kokkos-prof$(EXEEXT)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@am__EXEEXT_10 = example-kokkos-oprof$(EXEEXT)
 am__example_dbg_SOURCES_DIST = adaptivity_ex2.C exact_solution.C \
 	mesh.xda run.sh
 am__objects_1 = example_dbg-adaptivity_ex2.$(OBJEXT) \
 	example_dbg-exact_solution.$(OBJEXT)
-am__objects_2 = $(am__objects_1)
-@LIBMESH_DBG_MODE_TRUE@am_example_dbg_OBJECTS = $(am__objects_2)
+@LIBMESH_DBG_MODE_TRUE@am_example_dbg_OBJECTS = $(am__objects_1)
 example_dbg_OBJECTS = $(am_example_dbg_OBJECTS)
 @LIBMESH_DBG_MODE_TRUE@example_dbg_DEPENDENCIES =  \
 @LIBMESH_DBG_MODE_TRUE@	$(top_builddir)/libmesh_dbg.la
@@ -194,10 +213,9 @@ example_dbg_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 am__example_devel_SOURCES_DIST = adaptivity_ex2.C exact_solution.C \
 	mesh.xda run.sh
-am__objects_3 = example_devel-adaptivity_ex2.$(OBJEXT) \
+am__objects_2 = example_devel-adaptivity_ex2.$(OBJEXT) \
 	example_devel-exact_solution.$(OBJEXT)
-am__objects_4 = $(am__objects_3)
-@LIBMESH_DEVEL_MODE_TRUE@am_example_devel_OBJECTS = $(am__objects_4)
+@LIBMESH_DEVEL_MODE_TRUE@am_example_devel_OBJECTS = $(am__objects_2)
 example_devel_OBJECTS = $(am_example_devel_OBJECTS)
 @LIBMESH_DEVEL_MODE_TRUE@example_devel_DEPENDENCIES =  \
 @LIBMESH_DEVEL_MODE_TRUE@	$(top_builddir)/libmesh_devel.la
@@ -205,12 +223,42 @@ example_devel_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(example_devel_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
 	-o $@
+am__example_kokkos_dbg_SOURCES_DIST = adaptivity_ex2_kokkos.C
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@am_example_kokkos_dbg_OBJECTS = example_kokkos_dbg-adaptivity_ex2_kokkos.$(OBJEXT)
+example_kokkos_dbg_OBJECTS = $(am_example_kokkos_dbg_OBJECTS)
+am__DEPENDENCIES_1 =
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_kokkos_dbg_DEPENDENCIES = adaptivity_ex2_kokkos_dbg.o \
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_dbg.la \
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
+am__example_kokkos_devel_SOURCES_DIST = adaptivity_ex2_kokkos.C
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@am_example_kokkos_devel_OBJECTS = example_kokkos_devel-adaptivity_ex2_kokkos.$(OBJEXT)
+example_kokkos_devel_OBJECTS = $(am_example_kokkos_devel_OBJECTS)
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_kokkos_devel_DEPENDENCIES = adaptivity_ex2_kokkos_devel.o \
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@	$(top_builddir)/libmesh_devel.la \
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
+am__example_kokkos_oprof_SOURCES_DIST = adaptivity_ex2_kokkos.C
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@am_example_kokkos_oprof_OBJECTS = example_kokkos_oprof-adaptivity_ex2_kokkos.$(OBJEXT)
+example_kokkos_oprof_OBJECTS = $(am_example_kokkos_oprof_OBJECTS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@example_kokkos_oprof_DEPENDENCIES = adaptivity_ex2_kokkos_oprof.o \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@	$(top_builddir)/libmesh_oprof.la \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@	$(am__DEPENDENCIES_1)
+am__example_kokkos_opt_SOURCES_DIST = adaptivity_ex2_kokkos.C
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@am_example_kokkos_opt_OBJECTS = example_kokkos_opt-adaptivity_ex2_kokkos.$(OBJEXT)
+example_kokkos_opt_OBJECTS = $(am_example_kokkos_opt_OBJECTS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@example_kokkos_opt_DEPENDENCIES = adaptivity_ex2_kokkos_opt.o \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@	$(top_builddir)/libmesh_opt.la \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@	$(am__DEPENDENCIES_1)
+am__example_kokkos_prof_SOURCES_DIST = adaptivity_ex2_kokkos.C
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@am_example_kokkos_prof_OBJECTS = example_kokkos_prof-adaptivity_ex2_kokkos.$(OBJEXT)
+example_kokkos_prof_OBJECTS = $(am_example_kokkos_prof_OBJECTS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@example_kokkos_prof_DEPENDENCIES = adaptivity_ex2_kokkos_prof.o \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@	$(top_builddir)/libmesh_prof.la \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@	$(am__DEPENDENCIES_1)
 am__example_oprof_SOURCES_DIST = adaptivity_ex2.C exact_solution.C \
 	mesh.xda run.sh
-am__objects_5 = example_oprof-adaptivity_ex2.$(OBJEXT) \
+am__objects_3 = example_oprof-adaptivity_ex2.$(OBJEXT) \
 	example_oprof-exact_solution.$(OBJEXT)
-am__objects_6 = $(am__objects_5)
-@LIBMESH_OPROF_MODE_TRUE@am_example_oprof_OBJECTS = $(am__objects_6)
+@LIBMESH_OPROF_MODE_TRUE@am_example_oprof_OBJECTS = $(am__objects_3)
 example_oprof_OBJECTS = $(am_example_oprof_OBJECTS)
 @LIBMESH_OPROF_MODE_TRUE@example_oprof_DEPENDENCIES =  \
 @LIBMESH_OPROF_MODE_TRUE@	$(top_builddir)/libmesh_oprof.la
@@ -220,10 +268,9 @@ example_oprof_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	-o $@
 am__example_opt_SOURCES_DIST = adaptivity_ex2.C exact_solution.C \
 	mesh.xda run.sh
-am__objects_7 = example_opt-adaptivity_ex2.$(OBJEXT) \
+am__objects_4 = example_opt-adaptivity_ex2.$(OBJEXT) \
 	example_opt-exact_solution.$(OBJEXT)
-am__objects_8 = $(am__objects_7)
-@LIBMESH_OPT_MODE_TRUE@am_example_opt_OBJECTS = $(am__objects_8)
+@LIBMESH_OPT_MODE_TRUE@am_example_opt_OBJECTS = $(am__objects_4)
 example_opt_OBJECTS = $(am_example_opt_OBJECTS)
 @LIBMESH_OPT_MODE_TRUE@example_opt_DEPENDENCIES =  \
 @LIBMESH_OPT_MODE_TRUE@	$(top_builddir)/libmesh_opt.la
@@ -232,10 +279,9 @@ example_opt_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 am__example_prof_SOURCES_DIST = adaptivity_ex2.C exact_solution.C \
 	mesh.xda run.sh
-am__objects_9 = example_prof-adaptivity_ex2.$(OBJEXT) \
+am__objects_5 = example_prof-adaptivity_ex2.$(OBJEXT) \
 	example_prof-exact_solution.$(OBJEXT)
-am__objects_10 = $(am__objects_9)
-@LIBMESH_PROF_MODE_TRUE@am_example_prof_OBJECTS = $(am__objects_10)
+@LIBMESH_PROF_MODE_TRUE@am_example_prof_OBJECTS = $(am__objects_5)
 example_prof_OBJECTS = $(am_example_prof_OBJECTS)
 @LIBMESH_PROF_MODE_TRUE@example_prof_DEPENDENCIES =  \
 @LIBMESH_PROF_MODE_TRUE@	$(top_builddir)/libmesh_prof.la
@@ -261,6 +307,11 @@ am__depfiles_remade = ./$(DEPDIR)/example_dbg-adaptivity_ex2.Po \
 	./$(DEPDIR)/example_dbg-exact_solution.Po \
 	./$(DEPDIR)/example_devel-adaptivity_ex2.Po \
 	./$(DEPDIR)/example_devel-exact_solution.Po \
+	./$(DEPDIR)/example_kokkos_dbg-adaptivity_ex2_kokkos.Po \
+	./$(DEPDIR)/example_kokkos_devel-adaptivity_ex2_kokkos.Po \
+	./$(DEPDIR)/example_kokkos_oprof-adaptivity_ex2_kokkos.Po \
+	./$(DEPDIR)/example_kokkos_opt-adaptivity_ex2_kokkos.Po \
+	./$(DEPDIR)/example_kokkos_prof-adaptivity_ex2_kokkos.Po \
 	./$(DEPDIR)/example_oprof-adaptivity_ex2.Po \
 	./$(DEPDIR)/example_oprof-exact_solution.Po \
 	./$(DEPDIR)/example_opt-adaptivity_ex2.Po \
@@ -287,10 +338,17 @@ am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
 SOURCES = $(example_dbg_SOURCES) $(example_devel_SOURCES) \
-	$(example_oprof_SOURCES) $(example_opt_SOURCES) \
-	$(example_prof_SOURCES)
+	$(example_kokkos_dbg_SOURCES) $(example_kokkos_devel_SOURCES) \
+	$(example_kokkos_oprof_SOURCES) $(example_kokkos_opt_SOURCES) \
+	$(example_kokkos_prof_SOURCES) $(example_oprof_SOURCES) \
+	$(example_opt_SOURCES) $(example_prof_SOURCES)
 DIST_SOURCES = $(am__example_dbg_SOURCES_DIST) \
 	$(am__example_devel_SOURCES_DIST) \
+	$(am__example_kokkos_dbg_SOURCES_DIST) \
+	$(am__example_kokkos_devel_SOURCES_DIST) \
+	$(am__example_kokkos_oprof_SOURCES_DIST) \
+	$(am__example_kokkos_opt_SOURCES_DIST) \
+	$(am__example_kokkos_prof_SOURCES_DIST) \
 	$(am__example_oprof_SOURCES_DIST) \
 	$(am__example_opt_SOURCES_DIST) \
 	$(am__example_prof_SOURCES_DIST)
@@ -716,17 +774,21 @@ vtkversion = @vtkversion@
 BUILT_SOURCES = exact_solution.C $(am__append_1)
 DISTCLEANFILES = $(BUILT_SOURCES)
 example_name = adaptivity_ex2
-check_SCRIPTS = run.sh
+check_SCRIPTS = run.sh $(am__append_8)
 install_dir = $(examples_install_path)/adaptivity/ex2
-data = adaptivity_ex2.C exact_solution.C mesh.xda run.sh
-sources = $(data)
+data = adaptivity_ex2.C adaptivity_ex2_kokkos.C adaptivity_ex2_kokkos.K exact_solution.C mesh.xda run.sh run_kokkos.sh
+sources = adaptivity_ex2.C exact_solution.C mesh.xda run.sh
 
 ######################################################################
 #
 # how to make documentation
 #
 CLEANFILES = solution_read_in.gmv saved_solution.xda \
-	saved_solution.gmv saved_mesh.xda out.gmv.* $(am__append_2) \
+	saved_solution.gmv saved_mesh.xda out.gmv.* out-kokkos.e.* \
+	saved_solution-kokkos.e solution_read_in-kokkos.e \
+	adaptivity_ex2_kokkos_dbg.o adaptivity_ex2_kokkos_devel.o \
+	adaptivity_ex2_kokkos_opt.o adaptivity_ex2_kokkos_prof.o \
+	adaptivity_ex2_kokkos_oprof.o $(am__append_2) \
 	$(example_name).html stdout.log
 
 ######################################################################
@@ -789,6 +851,56 @@ TESTS_ENVIRONMENT = LIBMESH_DIR=$(abs_top_srcdir); export LIBMESH_DIR; \
 	METHODS="$(METHODS)"; export METHODS; petscmajor=@petscmajor@ \
 	petscminor=@petscminor@ enableeigen=@enableeigen@
 TESTS = $(check_SCRIPTS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@KOKKOS_ADAPTIVITY_EX2_DEPS = adaptivity_ex2_kokkos.K \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@  $(top_srcdir)/include/gpu/kokkos_fe_evaluator.h \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@  $(top_srcdir)/include/gpu/kokkos_fe_map.h \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@  $(top_srcdir)/include/gpu/kokkos_quadrature.h
+
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_kokkos_dbg_SOURCES = adaptivity_ex2_kokkos.C
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_kokkos_dbg_CPPFLAGS = $(CPPFLAGS_DBG) $(AM_CPPFLAGS)
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_kokkos_dbg_CXXFLAGS = $(CXXFLAGS_DBG)
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_kokkos_dbg_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_kokkos_dbg_LDADD = adaptivity_ex2_kokkos_dbg.o $(top_builddir)/libmesh_dbg.la $(KOKKOS_LIBS)
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_kokkos_dbg_LINK = \
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@	$(example_kokkos_dbg_LDFLAGS) $(LDFLAGS) -o $@
+
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_kokkos_devel_SOURCES = adaptivity_ex2_kokkos.C
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_kokkos_devel_CPPFLAGS = $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS)
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_kokkos_devel_CXXFLAGS = $(CXXFLAGS_DEVEL)
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_kokkos_devel_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_kokkos_devel_LDADD = adaptivity_ex2_kokkos_devel.o $(top_builddir)/libmesh_devel.la $(KOKKOS_LIBS)
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_kokkos_devel_LINK = \
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@	$(example_kokkos_devel_LDFLAGS) $(LDFLAGS) -o $@
+
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@example_kokkos_opt_SOURCES = adaptivity_ex2_kokkos.C
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@example_kokkos_opt_CPPFLAGS = $(CPPFLAGS_OPT) $(AM_CPPFLAGS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@example_kokkos_opt_CXXFLAGS = $(CXXFLAGS_OPT)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@example_kokkos_opt_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@example_kokkos_opt_LDADD = adaptivity_ex2_kokkos_opt.o $(top_builddir)/libmesh_opt.la $(KOKKOS_LIBS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@example_kokkos_opt_LINK = \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@	$(example_kokkos_opt_LDFLAGS) $(LDFLAGS) -o $@
+
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@example_kokkos_prof_SOURCES = adaptivity_ex2_kokkos.C
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@example_kokkos_prof_CPPFLAGS = $(CPPFLAGS_PROF) $(AM_CPPFLAGS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@example_kokkos_prof_CXXFLAGS = $(CXXFLAGS_PROF)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@example_kokkos_prof_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@example_kokkos_prof_LDADD = adaptivity_ex2_kokkos_prof.o $(top_builddir)/libmesh_prof.la $(KOKKOS_LIBS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@example_kokkos_prof_LINK = \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@	$(example_kokkos_prof_LDFLAGS) $(LDFLAGS) -o $@
+
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@example_kokkos_oprof_SOURCES = adaptivity_ex2_kokkos.C
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@example_kokkos_oprof_CPPFLAGS = $(CPPFLAGS_OPROF) $(AM_CPPFLAGS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@example_kokkos_oprof_CXXFLAGS = $(CXXFLAGS_OPROF)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@example_kokkos_oprof_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@example_kokkos_oprof_LDADD = adaptivity_ex2_kokkos_oprof.o $(top_builddir)/libmesh_oprof.la $(KOKKOS_LIBS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@example_kokkos_oprof_LINK = \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@	$(example_kokkos_oprof_LDFLAGS) $(LDFLAGS) -o $@
+
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -837,6 +949,26 @@ example-devel$(EXEEXT): $(example_devel_OBJECTS) $(example_devel_DEPENDENCIES) $
 	@rm -f example-devel$(EXEEXT)
 	$(AM_V_CXXLD)$(example_devel_LINK) $(example_devel_OBJECTS) $(example_devel_LDADD) $(LIBS)
 
+example-kokkos-dbg$(EXEEXT): $(example_kokkos_dbg_OBJECTS) $(example_kokkos_dbg_DEPENDENCIES) $(EXTRA_example_kokkos_dbg_DEPENDENCIES) 
+	@rm -f example-kokkos-dbg$(EXEEXT)
+	$(AM_V_GEN)$(example_kokkos_dbg_LINK) $(example_kokkos_dbg_OBJECTS) $(example_kokkos_dbg_LDADD) $(LIBS)
+
+example-kokkos-devel$(EXEEXT): $(example_kokkos_devel_OBJECTS) $(example_kokkos_devel_DEPENDENCIES) $(EXTRA_example_kokkos_devel_DEPENDENCIES) 
+	@rm -f example-kokkos-devel$(EXEEXT)
+	$(AM_V_GEN)$(example_kokkos_devel_LINK) $(example_kokkos_devel_OBJECTS) $(example_kokkos_devel_LDADD) $(LIBS)
+
+example-kokkos-oprof$(EXEEXT): $(example_kokkos_oprof_OBJECTS) $(example_kokkos_oprof_DEPENDENCIES) $(EXTRA_example_kokkos_oprof_DEPENDENCIES) 
+	@rm -f example-kokkos-oprof$(EXEEXT)
+	$(AM_V_GEN)$(example_kokkos_oprof_LINK) $(example_kokkos_oprof_OBJECTS) $(example_kokkos_oprof_LDADD) $(LIBS)
+
+example-kokkos-opt$(EXEEXT): $(example_kokkos_opt_OBJECTS) $(example_kokkos_opt_DEPENDENCIES) $(EXTRA_example_kokkos_opt_DEPENDENCIES) 
+	@rm -f example-kokkos-opt$(EXEEXT)
+	$(AM_V_GEN)$(example_kokkos_opt_LINK) $(example_kokkos_opt_OBJECTS) $(example_kokkos_opt_LDADD) $(LIBS)
+
+example-kokkos-prof$(EXEEXT): $(example_kokkos_prof_OBJECTS) $(example_kokkos_prof_DEPENDENCIES) $(EXTRA_example_kokkos_prof_DEPENDENCIES) 
+	@rm -f example-kokkos-prof$(EXEEXT)
+	$(AM_V_GEN)$(example_kokkos_prof_LINK) $(example_kokkos_prof_OBJECTS) $(example_kokkos_prof_LDADD) $(LIBS)
+
 example-oprof$(EXEEXT): $(example_oprof_OBJECTS) $(example_oprof_DEPENDENCIES) $(EXTRA_example_oprof_DEPENDENCIES) 
 	@rm -f example-oprof$(EXEEXT)
 	$(AM_V_CXXLD)$(example_oprof_LINK) $(example_oprof_OBJECTS) $(example_oprof_LDADD) $(LIBS)
@@ -859,6 +991,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/example_dbg-exact_solution.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/example_devel-adaptivity_ex2.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/example_devel-exact_solution.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/example_kokkos_dbg-adaptivity_ex2_kokkos.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/example_kokkos_devel-adaptivity_ex2_kokkos.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/example_kokkos_oprof-adaptivity_ex2_kokkos.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/example_kokkos_opt-adaptivity_ex2_kokkos.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/example_kokkos_prof-adaptivity_ex2_kokkos.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/example_oprof-adaptivity_ex2.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/example_oprof-exact_solution.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/example_opt-adaptivity_ex2.Po@am__quote@ # am--include-marker
@@ -951,6 +1088,76 @@ example_devel-exact_solution.obj: exact_solution.C
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='exact_solution.C' object='example_devel-exact_solution.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_devel_CPPFLAGS) $(CPPFLAGS) $(example_devel_CXXFLAGS) $(CXXFLAGS) -c -o example_devel-exact_solution.obj `if test -f 'exact_solution.C'; then $(CYGPATH_W) 'exact_solution.C'; else $(CYGPATH_W) '$(srcdir)/exact_solution.C'; fi`
+
+example_kokkos_dbg-adaptivity_ex2_kokkos.o: adaptivity_ex2_kokkos.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) -MT example_kokkos_dbg-adaptivity_ex2_kokkos.o -MD -MP -MF $(DEPDIR)/example_kokkos_dbg-adaptivity_ex2_kokkos.Tpo -c -o example_kokkos_dbg-adaptivity_ex2_kokkos.o `test -f 'adaptivity_ex2_kokkos.C' || echo '$(srcdir)/'`adaptivity_ex2_kokkos.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/example_kokkos_dbg-adaptivity_ex2_kokkos.Tpo $(DEPDIR)/example_kokkos_dbg-adaptivity_ex2_kokkos.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='adaptivity_ex2_kokkos.C' object='example_kokkos_dbg-adaptivity_ex2_kokkos.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) -c -o example_kokkos_dbg-adaptivity_ex2_kokkos.o `test -f 'adaptivity_ex2_kokkos.C' || echo '$(srcdir)/'`adaptivity_ex2_kokkos.C
+
+example_kokkos_dbg-adaptivity_ex2_kokkos.obj: adaptivity_ex2_kokkos.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) -MT example_kokkos_dbg-adaptivity_ex2_kokkos.obj -MD -MP -MF $(DEPDIR)/example_kokkos_dbg-adaptivity_ex2_kokkos.Tpo -c -o example_kokkos_dbg-adaptivity_ex2_kokkos.obj `if test -f 'adaptivity_ex2_kokkos.C'; then $(CYGPATH_W) 'adaptivity_ex2_kokkos.C'; else $(CYGPATH_W) '$(srcdir)/adaptivity_ex2_kokkos.C'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/example_kokkos_dbg-adaptivity_ex2_kokkos.Tpo $(DEPDIR)/example_kokkos_dbg-adaptivity_ex2_kokkos.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='adaptivity_ex2_kokkos.C' object='example_kokkos_dbg-adaptivity_ex2_kokkos.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) -c -o example_kokkos_dbg-adaptivity_ex2_kokkos.obj `if test -f 'adaptivity_ex2_kokkos.C'; then $(CYGPATH_W) 'adaptivity_ex2_kokkos.C'; else $(CYGPATH_W) '$(srcdir)/adaptivity_ex2_kokkos.C'; fi`
+
+example_kokkos_devel-adaptivity_ex2_kokkos.o: adaptivity_ex2_kokkos.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_devel_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_devel_CXXFLAGS) $(CXXFLAGS) -MT example_kokkos_devel-adaptivity_ex2_kokkos.o -MD -MP -MF $(DEPDIR)/example_kokkos_devel-adaptivity_ex2_kokkos.Tpo -c -o example_kokkos_devel-adaptivity_ex2_kokkos.o `test -f 'adaptivity_ex2_kokkos.C' || echo '$(srcdir)/'`adaptivity_ex2_kokkos.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/example_kokkos_devel-adaptivity_ex2_kokkos.Tpo $(DEPDIR)/example_kokkos_devel-adaptivity_ex2_kokkos.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='adaptivity_ex2_kokkos.C' object='example_kokkos_devel-adaptivity_ex2_kokkos.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_devel_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_devel_CXXFLAGS) $(CXXFLAGS) -c -o example_kokkos_devel-adaptivity_ex2_kokkos.o `test -f 'adaptivity_ex2_kokkos.C' || echo '$(srcdir)/'`adaptivity_ex2_kokkos.C
+
+example_kokkos_devel-adaptivity_ex2_kokkos.obj: adaptivity_ex2_kokkos.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_devel_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_devel_CXXFLAGS) $(CXXFLAGS) -MT example_kokkos_devel-adaptivity_ex2_kokkos.obj -MD -MP -MF $(DEPDIR)/example_kokkos_devel-adaptivity_ex2_kokkos.Tpo -c -o example_kokkos_devel-adaptivity_ex2_kokkos.obj `if test -f 'adaptivity_ex2_kokkos.C'; then $(CYGPATH_W) 'adaptivity_ex2_kokkos.C'; else $(CYGPATH_W) '$(srcdir)/adaptivity_ex2_kokkos.C'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/example_kokkos_devel-adaptivity_ex2_kokkos.Tpo $(DEPDIR)/example_kokkos_devel-adaptivity_ex2_kokkos.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='adaptivity_ex2_kokkos.C' object='example_kokkos_devel-adaptivity_ex2_kokkos.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_devel_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_devel_CXXFLAGS) $(CXXFLAGS) -c -o example_kokkos_devel-adaptivity_ex2_kokkos.obj `if test -f 'adaptivity_ex2_kokkos.C'; then $(CYGPATH_W) 'adaptivity_ex2_kokkos.C'; else $(CYGPATH_W) '$(srcdir)/adaptivity_ex2_kokkos.C'; fi`
+
+example_kokkos_oprof-adaptivity_ex2_kokkos.o: adaptivity_ex2_kokkos.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_oprof_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_oprof_CXXFLAGS) $(CXXFLAGS) -MT example_kokkos_oprof-adaptivity_ex2_kokkos.o -MD -MP -MF $(DEPDIR)/example_kokkos_oprof-adaptivity_ex2_kokkos.Tpo -c -o example_kokkos_oprof-adaptivity_ex2_kokkos.o `test -f 'adaptivity_ex2_kokkos.C' || echo '$(srcdir)/'`adaptivity_ex2_kokkos.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/example_kokkos_oprof-adaptivity_ex2_kokkos.Tpo $(DEPDIR)/example_kokkos_oprof-adaptivity_ex2_kokkos.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='adaptivity_ex2_kokkos.C' object='example_kokkos_oprof-adaptivity_ex2_kokkos.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_oprof_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_oprof_CXXFLAGS) $(CXXFLAGS) -c -o example_kokkos_oprof-adaptivity_ex2_kokkos.o `test -f 'adaptivity_ex2_kokkos.C' || echo '$(srcdir)/'`adaptivity_ex2_kokkos.C
+
+example_kokkos_oprof-adaptivity_ex2_kokkos.obj: adaptivity_ex2_kokkos.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_oprof_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_oprof_CXXFLAGS) $(CXXFLAGS) -MT example_kokkos_oprof-adaptivity_ex2_kokkos.obj -MD -MP -MF $(DEPDIR)/example_kokkos_oprof-adaptivity_ex2_kokkos.Tpo -c -o example_kokkos_oprof-adaptivity_ex2_kokkos.obj `if test -f 'adaptivity_ex2_kokkos.C'; then $(CYGPATH_W) 'adaptivity_ex2_kokkos.C'; else $(CYGPATH_W) '$(srcdir)/adaptivity_ex2_kokkos.C'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/example_kokkos_oprof-adaptivity_ex2_kokkos.Tpo $(DEPDIR)/example_kokkos_oprof-adaptivity_ex2_kokkos.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='adaptivity_ex2_kokkos.C' object='example_kokkos_oprof-adaptivity_ex2_kokkos.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_oprof_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_oprof_CXXFLAGS) $(CXXFLAGS) -c -o example_kokkos_oprof-adaptivity_ex2_kokkos.obj `if test -f 'adaptivity_ex2_kokkos.C'; then $(CYGPATH_W) 'adaptivity_ex2_kokkos.C'; else $(CYGPATH_W) '$(srcdir)/adaptivity_ex2_kokkos.C'; fi`
+
+example_kokkos_opt-adaptivity_ex2_kokkos.o: adaptivity_ex2_kokkos.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_opt_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_opt_CXXFLAGS) $(CXXFLAGS) -MT example_kokkos_opt-adaptivity_ex2_kokkos.o -MD -MP -MF $(DEPDIR)/example_kokkos_opt-adaptivity_ex2_kokkos.Tpo -c -o example_kokkos_opt-adaptivity_ex2_kokkos.o `test -f 'adaptivity_ex2_kokkos.C' || echo '$(srcdir)/'`adaptivity_ex2_kokkos.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/example_kokkos_opt-adaptivity_ex2_kokkos.Tpo $(DEPDIR)/example_kokkos_opt-adaptivity_ex2_kokkos.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='adaptivity_ex2_kokkos.C' object='example_kokkos_opt-adaptivity_ex2_kokkos.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_opt_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_opt_CXXFLAGS) $(CXXFLAGS) -c -o example_kokkos_opt-adaptivity_ex2_kokkos.o `test -f 'adaptivity_ex2_kokkos.C' || echo '$(srcdir)/'`adaptivity_ex2_kokkos.C
+
+example_kokkos_opt-adaptivity_ex2_kokkos.obj: adaptivity_ex2_kokkos.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_opt_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_opt_CXXFLAGS) $(CXXFLAGS) -MT example_kokkos_opt-adaptivity_ex2_kokkos.obj -MD -MP -MF $(DEPDIR)/example_kokkos_opt-adaptivity_ex2_kokkos.Tpo -c -o example_kokkos_opt-adaptivity_ex2_kokkos.obj `if test -f 'adaptivity_ex2_kokkos.C'; then $(CYGPATH_W) 'adaptivity_ex2_kokkos.C'; else $(CYGPATH_W) '$(srcdir)/adaptivity_ex2_kokkos.C'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/example_kokkos_opt-adaptivity_ex2_kokkos.Tpo $(DEPDIR)/example_kokkos_opt-adaptivity_ex2_kokkos.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='adaptivity_ex2_kokkos.C' object='example_kokkos_opt-adaptivity_ex2_kokkos.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_opt_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_opt_CXXFLAGS) $(CXXFLAGS) -c -o example_kokkos_opt-adaptivity_ex2_kokkos.obj `if test -f 'adaptivity_ex2_kokkos.C'; then $(CYGPATH_W) 'adaptivity_ex2_kokkos.C'; else $(CYGPATH_W) '$(srcdir)/adaptivity_ex2_kokkos.C'; fi`
+
+example_kokkos_prof-adaptivity_ex2_kokkos.o: adaptivity_ex2_kokkos.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_prof_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_prof_CXXFLAGS) $(CXXFLAGS) -MT example_kokkos_prof-adaptivity_ex2_kokkos.o -MD -MP -MF $(DEPDIR)/example_kokkos_prof-adaptivity_ex2_kokkos.Tpo -c -o example_kokkos_prof-adaptivity_ex2_kokkos.o `test -f 'adaptivity_ex2_kokkos.C' || echo '$(srcdir)/'`adaptivity_ex2_kokkos.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/example_kokkos_prof-adaptivity_ex2_kokkos.Tpo $(DEPDIR)/example_kokkos_prof-adaptivity_ex2_kokkos.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='adaptivity_ex2_kokkos.C' object='example_kokkos_prof-adaptivity_ex2_kokkos.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_prof_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_prof_CXXFLAGS) $(CXXFLAGS) -c -o example_kokkos_prof-adaptivity_ex2_kokkos.o `test -f 'adaptivity_ex2_kokkos.C' || echo '$(srcdir)/'`adaptivity_ex2_kokkos.C
+
+example_kokkos_prof-adaptivity_ex2_kokkos.obj: adaptivity_ex2_kokkos.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_prof_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_prof_CXXFLAGS) $(CXXFLAGS) -MT example_kokkos_prof-adaptivity_ex2_kokkos.obj -MD -MP -MF $(DEPDIR)/example_kokkos_prof-adaptivity_ex2_kokkos.Tpo -c -o example_kokkos_prof-adaptivity_ex2_kokkos.obj `if test -f 'adaptivity_ex2_kokkos.C'; then $(CYGPATH_W) 'adaptivity_ex2_kokkos.C'; else $(CYGPATH_W) '$(srcdir)/adaptivity_ex2_kokkos.C'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/example_kokkos_prof-adaptivity_ex2_kokkos.Tpo $(DEPDIR)/example_kokkos_prof-adaptivity_ex2_kokkos.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='adaptivity_ex2_kokkos.C' object='example_kokkos_prof-adaptivity_ex2_kokkos.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_kokkos_prof_CPPFLAGS) $(CPPFLAGS) $(example_kokkos_prof_CXXFLAGS) $(CXXFLAGS) -c -o example_kokkos_prof-adaptivity_ex2_kokkos.obj `if test -f 'adaptivity_ex2_kokkos.C'; then $(CYGPATH_W) 'adaptivity_ex2_kokkos.C'; else $(CYGPATH_W) '$(srcdir)/adaptivity_ex2_kokkos.C'; fi`
 
 example_oprof-adaptivity_ex2.o: adaptivity_ex2.C
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(example_oprof_CPPFLAGS) $(CPPFLAGS) $(example_oprof_CXXFLAGS) $(CXXFLAGS) -MT example_oprof-adaptivity_ex2.o -MD -MP -MF $(DEPDIR)/example_oprof-adaptivity_ex2.Tpo -c -o example_oprof-adaptivity_ex2.o `test -f 'adaptivity_ex2.C' || echo '$(srcdir)/'`adaptivity_ex2.C
@@ -1296,6 +1503,11 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/example_dbg-exact_solution.Po
 	-rm -f ./$(DEPDIR)/example_devel-adaptivity_ex2.Po
 	-rm -f ./$(DEPDIR)/example_devel-exact_solution.Po
+	-rm -f ./$(DEPDIR)/example_kokkos_dbg-adaptivity_ex2_kokkos.Po
+	-rm -f ./$(DEPDIR)/example_kokkos_devel-adaptivity_ex2_kokkos.Po
+	-rm -f ./$(DEPDIR)/example_kokkos_oprof-adaptivity_ex2_kokkos.Po
+	-rm -f ./$(DEPDIR)/example_kokkos_opt-adaptivity_ex2_kokkos.Po
+	-rm -f ./$(DEPDIR)/example_kokkos_prof-adaptivity_ex2_kokkos.Po
 	-rm -f ./$(DEPDIR)/example_oprof-adaptivity_ex2.Po
 	-rm -f ./$(DEPDIR)/example_oprof-exact_solution.Po
 	-rm -f ./$(DEPDIR)/example_opt-adaptivity_ex2.Po
@@ -1349,6 +1561,11 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/example_dbg-exact_solution.Po
 	-rm -f ./$(DEPDIR)/example_devel-adaptivity_ex2.Po
 	-rm -f ./$(DEPDIR)/example_devel-exact_solution.Po
+	-rm -f ./$(DEPDIR)/example_kokkos_dbg-adaptivity_ex2_kokkos.Po
+	-rm -f ./$(DEPDIR)/example_kokkos_devel-adaptivity_ex2_kokkos.Po
+	-rm -f ./$(DEPDIR)/example_kokkos_oprof-adaptivity_ex2_kokkos.Po
+	-rm -f ./$(DEPDIR)/example_kokkos_opt-adaptivity_ex2_kokkos.Po
+	-rm -f ./$(DEPDIR)/example_kokkos_prof-adaptivity_ex2_kokkos.Po
 	-rm -f ./$(DEPDIR)/example_oprof-adaptivity_ex2.Po
 	-rm -f ./$(DEPDIR)/example_oprof-exact_solution.Po
 	-rm -f ./$(DEPDIR)/example_opt-adaptivity_ex2.Po
@@ -1415,8 +1632,15 @@ $(example_name).html: $(DOC_PROGRAM) \
 # mode: makefile
 # End:
 
-##############################################
-# include common example environment
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@adaptivity_ex2_kokkos_dbg.o: KOKKOS_ADAPTIVITY_EX2_METHOD_CPPFLAGS = $(CPPFLAGS_DBG)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@adaptivity_ex2_kokkos_devel.o: KOKKOS_ADAPTIVITY_EX2_METHOD_CPPFLAGS = $(CPPFLAGS_DEVEL)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@adaptivity_ex2_kokkos_opt.o: KOKKOS_ADAPTIVITY_EX2_METHOD_CPPFLAGS = $(CPPFLAGS_OPT)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@adaptivity_ex2_kokkos_prof.o: KOKKOS_ADAPTIVITY_EX2_METHOD_CPPFLAGS = $(CPPFLAGS_PROF)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@adaptivity_ex2_kokkos_oprof.o: KOKKOS_ADAPTIVITY_EX2_METHOD_CPPFLAGS = $(CPPFLAGS_OPROF)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@adaptivity_ex2_kokkos_%.o: $(KOKKOS_ADAPTIVITY_EX2_DEPS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@	$(KOKKOS_CXX) $(KOKKOS_CXXFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(KOKKOS_ADAPTIVITY_EX2_METHOD_CPPFLAGS) $(AM_CPPFLAGS) -I$(top_srcdir)/include $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
