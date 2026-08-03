@@ -45,7 +45,7 @@ using RealTensor = libMesh::TypeTensor<Real>;
 LIBMESH_DEVICE_INLINE
 RealVector zero_vector()
 {
-  return zero_vector_value<RealVector>();
+  return RealVector();
 }
 
 LIBMESH_DEVICE_INLINE
@@ -73,7 +73,7 @@ RealVector make_vector(const Real x, const Real y = 0, const Real z = 0)
 LIBMESH_DEVICE_INLINE
 RealTensor zero_tensor()
 {
-  return zero_tensor_value<RealTensor>();
+  return RealTensor();
 }
 
 template <libMesh::FEFamily family, libMesh::ElemType elem_type, unsigned int Order = 0>

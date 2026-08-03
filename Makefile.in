@@ -115,17 +115,25 @@ target_triplet = @target@
 @LIBMESH_PROF_MODE_TRUE@am__append_14 = libmesh_prof.la
 @LIBMESH_OPROF_MODE_TRUE@am__append_15 = libmesh_oprof.la
 @LIBMESH_ENABLE_TESTS_DIR_TRUE@am__append_16 = tests
-bin_PROGRAMS = $(am__EXEEXT_2) $(am__EXEEXT_4) $(am__EXEEXT_6) \
-	$(am__EXEEXT_8)
-@LIBMESH_OPT_MODE_TRUE@am__append_17 = $(opt_programs)
-@LIBMESH_DEVEL_MODE_TRUE@am__append_18 = $(devel_programs)
-@LIBMESH_DBG_MODE_TRUE@am__append_19 = $(dbg_programs)
-@LIBMESH_OPROF_MODE_TRUE@am__append_20 = $(oprof_programs)
+bin_PROGRAMS = $(am__EXEEXT_4) $(am__EXEEXT_8) $(am__EXEEXT_12) \
+	$(am__EXEEXT_14)
+
+# calculator
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_17 = calculator-kokkos-opt
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_18 = calculator-kokkos-devel
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_19 = calculator-kokkos-dbg
+@LIBMESH_ENABLE_KOKKOS_FALSE@am__append_20 = calculator-opt
+@LIBMESH_ENABLE_KOKKOS_FALSE@am__append_21 = calculator-devel
+@LIBMESH_ENABLE_KOKKOS_FALSE@am__append_22 = calculator-dbg
+@LIBMESH_OPT_MODE_TRUE@am__append_23 = $(opt_programs)
+@LIBMESH_DEVEL_MODE_TRUE@am__append_24 = $(devel_programs)
+@LIBMESH_DBG_MODE_TRUE@am__append_25 = $(dbg_programs)
+@LIBMESH_OPROF_MODE_TRUE@am__append_26 = $(oprof_programs)
 
 ###########################################################
 # Examples
-@LIBMESH_ENABLE_EXAMPLES_TRUE@am__append_21 = examples
-@CODE_COVERAGE_ENABLED_TRUE@am__append_22 = src/apps/*.gcda src/apps/*.gcno
+@LIBMESH_ENABLE_EXAMPLES_TRUE@am__append_27 = examples
+@CODE_COVERAGE_ENABLED_TRUE@am__append_28 = src/apps/*.gcda src/apps/*.gcno
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \
@@ -202,20 +210,26 @@ CONFIG_CLEAN_FILES = contrib/utils/Makefile contrib/utils/Make.common \
 	contrib/utils/libmesh-oprof.pc contrib/bin/libmesh-config \
 	contrib/bin/create_libmesh_release contrib/utils/libmesh.pc
 CONFIG_CLEAN_VPATH_FILES =
-am__EXEEXT_1 = fparser_parse-opt$(EXEEXT) getpot_parse-opt$(EXEEXT) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__EXEEXT_1 =  \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	calculator-kokkos-opt$(EXEEXT)
+@LIBMESH_ENABLE_KOKKOS_FALSE@am__EXEEXT_2 = calculator-opt$(EXEEXT)
+am__EXEEXT_3 = fparser_parse-opt$(EXEEXT) getpot_parse-opt$(EXEEXT) \
 	amr-opt$(EXEEXT) matrixconvert-opt$(EXEEXT) \
-	matrixsolve-opt$(EXEEXT) meshtool-opt$(EXEEXT) \
-	calculator-opt$(EXEEXT) compare-opt$(EXEEXT) \
-	meshbcid-opt$(EXEEXT) meshid-opt$(EXEEXT) meshavg-opt$(EXEEXT) \
-	meshdiff-opt$(EXEEXT) meshnorm-opt$(EXEEXT) \
-	projection-opt$(EXEEXT) output_libmesh_version-opt$(EXEEXT) \
-	meshplot-opt$(EXEEXT) solution_components-opt$(EXEEXT) \
-	splitter-opt$(EXEEXT) embedding-opt$(EXEEXT)
-@LIBMESH_OPT_MODE_TRUE@am__EXEEXT_2 = $(am__EXEEXT_1)
-am__EXEEXT_3 = fparser_parse-devel$(EXEEXT) \
+	matrixsolve-opt$(EXEEXT) meshtool-opt$(EXEEXT) $(am__EXEEXT_1) \
+	$(am__EXEEXT_2) compare-opt$(EXEEXT) meshbcid-opt$(EXEEXT) \
+	meshid-opt$(EXEEXT) meshavg-opt$(EXEEXT) meshdiff-opt$(EXEEXT) \
+	meshnorm-opt$(EXEEXT) projection-opt$(EXEEXT) \
+	output_libmesh_version-opt$(EXEEXT) meshplot-opt$(EXEEXT) \
+	solution_components-opt$(EXEEXT) splitter-opt$(EXEEXT) \
+	embedding-opt$(EXEEXT)
+@LIBMESH_OPT_MODE_TRUE@am__EXEEXT_4 = $(am__EXEEXT_3)
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__EXEEXT_5 =  \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	calculator-kokkos-devel$(EXEEXT)
+@LIBMESH_ENABLE_KOKKOS_FALSE@am__EXEEXT_6 = calculator-devel$(EXEEXT)
+am__EXEEXT_7 = fparser_parse-devel$(EXEEXT) \
 	getpot_parse-devel$(EXEEXT) amr-devel$(EXEEXT) \
 	matrixconvert-devel$(EXEEXT) matrixsolve-devel$(EXEEXT) \
-	meshtool-devel$(EXEEXT) calculator-devel$(EXEEXT) \
+	meshtool-devel$(EXEEXT) $(am__EXEEXT_5) $(am__EXEEXT_6) \
 	compare-devel$(EXEEXT) meshbcid-devel$(EXEEXT) \
 	meshid-devel$(EXEEXT) meshavg-devel$(EXEEXT) \
 	meshdiff-devel$(EXEEXT) meshnorm-devel$(EXEEXT) \
@@ -223,18 +237,21 @@ am__EXEEXT_3 = fparser_parse-devel$(EXEEXT) \
 	output_libmesh_version-devel$(EXEEXT) meshplot-devel$(EXEEXT) \
 	solution_components-devel$(EXEEXT) splitter-devel$(EXEEXT) \
 	embedding-devel$(EXEEXT)
-@LIBMESH_DEVEL_MODE_TRUE@am__EXEEXT_4 = $(am__EXEEXT_3)
-am__EXEEXT_5 = fparser_parse-dbg$(EXEEXT) getpot_parse-dbg$(EXEEXT) \
+@LIBMESH_DEVEL_MODE_TRUE@am__EXEEXT_8 = $(am__EXEEXT_7)
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__EXEEXT_9 =  \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	calculator-kokkos-dbg$(EXEEXT)
+@LIBMESH_ENABLE_KOKKOS_FALSE@am__EXEEXT_10 = calculator-dbg$(EXEEXT)
+am__EXEEXT_11 = fparser_parse-dbg$(EXEEXT) getpot_parse-dbg$(EXEEXT) \
 	amr-dbg$(EXEEXT) matrixconvert-dbg$(EXEEXT) \
-	matrixsolve-dbg$(EXEEXT) meshtool-dbg$(EXEEXT) \
-	calculator-dbg$(EXEEXT) compare-dbg$(EXEEXT) \
-	meshbcid-dbg$(EXEEXT) meshid-dbg$(EXEEXT) meshavg-dbg$(EXEEXT) \
-	meshdiff-dbg$(EXEEXT) meshnorm-dbg$(EXEEXT) \
-	projection-dbg$(EXEEXT) output_libmesh_version-dbg$(EXEEXT) \
-	meshplot-dbg$(EXEEXT) solution_components-dbg$(EXEEXT) \
-	splitter-dbg$(EXEEXT) embedding-dbg$(EXEEXT)
-@LIBMESH_DBG_MODE_TRUE@am__EXEEXT_6 = $(am__EXEEXT_5)
-am__EXEEXT_7 = fparser_parse-oprof$(EXEEXT) \
+	matrixsolve-dbg$(EXEEXT) meshtool-dbg$(EXEEXT) $(am__EXEEXT_9) \
+	$(am__EXEEXT_10) compare-dbg$(EXEEXT) meshbcid-dbg$(EXEEXT) \
+	meshid-dbg$(EXEEXT) meshavg-dbg$(EXEEXT) meshdiff-dbg$(EXEEXT) \
+	meshnorm-dbg$(EXEEXT) projection-dbg$(EXEEXT) \
+	output_libmesh_version-dbg$(EXEEXT) meshplot-dbg$(EXEEXT) \
+	solution_components-dbg$(EXEEXT) splitter-dbg$(EXEEXT) \
+	embedding-dbg$(EXEEXT)
+@LIBMESH_DBG_MODE_TRUE@am__EXEEXT_12 = $(am__EXEEXT_11)
+am__EXEEXT_13 = fparser_parse-oprof$(EXEEXT) \
 	getpot_parse-oprof$(EXEEXT) amr-oprof$(EXEEXT) \
 	matrixconvert-oprof$(EXEEXT) matrixsolve-oprof$(EXEEXT) \
 	meshtool-oprof$(EXEEXT) calculator-oprof$(EXEEXT) \
@@ -245,7 +262,7 @@ am__EXEEXT_7 = fparser_parse-oprof$(EXEEXT) \
 	output_libmesh_version-oprof$(EXEEXT) meshplot-oprof$(EXEEXT) \
 	solution_components-oprof$(EXEEXT) splitter-oprof$(EXEEXT) \
 	embedding-oprof$(EXEEXT)
-@LIBMESH_OPROF_MODE_TRUE@am__EXEEXT_8 = $(am__EXEEXT_7)
+@LIBMESH_OPROF_MODE_TRUE@am__EXEEXT_14 = $(am__EXEEXT_13)
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(libdir)" \
 	"$(DESTDIR)$(bindir)" "$(DESTDIR)$(contribbindir)" \
 	"$(DESTDIR)$(libmesh_configdir)" "$(DESTDIR)$(configdir)" \
@@ -282,6 +299,7 @@ am__DEPENDENCIES_1 =
 am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 @LIBMESH_DBG_MODE_TRUE@libmesh_dbg_la_DEPENDENCIES =  \
 @LIBMESH_DBG_MODE_TRUE@	contrib/libcontrib_dbg.la \
+@LIBMESH_DBG_MODE_TRUE@	$(KOKKOS_LIBMESH_DBG_OBJECTS) \
 @LIBMESH_DBG_MODE_TRUE@	$(am__DEPENDENCIES_2)
 am__libmesh_dbg_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/base/dof_map.C src/base/dof_map_base.C \
@@ -438,8 +456,9 @@ am__libmesh_dbg_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/numerics/eigen_sparse_vector.C \
 	src/numerics/laspack_matrix.C src/numerics/laspack_vector.C \
 	src/numerics/lumped_mass_matrix.C \
-	src/numerics/numeric_vector.C src/numerics/petsc_matrix.C \
-	src/numerics/petsc_matrix_base.C \
+	src/numerics/numeric_vector.C \
+	src/numerics/parsed_function_program.C \
+	src/numerics/petsc_matrix.C src/numerics/petsc_matrix_base.C \
 	src/numerics/petsc_matrix_shell_matrix.C \
 	src/numerics/petsc_preconditioner.C \
 	src/numerics/petsc_shell_matrix.C src/numerics/petsc_vector.C \
@@ -881,6 +900,7 @@ am__objects_1 = src/base/libmesh_dbg_la-dirichlet_boundary.lo \
 	src/numerics/libmesh_dbg_la-laspack_vector.lo \
 	src/numerics/libmesh_dbg_la-lumped_mass_matrix.lo \
 	src/numerics/libmesh_dbg_la-numeric_vector.lo \
+	src/numerics/libmesh_dbg_la-parsed_function_program.lo \
 	src/numerics/libmesh_dbg_la-petsc_matrix.lo \
 	src/numerics/libmesh_dbg_la-petsc_matrix_base.lo \
 	src/numerics/libmesh_dbg_la-petsc_matrix_shell_matrix.lo \
@@ -1097,6 +1117,7 @@ libmesh_dbg_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 @LIBMESH_DBG_MODE_TRUE@am_libmesh_dbg_la_rpath = -rpath $(libdir)
 @LIBMESH_DEVEL_MODE_TRUE@libmesh_devel_la_DEPENDENCIES =  \
 @LIBMESH_DEVEL_MODE_TRUE@	contrib/libcontrib_devel.la \
+@LIBMESH_DEVEL_MODE_TRUE@	$(KOKKOS_LIBMESH_DEVEL_OBJECTS) \
 @LIBMESH_DEVEL_MODE_TRUE@	$(am__DEPENDENCIES_2)
 am__libmesh_devel_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/base/dof_map.C src/base/dof_map_base.C \
@@ -1253,8 +1274,9 @@ am__libmesh_devel_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/numerics/eigen_sparse_vector.C \
 	src/numerics/laspack_matrix.C src/numerics/laspack_vector.C \
 	src/numerics/lumped_mass_matrix.C \
-	src/numerics/numeric_vector.C src/numerics/petsc_matrix.C \
-	src/numerics/petsc_matrix_base.C \
+	src/numerics/numeric_vector.C \
+	src/numerics/parsed_function_program.C \
+	src/numerics/petsc_matrix.C src/numerics/petsc_matrix_base.C \
 	src/numerics/petsc_matrix_shell_matrix.C \
 	src/numerics/petsc_preconditioner.C \
 	src/numerics/petsc_shell_matrix.C src/numerics/petsc_vector.C \
@@ -1695,6 +1717,7 @@ am__objects_2 = src/base/libmesh_devel_la-dirichlet_boundary.lo \
 	src/numerics/libmesh_devel_la-laspack_vector.lo \
 	src/numerics/libmesh_devel_la-lumped_mass_matrix.lo \
 	src/numerics/libmesh_devel_la-numeric_vector.lo \
+	src/numerics/libmesh_devel_la-parsed_function_program.lo \
 	src/numerics/libmesh_devel_la-petsc_matrix.lo \
 	src/numerics/libmesh_devel_la-petsc_matrix_base.lo \
 	src/numerics/libmesh_devel_la-petsc_matrix_shell_matrix.lo \
@@ -1908,6 +1931,7 @@ libmesh_devel_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 @LIBMESH_DEVEL_MODE_TRUE@am_libmesh_devel_la_rpath = -rpath $(libdir)
 @LIBMESH_OPROF_MODE_TRUE@libmesh_oprof_la_DEPENDENCIES =  \
 @LIBMESH_OPROF_MODE_TRUE@	contrib/libcontrib_oprof.la \
+@LIBMESH_OPROF_MODE_TRUE@	$(KOKKOS_LIBMESH_OPROF_OBJECTS) \
 @LIBMESH_OPROF_MODE_TRUE@	$(am__DEPENDENCIES_2)
 am__libmesh_oprof_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/base/dof_map.C src/base/dof_map_base.C \
@@ -2064,8 +2088,9 @@ am__libmesh_oprof_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/numerics/eigen_sparse_vector.C \
 	src/numerics/laspack_matrix.C src/numerics/laspack_vector.C \
 	src/numerics/lumped_mass_matrix.C \
-	src/numerics/numeric_vector.C src/numerics/petsc_matrix.C \
-	src/numerics/petsc_matrix_base.C \
+	src/numerics/numeric_vector.C \
+	src/numerics/parsed_function_program.C \
+	src/numerics/petsc_matrix.C src/numerics/petsc_matrix_base.C \
 	src/numerics/petsc_matrix_shell_matrix.C \
 	src/numerics/petsc_preconditioner.C \
 	src/numerics/petsc_shell_matrix.C src/numerics/petsc_vector.C \
@@ -2506,6 +2531,7 @@ am__objects_3 = src/base/libmesh_oprof_la-dirichlet_boundary.lo \
 	src/numerics/libmesh_oprof_la-laspack_vector.lo \
 	src/numerics/libmesh_oprof_la-lumped_mass_matrix.lo \
 	src/numerics/libmesh_oprof_la-numeric_vector.lo \
+	src/numerics/libmesh_oprof_la-parsed_function_program.lo \
 	src/numerics/libmesh_oprof_la-petsc_matrix.lo \
 	src/numerics/libmesh_oprof_la-petsc_matrix_base.lo \
 	src/numerics/libmesh_oprof_la-petsc_matrix_shell_matrix.lo \
@@ -2719,6 +2745,7 @@ libmesh_oprof_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 @LIBMESH_OPROF_MODE_TRUE@am_libmesh_oprof_la_rpath = -rpath $(libdir)
 @LIBMESH_OPT_MODE_TRUE@libmesh_opt_la_DEPENDENCIES =  \
 @LIBMESH_OPT_MODE_TRUE@	contrib/libcontrib_opt.la \
+@LIBMESH_OPT_MODE_TRUE@	$(KOKKOS_LIBMESH_OPT_OBJECTS) \
 @LIBMESH_OPT_MODE_TRUE@	$(am__DEPENDENCIES_2)
 am__libmesh_opt_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/base/dof_map.C src/base/dof_map_base.C \
@@ -2875,8 +2902,9 @@ am__libmesh_opt_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/numerics/eigen_sparse_vector.C \
 	src/numerics/laspack_matrix.C src/numerics/laspack_vector.C \
 	src/numerics/lumped_mass_matrix.C \
-	src/numerics/numeric_vector.C src/numerics/petsc_matrix.C \
-	src/numerics/petsc_matrix_base.C \
+	src/numerics/numeric_vector.C \
+	src/numerics/parsed_function_program.C \
+	src/numerics/petsc_matrix.C src/numerics/petsc_matrix_base.C \
 	src/numerics/petsc_matrix_shell_matrix.C \
 	src/numerics/petsc_preconditioner.C \
 	src/numerics/petsc_shell_matrix.C src/numerics/petsc_vector.C \
@@ -3317,6 +3345,7 @@ am__objects_4 = src/base/libmesh_opt_la-dirichlet_boundary.lo \
 	src/numerics/libmesh_opt_la-laspack_vector.lo \
 	src/numerics/libmesh_opt_la-lumped_mass_matrix.lo \
 	src/numerics/libmesh_opt_la-numeric_vector.lo \
+	src/numerics/libmesh_opt_la-parsed_function_program.lo \
 	src/numerics/libmesh_opt_la-petsc_matrix.lo \
 	src/numerics/libmesh_opt_la-petsc_matrix_base.lo \
 	src/numerics/libmesh_opt_la-petsc_matrix_shell_matrix.lo \
@@ -3529,6 +3558,7 @@ libmesh_opt_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 @LIBMESH_OPT_MODE_TRUE@am_libmesh_opt_la_rpath = -rpath $(libdir)
 @LIBMESH_PROF_MODE_TRUE@libmesh_prof_la_DEPENDENCIES =  \
 @LIBMESH_PROF_MODE_TRUE@	contrib/libcontrib_prof.la \
+@LIBMESH_PROF_MODE_TRUE@	$(KOKKOS_LIBMESH_PROF_OBJECTS) \
 @LIBMESH_PROF_MODE_TRUE@	$(am__DEPENDENCIES_2)
 am__libmesh_prof_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/base/dof_map.C src/base/dof_map_base.C \
@@ -3685,8 +3715,9 @@ am__libmesh_prof_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/numerics/eigen_sparse_vector.C \
 	src/numerics/laspack_matrix.C src/numerics/laspack_vector.C \
 	src/numerics/lumped_mass_matrix.C \
-	src/numerics/numeric_vector.C src/numerics/petsc_matrix.C \
-	src/numerics/petsc_matrix_base.C \
+	src/numerics/numeric_vector.C \
+	src/numerics/parsed_function_program.C \
+	src/numerics/petsc_matrix.C src/numerics/petsc_matrix_base.C \
 	src/numerics/petsc_matrix_shell_matrix.C \
 	src/numerics/petsc_preconditioner.C \
 	src/numerics/petsc_shell_matrix.C src/numerics/petsc_vector.C \
@@ -4127,6 +4158,7 @@ am__objects_5 = src/base/libmesh_prof_la-dirichlet_boundary.lo \
 	src/numerics/libmesh_prof_la-laspack_vector.lo \
 	src/numerics/libmesh_prof_la-lumped_mass_matrix.lo \
 	src/numerics/libmesh_prof_la-numeric_vector.lo \
+	src/numerics/libmesh_prof_la-parsed_function_program.lo \
 	src/numerics/libmesh_prof_la-petsc_matrix.lo \
 	src/numerics/libmesh_prof_la-petsc_matrix_base.lo \
 	src/numerics/libmesh_prof_la-petsc_matrix_shell_matrix.lo \
@@ -4361,24 +4393,62 @@ amr_opt_DEPENDENCIES = libmesh_opt.la
 amr_opt_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(amr_opt_CXXFLAGS) \
 	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-am_calculator_dbg_OBJECTS =  \
-	src/apps/calculator_dbg-calculator.$(OBJEXT) \
-	src/apps/calculator_dbg-L2system.$(OBJEXT)
+am__calculator_dbg_SOURCES_DIST = src/apps/calculator.C \
+	src/apps/L2system.C src/apps/L2system.h
+@LIBMESH_ENABLE_KOKKOS_FALSE@am_calculator_dbg_OBJECTS = src/apps/calculator_dbg-calculator.$(OBJEXT) \
+@LIBMESH_ENABLE_KOKKOS_FALSE@	src/apps/calculator_dbg-L2system.$(OBJEXT)
 calculator_dbg_OBJECTS = $(am_calculator_dbg_OBJECTS)
-calculator_dbg_DEPENDENCIES = libmesh_dbg.la
+@LIBMESH_ENABLE_KOKKOS_FALSE@calculator_dbg_DEPENDENCIES =  \
+@LIBMESH_ENABLE_KOKKOS_FALSE@	libmesh_dbg.la
 calculator_dbg_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(calculator_dbg_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am_calculator_devel_OBJECTS =  \
-	src/apps/calculator_devel-calculator.$(OBJEXT) \
-	src/apps/calculator_devel-L2system.$(OBJEXT)
+am__calculator_devel_SOURCES_DIST = src/apps/calculator.C \
+	src/apps/L2system.C src/apps/L2system.h
+@LIBMESH_ENABLE_KOKKOS_FALSE@am_calculator_devel_OBJECTS = src/apps/calculator_devel-calculator.$(OBJEXT) \
+@LIBMESH_ENABLE_KOKKOS_FALSE@	src/apps/calculator_devel-L2system.$(OBJEXT)
 calculator_devel_OBJECTS = $(am_calculator_devel_OBJECTS)
-calculator_devel_DEPENDENCIES = libmesh_devel.la
+@LIBMESH_ENABLE_KOKKOS_FALSE@calculator_devel_DEPENDENCIES =  \
+@LIBMESH_ENABLE_KOKKOS_FALSE@	libmesh_devel.la
 calculator_devel_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(calculator_devel_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
+am__calculator_kokkos_dbg_SOURCES_DIST = src/apps/calculator.C \
+	src/apps/L2system.C src/apps/L2system.h
+@LIBMESH_ENABLE_KOKKOS_TRUE@am_calculator_kokkos_dbg_OBJECTS = src/apps/calculator_kokkos_dbg-calculator.$(OBJEXT) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/calculator_kokkos_dbg-L2system.$(OBJEXT)
+calculator_kokkos_dbg_OBJECTS = $(am_calculator_kokkos_dbg_OBJECTS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@am__DEPENDENCIES_3 = src/apps/L2system_kokkos_dbg.o
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_dbg_DEPENDENCIES =  \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	libmesh_dbg.la \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(KOKKOS_LIBMESH_DBG_OBJECTS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_3) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
+am__calculator_kokkos_devel_SOURCES_DIST = src/apps/calculator.C \
+	src/apps/L2system.C src/apps/L2system.h
+@LIBMESH_ENABLE_KOKKOS_TRUE@am_calculator_kokkos_devel_OBJECTS = src/apps/calculator_kokkos_devel-calculator.$(OBJEXT) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/calculator_kokkos_devel-L2system.$(OBJEXT)
+calculator_kokkos_devel_OBJECTS =  \
+	$(am_calculator_kokkos_devel_OBJECTS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@am__DEPENDENCIES_4 = src/apps/L2system_kokkos_devel.o
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_devel_DEPENDENCIES =  \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	libmesh_devel.la \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(KOKKOS_LIBMESH_DEVEL_OBJECTS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_4) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
+am__calculator_kokkos_opt_SOURCES_DIST = src/apps/calculator.C \
+	src/apps/L2system.C src/apps/L2system.h
+@LIBMESH_ENABLE_KOKKOS_TRUE@am_calculator_kokkos_opt_OBJECTS = src/apps/calculator_kokkos_opt-calculator.$(OBJEXT) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/calculator_kokkos_opt-L2system.$(OBJEXT)
+calculator_kokkos_opt_OBJECTS = $(am_calculator_kokkos_opt_OBJECTS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@am__DEPENDENCIES_5 = src/apps/L2system_kokkos_opt.o
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_opt_DEPENDENCIES =  \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	libmesh_opt.la \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(KOKKOS_LIBMESH_OPT_OBJECTS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_5) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
 am_calculator_oprof_OBJECTS =  \
 	src/apps/calculator_oprof-calculator.$(OBJEXT) \
 	src/apps/calculator_oprof-L2system.$(OBJEXT)
@@ -4388,11 +4458,13 @@ calculator_oprof_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(calculator_oprof_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am_calculator_opt_OBJECTS =  \
-	src/apps/calculator_opt-calculator.$(OBJEXT) \
-	src/apps/calculator_opt-L2system.$(OBJEXT)
+am__calculator_opt_SOURCES_DIST = src/apps/calculator.C \
+	src/apps/L2system.C src/apps/L2system.h
+@LIBMESH_ENABLE_KOKKOS_FALSE@am_calculator_opt_OBJECTS = src/apps/calculator_opt-calculator.$(OBJEXT) \
+@LIBMESH_ENABLE_KOKKOS_FALSE@	src/apps/calculator_opt-L2system.$(OBJEXT)
 calculator_opt_OBJECTS = $(am_calculator_opt_OBJECTS)
-calculator_opt_DEPENDENCIES = libmesh_opt.la
+@LIBMESH_ENABLE_KOKKOS_FALSE@calculator_opt_DEPENDENCIES =  \
+@LIBMESH_ENABLE_KOKKOS_FALSE@	libmesh_opt.la
 calculator_opt_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
 	$(calculator_opt_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
@@ -4920,6 +4992,12 @@ am__depfiles_remade = src/apps/$(DEPDIR)/amr_dbg-amr.Po \
 	src/apps/$(DEPDIR)/calculator_dbg-calculator.Po \
 	src/apps/$(DEPDIR)/calculator_devel-L2system.Po \
 	src/apps/$(DEPDIR)/calculator_devel-calculator.Po \
+	src/apps/$(DEPDIR)/calculator_kokkos_dbg-L2system.Po \
+	src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Po \
+	src/apps/$(DEPDIR)/calculator_kokkos_devel-L2system.Po \
+	src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Po \
+	src/apps/$(DEPDIR)/calculator_kokkos_opt-L2system.Po \
+	src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Po \
 	src/apps/$(DEPDIR)/calculator_oprof-L2system.Po \
 	src/apps/$(DEPDIR)/calculator_oprof-calculator.Po \
 	src/apps/$(DEPDIR)/calculator_opt-L2system.Po \
@@ -6289,6 +6367,7 @@ am__depfiles_remade = src/apps/$(DEPDIR)/amr_dbg-amr.Po \
 	src/numerics/$(DEPDIR)/libmesh_dbg_la-laspack_vector.Plo \
 	src/numerics/$(DEPDIR)/libmesh_dbg_la-lumped_mass_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_dbg_la-numeric_vector.Plo \
+	src/numerics/$(DEPDIR)/libmesh_dbg_la-parsed_function_program.Plo \
 	src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix_base.Plo \
 	src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix_shell_matrix.Plo \
@@ -6327,6 +6406,7 @@ am__depfiles_remade = src/apps/$(DEPDIR)/amr_dbg-amr.Po \
 	src/numerics/$(DEPDIR)/libmesh_devel_la-laspack_vector.Plo \
 	src/numerics/$(DEPDIR)/libmesh_devel_la-lumped_mass_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_devel_la-numeric_vector.Plo \
+	src/numerics/$(DEPDIR)/libmesh_devel_la-parsed_function_program.Plo \
 	src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix_base.Plo \
 	src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix_shell_matrix.Plo \
@@ -6365,6 +6445,7 @@ am__depfiles_remade = src/apps/$(DEPDIR)/amr_dbg-amr.Po \
 	src/numerics/$(DEPDIR)/libmesh_oprof_la-laspack_vector.Plo \
 	src/numerics/$(DEPDIR)/libmesh_oprof_la-lumped_mass_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_oprof_la-numeric_vector.Plo \
+	src/numerics/$(DEPDIR)/libmesh_oprof_la-parsed_function_program.Plo \
 	src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix_base.Plo \
 	src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix_shell_matrix.Plo \
@@ -6403,6 +6484,7 @@ am__depfiles_remade = src/apps/$(DEPDIR)/amr_dbg-amr.Po \
 	src/numerics/$(DEPDIR)/libmesh_opt_la-laspack_vector.Plo \
 	src/numerics/$(DEPDIR)/libmesh_opt_la-lumped_mass_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_opt_la-numeric_vector.Plo \
+	src/numerics/$(DEPDIR)/libmesh_opt_la-parsed_function_program.Plo \
 	src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix_base.Plo \
 	src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix_shell_matrix.Plo \
@@ -6441,6 +6523,7 @@ am__depfiles_remade = src/apps/$(DEPDIR)/amr_dbg-amr.Po \
 	src/numerics/$(DEPDIR)/libmesh_prof_la-laspack_vector.Plo \
 	src/numerics/$(DEPDIR)/libmesh_prof_la-lumped_mass_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_prof_la-numeric_vector.Plo \
+	src/numerics/$(DEPDIR)/libmesh_prof_la-parsed_function_program.Plo \
 	src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix_base.Plo \
 	src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix_shell_matrix.Plo \
@@ -7414,34 +7497,36 @@ SOURCES = $(libmesh_dbg_la_SOURCES) $(libmesh_devel_la_SOURCES) \
 	$(libmesh_prof_la_SOURCES) $(amr_dbg_SOURCES) \
 	$(amr_devel_SOURCES) $(amr_oprof_SOURCES) $(amr_opt_SOURCES) \
 	$(calculator_dbg_SOURCES) $(calculator_devel_SOURCES) \
-	$(calculator_oprof_SOURCES) $(calculator_opt_SOURCES) \
-	$(compare_dbg_SOURCES) $(compare_devel_SOURCES) \
-	$(compare_oprof_SOURCES) $(compare_opt_SOURCES) \
-	$(embedding_dbg_SOURCES) $(embedding_devel_SOURCES) \
-	$(embedding_oprof_SOURCES) $(embedding_opt_SOURCES) \
-	$(fparser_parse_dbg_SOURCES) $(fparser_parse_devel_SOURCES) \
-	$(fparser_parse_oprof_SOURCES) $(fparser_parse_opt_SOURCES) \
-	$(getpot_parse_dbg_SOURCES) $(getpot_parse_devel_SOURCES) \
-	$(getpot_parse_oprof_SOURCES) $(getpot_parse_opt_SOURCES) \
-	$(matrixconvert_dbg_SOURCES) $(matrixconvert_devel_SOURCES) \
-	$(matrixconvert_oprof_SOURCES) $(matrixconvert_opt_SOURCES) \
-	$(matrixsolve_dbg_SOURCES) $(matrixsolve_devel_SOURCES) \
-	$(matrixsolve_oprof_SOURCES) $(matrixsolve_opt_SOURCES) \
-	$(meshavg_dbg_SOURCES) $(meshavg_devel_SOURCES) \
-	$(meshavg_oprof_SOURCES) $(meshavg_opt_SOURCES) \
-	$(meshbcid_dbg_SOURCES) $(meshbcid_devel_SOURCES) \
-	$(meshbcid_oprof_SOURCES) $(meshbcid_opt_SOURCES) \
-	$(meshdiff_dbg_SOURCES) $(meshdiff_devel_SOURCES) \
-	$(meshdiff_oprof_SOURCES) $(meshdiff_opt_SOURCES) \
-	$(meshid_dbg_SOURCES) $(meshid_devel_SOURCES) \
-	$(meshid_oprof_SOURCES) $(meshid_opt_SOURCES) \
-	$(meshnorm_dbg_SOURCES) $(meshnorm_devel_SOURCES) \
-	$(meshnorm_oprof_SOURCES) $(meshnorm_opt_SOURCES) \
-	$(meshplot_dbg_SOURCES) $(meshplot_devel_SOURCES) \
-	$(meshplot_oprof_SOURCES) $(meshplot_opt_SOURCES) \
-	$(meshtool_dbg_SOURCES) $(meshtool_devel_SOURCES) \
-	$(meshtool_oprof_SOURCES) $(meshtool_opt_SOURCES) \
-	$(output_libmesh_version_dbg_SOURCES) \
+	$(calculator_kokkos_dbg_SOURCES) \
+	$(calculator_kokkos_devel_SOURCES) \
+	$(calculator_kokkos_opt_SOURCES) $(calculator_oprof_SOURCES) \
+	$(calculator_opt_SOURCES) $(compare_dbg_SOURCES) \
+	$(compare_devel_SOURCES) $(compare_oprof_SOURCES) \
+	$(compare_opt_SOURCES) $(embedding_dbg_SOURCES) \
+	$(embedding_devel_SOURCES) $(embedding_oprof_SOURCES) \
+	$(embedding_opt_SOURCES) $(fparser_parse_dbg_SOURCES) \
+	$(fparser_parse_devel_SOURCES) $(fparser_parse_oprof_SOURCES) \
+	$(fparser_parse_opt_SOURCES) $(getpot_parse_dbg_SOURCES) \
+	$(getpot_parse_devel_SOURCES) $(getpot_parse_oprof_SOURCES) \
+	$(getpot_parse_opt_SOURCES) $(matrixconvert_dbg_SOURCES) \
+	$(matrixconvert_devel_SOURCES) $(matrixconvert_oprof_SOURCES) \
+	$(matrixconvert_opt_SOURCES) $(matrixsolve_dbg_SOURCES) \
+	$(matrixsolve_devel_SOURCES) $(matrixsolve_oprof_SOURCES) \
+	$(matrixsolve_opt_SOURCES) $(meshavg_dbg_SOURCES) \
+	$(meshavg_devel_SOURCES) $(meshavg_oprof_SOURCES) \
+	$(meshavg_opt_SOURCES) $(meshbcid_dbg_SOURCES) \
+	$(meshbcid_devel_SOURCES) $(meshbcid_oprof_SOURCES) \
+	$(meshbcid_opt_SOURCES) $(meshdiff_dbg_SOURCES) \
+	$(meshdiff_devel_SOURCES) $(meshdiff_oprof_SOURCES) \
+	$(meshdiff_opt_SOURCES) $(meshid_dbg_SOURCES) \
+	$(meshid_devel_SOURCES) $(meshid_oprof_SOURCES) \
+	$(meshid_opt_SOURCES) $(meshnorm_dbg_SOURCES) \
+	$(meshnorm_devel_SOURCES) $(meshnorm_oprof_SOURCES) \
+	$(meshnorm_opt_SOURCES) $(meshplot_dbg_SOURCES) \
+	$(meshplot_devel_SOURCES) $(meshplot_oprof_SOURCES) \
+	$(meshplot_opt_SOURCES) $(meshtool_dbg_SOURCES) \
+	$(meshtool_devel_SOURCES) $(meshtool_oprof_SOURCES) \
+	$(meshtool_opt_SOURCES) $(output_libmesh_version_dbg_SOURCES) \
 	$(output_libmesh_version_devel_SOURCES) \
 	$(output_libmesh_version_oprof_SOURCES) \
 	$(output_libmesh_version_opt_SOURCES) \
@@ -7459,8 +7544,12 @@ DIST_SOURCES = $(am__libmesh_dbg_la_SOURCES_DIST) \
 	$(am__libmesh_opt_la_SOURCES_DIST) \
 	$(am__libmesh_prof_la_SOURCES_DIST) $(amr_dbg_SOURCES) \
 	$(amr_devel_SOURCES) $(amr_oprof_SOURCES) $(amr_opt_SOURCES) \
-	$(calculator_dbg_SOURCES) $(calculator_devel_SOURCES) \
-	$(calculator_oprof_SOURCES) $(calculator_opt_SOURCES) \
+	$(am__calculator_dbg_SOURCES_DIST) \
+	$(am__calculator_devel_SOURCES_DIST) \
+	$(am__calculator_kokkos_dbg_SOURCES_DIST) \
+	$(am__calculator_kokkos_devel_SOURCES_DIST) \
+	$(am__calculator_kokkos_opt_SOURCES_DIST) \
+	$(calculator_oprof_SOURCES) $(am__calculator_opt_SOURCES_DIST) \
 	$(compare_dbg_SOURCES) $(compare_devel_SOURCES) \
 	$(compare_oprof_SOURCES) $(compare_opt_SOURCES) \
 	$(embedding_dbg_SOURCES) $(embedding_devel_SOURCES) \
@@ -7972,7 +8061,7 @@ vtkversion = @vtkversion@
 #          test/unit/Makefile.in
 
 # Make sure we build the library before we test it
-SUBDIRS = include contrib . $(am__append_16) $(am__append_21) doc
+SUBDIRS = include contrib . $(am__append_16) $(am__append_27) doc
 AUTOMAKE_OPTIONS = subdir-objects
 ACLOCAL_AMFLAGS = -I m4 -I m4/autoconf-submodule
 AM_CFLAGS = $(libmesh_CFLAGS)
@@ -8002,10 +8091,36 @@ TAR_OPTIONS = --hard-dereference
 # codes.  These will be augmented with method-specific
 # cppflags later on
 AM_CPPFLAGS = -DLIBMESH_IS_COMPILING_ITSELF \
+                   -iquote $(top_builddir)/include \
+                   -iquote $(top_srcdir)/contrib/netgen \
                    $(libmesh_contrib_INCLUDES) \
                    $(libmesh_optional_INCLUDES) \
                    -I$(top_builddir)/include # required for libmesh_version.h
 
+
+# nvcc does not reliably treat GCC-style two-token -iquote options as
+# preprocessor options, so keep Kokkos .K rules on -I include paths.
+KOKKOS_AM_CPPFLAGS = -DLIBMESH_IS_COMPILING_ITSELF \
+                     -I$(top_builddir)/include \
+                     -I$(top_srcdir)/contrib/netgen \
+                     $(libmesh_contrib_INCLUDES) \
+                     $(libmesh_optional_INCLUDES) \
+                     -I$(top_builddir)/include # required for libmesh_version.h
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@KOKKOS_LIBMESH_DBG_OBJECTS = src/base/dof_map_kokkos_dbg.lo src/base/libmesh_kokkos_dbg.lo src/mesh/mesh_base_kokkos_dbg.lo
+@LIBMESH_ENABLE_KOKKOS_TRUE@KOKKOS_LIBMESH_DEVEL_OBJECTS = src/base/dof_map_kokkos_devel.lo src/base/libmesh_kokkos_devel.lo src/mesh/mesh_base_kokkos_devel.lo
+@LIBMESH_ENABLE_KOKKOS_TRUE@KOKKOS_LIBMESH_OPT_OBJECTS = src/base/dof_map_kokkos_opt.lo src/base/libmesh_kokkos_opt.lo src/mesh/mesh_base_kokkos_opt.lo
+@LIBMESH_ENABLE_KOKKOS_TRUE@KOKKOS_LIBMESH_PROF_OBJECTS = src/base/dof_map_kokkos_prof.lo src/base/libmesh_kokkos_prof.lo src/mesh/mesh_base_kokkos_prof.lo
+@LIBMESH_ENABLE_KOKKOS_TRUE@KOKKOS_LIBMESH_OPROF_OBJECTS = src/base/dof_map_kokkos_oprof.lo src/base/libmesh_kokkos_oprof.lo src/mesh/mesh_base_kokkos_oprof.lo
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_L2SYSTEM_DBG_OBJECTS = src/apps/L2system_kokkos_dbg.o
+@LIBMESH_ENABLE_COMPLEX_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_L2SYSTEM_DBG_OBJECTS = 
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_FALSE@KOKKOS_L2SYSTEM_DBG_OBJECTS = 
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_L2SYSTEM_DEVEL_OBJECTS = src/apps/L2system_kokkos_devel.o
+@LIBMESH_ENABLE_COMPLEX_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_L2SYSTEM_DEVEL_OBJECTS = 
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_FALSE@KOKKOS_L2SYSTEM_DEVEL_OBJECTS = 
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_L2SYSTEM_OPT_OBJECTS = src/apps/L2system_kokkos_opt.o
+@LIBMESH_ENABLE_COMPLEX_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_L2SYSTEM_OPT_OBJECTS = 
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_FALSE@KOKKOS_L2SYSTEM_OPT_OBJECTS = 
 
 # additional files which must be included in 'make dist'
 EXTRA_DIST = reference_elements \
@@ -8353,6 +8468,7 @@ libmesh_SOURCES = \
         src/numerics/laspack_vector.C \
         src/numerics/lumped_mass_matrix.C \
         src/numerics/numeric_vector.C \
+        src/numerics/parsed_function_program.C \
         src/numerics/petsc_matrix.C \
         src/numerics/petsc_matrix_base.C \
         src/numerics/petsc_matrix_shell_matrix.C \
@@ -8567,29 +8683,29 @@ lib_LTLIBRARIES = $(am__append_11) $(am__append_12) $(am__append_13) \
 @LIBMESH_DBG_MODE_TRUE@libmesh_dbg_la_CPPFLAGS = $(CPPFLAGS_DBG) $(AM_CPPFLAGS)
 @LIBMESH_DBG_MODE_TRUE@libmesh_dbg_la_CXXFLAGS = $(CXXFLAGS_DBG)
 @LIBMESH_DBG_MODE_TRUE@libmesh_dbg_la_CFLAGS = $(CFLAGS_DBG)
-@LIBMESH_DBG_MODE_TRUE@libmesh_dbg_la_LIBADD = contrib/libcontrib_dbg.la $(LIBS)
+@LIBMESH_DBG_MODE_TRUE@libmesh_dbg_la_LIBADD = contrib/libcontrib_dbg.la $(KOKKOS_LIBMESH_DBG_OBJECTS) $(LIBS)
 @LIBMESH_DEVEL_MODE_TRUE@libmesh_devel_la_SOURCES = $(libmesh_SOURCES)
 @LIBMESH_DEVEL_MODE_TRUE@libmesh_devel_la_CPPFLAGS = $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS)
 @LIBMESH_DEVEL_MODE_TRUE@libmesh_devel_la_CXXFLAGS = $(CXXFLAGS_DEVEL)
 @LIBMESH_DEVEL_MODE_TRUE@libmesh_devel_la_CFLAGS = $(CFLAGS_DEVEL)
-@LIBMESH_DEVEL_MODE_TRUE@libmesh_devel_la_LIBADD = contrib/libcontrib_devel.la $(LIBS)
+@LIBMESH_DEVEL_MODE_TRUE@libmesh_devel_la_LIBADD = contrib/libcontrib_devel.la $(KOKKOS_LIBMESH_DEVEL_OBJECTS) $(LIBS)
 @LIBMESH_OPT_MODE_TRUE@libmesh_opt_la_SOURCES = $(libmesh_SOURCES)
 @LIBMESH_OPT_MODE_TRUE@libmesh_opt_la_CPPFLAGS = $(CPPFLAGS_OPT) $(AM_CPPFLAGS)
 @LIBMESH_OPT_MODE_TRUE@libmesh_opt_la_CXXFLAGS = $(CXXFLAGS_OPT)
 @LIBMESH_OPT_MODE_TRUE@libmesh_opt_la_CFLAGS = $(CFLAGS_OPT)
-@LIBMESH_OPT_MODE_TRUE@libmesh_opt_la_LIBADD = contrib/libcontrib_opt.la $(LIBS)
+@LIBMESH_OPT_MODE_TRUE@libmesh_opt_la_LIBADD = contrib/libcontrib_opt.la $(KOKKOS_LIBMESH_OPT_OBJECTS) $(LIBS)
 @LIBMESH_PROF_MODE_TRUE@libmesh_prof_la_SOURCES = $(libmesh_SOURCES)
 @LIBMESH_PROF_MODE_TRUE@libmesh_prof_la_CPPFLAGS = $(CPPFLAGS_PROF) $(AM_CPPFLAGS)
 @LIBMESH_PROF_MODE_TRUE@libmesh_prof_la_CXXFLAGS = $(CXXFLAGS_PROF)
 @LIBMESH_PROF_MODE_TRUE@libmesh_prof_la_CFLAGS = $(CFLAGS_PROF)
-@LIBMESH_PROF_MODE_TRUE@libmesh_prof_la_LIBADD = contrib/libcontrib_prof.la $(LIBS)
+@LIBMESH_PROF_MODE_TRUE@libmesh_prof_la_LIBADD = contrib/libcontrib_prof.la $(KOKKOS_LIBMESH_PROF_OBJECTS) $(LIBS)
 @LIBMESH_OPROF_MODE_TRUE@libmesh_oprof_la_SOURCES = $(libmesh_SOURCES)
 @LIBMESH_OPROF_MODE_TRUE@libmesh_oprof_la_CPPFLAGS = $(CPPFLAGS_OPROF) $(AM_CPPFLAGS)
 @LIBMESH_OPROF_MODE_TRUE@libmesh_oprof_la_CXXFLAGS = $(CXXFLAGS_OPROF)
 @LIBMESH_OPROF_MODE_TRUE@libmesh_oprof_la_CFLAGS = $(CFLAGS_OPROF)
-@LIBMESH_OPROF_MODE_TRUE@libmesh_oprof_la_LIBADD = contrib/libcontrib_oprof.la $(LIBS)
+@LIBMESH_OPROF_MODE_TRUE@libmesh_oprof_la_LIBADD = contrib/libcontrib_oprof.la $(KOKKOS_LIBMESH_OPROF_OBJECTS) $(LIBS)
 bin_SCRIPTS = # empty, append below
-CLEANFILES = $(am__append_22)
+CLEANFILES = $(am__append_28)
 
 ###########################################################
 # Utility programs
@@ -8605,8 +8721,6 @@ CLEANFILES = $(am__append_22)
 # matrixsolve
 
 # meshtool
-
-# calculator
 
 # compare
 
@@ -8632,23 +8746,23 @@ CLEANFILES = $(am__append_22)
 
 # embedding
 opt_programs = fparser_parse-opt getpot_parse-opt amr-opt \
-	matrixconvert-opt matrixsolve-opt meshtool-opt calculator-opt \
-	compare-opt meshbcid-opt meshid-opt meshavg-opt meshdiff-opt \
-	meshnorm-opt projection-opt output_libmesh_version-opt \
-	meshplot-opt solution_components-opt splitter-opt \
-	embedding-opt
+	matrixconvert-opt matrixsolve-opt meshtool-opt \
+	$(am__append_17) $(am__append_20) compare-opt meshbcid-opt \
+	meshid-opt meshavg-opt meshdiff-opt meshnorm-opt \
+	projection-opt output_libmesh_version-opt meshplot-opt \
+	solution_components-opt splitter-opt embedding-opt
 devel_programs = fparser_parse-devel getpot_parse-devel amr-devel \
 	matrixconvert-devel matrixsolve-devel meshtool-devel \
-	calculator-devel compare-devel meshbcid-devel meshid-devel \
-	meshavg-devel meshdiff-devel meshnorm-devel projection-devel \
-	output_libmesh_version-devel meshplot-devel \
+	$(am__append_18) $(am__append_21) compare-devel meshbcid-devel \
+	meshid-devel meshavg-devel meshdiff-devel meshnorm-devel \
+	projection-devel output_libmesh_version-devel meshplot-devel \
 	solution_components-devel splitter-devel embedding-devel
 dbg_programs = fparser_parse-dbg getpot_parse-dbg amr-dbg \
-	matrixconvert-dbg matrixsolve-dbg meshtool-dbg calculator-dbg \
-	compare-dbg meshbcid-dbg meshid-dbg meshavg-dbg meshdiff-dbg \
-	meshnorm-dbg projection-dbg output_libmesh_version-dbg \
-	meshplot-dbg solution_components-dbg splitter-dbg \
-	embedding-dbg
+	matrixconvert-dbg matrixsolve-dbg meshtool-dbg \
+	$(am__append_19) $(am__append_22) compare-dbg meshbcid-dbg \
+	meshid-dbg meshavg-dbg meshdiff-dbg meshnorm-dbg \
+	projection-dbg output_libmesh_version-dbg meshplot-dbg \
+	solution_components-dbg splitter-dbg embedding-dbg
 prof_programs = # empty, append below
 oprof_programs = fparser_parse-oprof getpot_parse-oprof amr-oprof \
 	matrixconvert-oprof matrixsolve-oprof meshtool-oprof \
@@ -8752,21 +8866,75 @@ meshtool_oprof_SOURCES = src/apps/meshtool.C
 meshtool_oprof_CPPFLAGS = $(CPPFLAGS_OPROF) $(AM_CPPFLAGS)
 meshtool_oprof_CXXFLAGS = $(CXXFLAGS_OPROF)
 meshtool_oprof_LDADD = libmesh_oprof.la
-calculator_opt_SOURCES = src/apps/calculator.C src/apps/L2system.C \
-	src/apps/L2system.h
-calculator_opt_CPPFLAGS = $(CPPFLAGS_OPT) $(AM_CPPFLAGS)
-calculator_opt_CXXFLAGS = $(CXXFLAGS_OPT)
-calculator_opt_LDADD = libmesh_opt.la
-calculator_devel_SOURCES = src/apps/calculator.C src/apps/L2system.C \
-	src/apps/L2system.h
-calculator_devel_CPPFLAGS = $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS)
-calculator_devel_CXXFLAGS = $(CXXFLAGS_DEVEL)
-calculator_devel_LDADD = libmesh_devel.la
-calculator_dbg_SOURCES = src/apps/calculator.C src/apps/L2system.C \
-	src/apps/L2system.h
-calculator_dbg_CPPFLAGS = $(CPPFLAGS_DBG) $(AM_CPPFLAGS)
-calculator_dbg_CXXFLAGS = $(CXXFLAGS_DBG)
-calculator_dbg_LDADD = libmesh_dbg.la
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_opt_SOURCES =  \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/calculator.C \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system.C \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system.h
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_opt_CPPFLAGS = $(CPPFLAGS_OPT) $(AM_CPPFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_opt_CXXFLAGS = $(CXXFLAGS_OPT)
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_opt_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_opt_LDADD = libmesh_opt.la \
+@LIBMESH_ENABLE_KOKKOS_TRUE@                                 $(KOKKOS_LIBMESH_OPT_OBJECTS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@                                 $(KOKKOS_L2SYSTEM_OPT_OBJECTS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@                                 $(KOKKOS_LIBS)
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_opt_LINK = \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(calculator_kokkos_opt_LDFLAGS) $(LDFLAGS) -o $@
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_devel_SOURCES =  \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/calculator.C \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system.C \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system.h
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_devel_CPPFLAGS = $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_devel_CXXFLAGS = $(CXXFLAGS_DEVEL)
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_devel_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_devel_LDADD = libmesh_devel.la \
+@LIBMESH_ENABLE_KOKKOS_TRUE@                                    $(KOKKOS_LIBMESH_DEVEL_OBJECTS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@                                    $(KOKKOS_L2SYSTEM_DEVEL_OBJECTS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@                                    $(KOKKOS_LIBS)
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_devel_LINK = \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(calculator_kokkos_devel_LDFLAGS) $(LDFLAGS) -o $@
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_dbg_SOURCES =  \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/calculator.C \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system.C \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	src/apps/L2system.h
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_dbg_CPPFLAGS = $(CPPFLAGS_DBG) $(AM_CPPFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_dbg_CXXFLAGS = $(CXXFLAGS_DBG)
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_dbg_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_dbg_LDADD = libmesh_dbg.la \
+@LIBMESH_ENABLE_KOKKOS_TRUE@                                 $(KOKKOS_LIBMESH_DBG_OBJECTS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@                                 $(KOKKOS_L2SYSTEM_DBG_OBJECTS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@                                 $(KOKKOS_LIBS)
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_kokkos_dbg_LINK = \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(calculator_kokkos_dbg_LDFLAGS) $(LDFLAGS) -o $@
+
+@LIBMESH_ENABLE_KOKKOS_FALSE@calculator_opt_SOURCES =  \
+@LIBMESH_ENABLE_KOKKOS_FALSE@	src/apps/calculator.C \
+@LIBMESH_ENABLE_KOKKOS_FALSE@	src/apps/L2system.C \
+@LIBMESH_ENABLE_KOKKOS_FALSE@	src/apps/L2system.h
+@LIBMESH_ENABLE_KOKKOS_FALSE@calculator_opt_CPPFLAGS = $(CPPFLAGS_OPT) $(AM_CPPFLAGS)
+@LIBMESH_ENABLE_KOKKOS_FALSE@calculator_opt_CXXFLAGS = $(CXXFLAGS_OPT)
+@LIBMESH_ENABLE_KOKKOS_FALSE@calculator_opt_LDADD = libmesh_opt.la
+@LIBMESH_ENABLE_KOKKOS_FALSE@calculator_devel_SOURCES =  \
+@LIBMESH_ENABLE_KOKKOS_FALSE@	src/apps/calculator.C \
+@LIBMESH_ENABLE_KOKKOS_FALSE@	src/apps/L2system.C \
+@LIBMESH_ENABLE_KOKKOS_FALSE@	src/apps/L2system.h
+@LIBMESH_ENABLE_KOKKOS_FALSE@calculator_devel_CPPFLAGS = $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS)
+@LIBMESH_ENABLE_KOKKOS_FALSE@calculator_devel_CXXFLAGS = $(CXXFLAGS_DEVEL)
+@LIBMESH_ENABLE_KOKKOS_FALSE@calculator_devel_LDADD = libmesh_devel.la
+@LIBMESH_ENABLE_KOKKOS_FALSE@calculator_dbg_SOURCES =  \
+@LIBMESH_ENABLE_KOKKOS_FALSE@	src/apps/calculator.C \
+@LIBMESH_ENABLE_KOKKOS_FALSE@	src/apps/L2system.C \
+@LIBMESH_ENABLE_KOKKOS_FALSE@	src/apps/L2system.h
+@LIBMESH_ENABLE_KOKKOS_FALSE@calculator_dbg_CPPFLAGS = $(CPPFLAGS_DBG) $(AM_CPPFLAGS)
+@LIBMESH_ENABLE_KOKKOS_FALSE@calculator_dbg_CXXFLAGS = $(CXXFLAGS_DBG)
+@LIBMESH_ENABLE_KOKKOS_FALSE@calculator_dbg_LDADD = libmesh_dbg.la
 calculator_oprof_SOURCES = src/apps/calculator.C src/apps/L2system.C \
 	src/apps/L2system.h
 calculator_oprof_CPPFLAGS = $(CPPFLAGS_OPROF) $(AM_CPPFLAGS)
@@ -9730,6 +9898,9 @@ src/numerics/libmesh_dbg_la-lumped_mass_matrix.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
 src/numerics/libmesh_dbg_la-numeric_vector.lo:  \
+	src/numerics/$(am__dirstamp) \
+	src/numerics/$(DEPDIR)/$(am__dirstamp)
+src/numerics/libmesh_dbg_la-parsed_function_program.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
 src/numerics/libmesh_dbg_la-petsc_matrix.lo:  \
@@ -10957,6 +11128,9 @@ src/numerics/libmesh_devel_la-lumped_mass_matrix.lo:  \
 src/numerics/libmesh_devel_la-numeric_vector.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
+src/numerics/libmesh_devel_la-parsed_function_program.lo:  \
+	src/numerics/$(am__dirstamp) \
+	src/numerics/$(DEPDIR)/$(am__dirstamp)
 src/numerics/libmesh_devel_la-petsc_matrix.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
@@ -12129,6 +12303,9 @@ src/numerics/libmesh_oprof_la-lumped_mass_matrix.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
 src/numerics/libmesh_oprof_la-numeric_vector.lo:  \
+	src/numerics/$(am__dirstamp) \
+	src/numerics/$(DEPDIR)/$(am__dirstamp)
+src/numerics/libmesh_oprof_la-parsed_function_program.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
 src/numerics/libmesh_oprof_la-petsc_matrix.lo:  \
@@ -13305,6 +13482,9 @@ src/numerics/libmesh_opt_la-lumped_mass_matrix.lo:  \
 src/numerics/libmesh_opt_la-numeric_vector.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
+src/numerics/libmesh_opt_la-parsed_function_program.lo:  \
+	src/numerics/$(am__dirstamp) \
+	src/numerics/$(DEPDIR)/$(am__dirstamp)
 src/numerics/libmesh_opt_la-petsc_matrix.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
@@ -14476,6 +14656,9 @@ src/numerics/libmesh_prof_la-lumped_mass_matrix.lo:  \
 src/numerics/libmesh_prof_la-numeric_vector.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
+src/numerics/libmesh_prof_la-parsed_function_program.lo:  \
+	src/numerics/$(am__dirstamp) \
+	src/numerics/$(DEPDIR)/$(am__dirstamp)
 src/numerics/libmesh_prof_la-petsc_matrix.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
@@ -15109,6 +15292,30 @@ src/apps/calculator_devel-L2system.$(OBJEXT):  \
 calculator-devel$(EXEEXT): $(calculator_devel_OBJECTS) $(calculator_devel_DEPENDENCIES) $(EXTRA_calculator_devel_DEPENDENCIES) 
 	@rm -f calculator-devel$(EXEEXT)
 	$(AM_V_CXXLD)$(calculator_devel_LINK) $(calculator_devel_OBJECTS) $(calculator_devel_LDADD) $(LIBS)
+src/apps/calculator_kokkos_dbg-calculator.$(OBJEXT):  \
+	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
+src/apps/calculator_kokkos_dbg-L2system.$(OBJEXT):  \
+	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
+
+calculator-kokkos-dbg$(EXEEXT): $(calculator_kokkos_dbg_OBJECTS) $(calculator_kokkos_dbg_DEPENDENCIES) $(EXTRA_calculator_kokkos_dbg_DEPENDENCIES) 
+	@rm -f calculator-kokkos-dbg$(EXEEXT)
+	$(AM_V_GEN)$(calculator_kokkos_dbg_LINK) $(calculator_kokkos_dbg_OBJECTS) $(calculator_kokkos_dbg_LDADD) $(LIBS)
+src/apps/calculator_kokkos_devel-calculator.$(OBJEXT):  \
+	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
+src/apps/calculator_kokkos_devel-L2system.$(OBJEXT):  \
+	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
+
+calculator-kokkos-devel$(EXEEXT): $(calculator_kokkos_devel_OBJECTS) $(calculator_kokkos_devel_DEPENDENCIES) $(EXTRA_calculator_kokkos_devel_DEPENDENCIES) 
+	@rm -f calculator-kokkos-devel$(EXEEXT)
+	$(AM_V_GEN)$(calculator_kokkos_devel_LINK) $(calculator_kokkos_devel_OBJECTS) $(calculator_kokkos_devel_LDADD) $(LIBS)
+src/apps/calculator_kokkos_opt-calculator.$(OBJEXT):  \
+	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
+src/apps/calculator_kokkos_opt-L2system.$(OBJEXT):  \
+	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
+
+calculator-kokkos-opt$(EXEEXT): $(calculator_kokkos_opt_OBJECTS) $(calculator_kokkos_opt_DEPENDENCIES) $(EXTRA_calculator_kokkos_opt_DEPENDENCIES) 
+	@rm -f calculator-kokkos-opt$(EXEEXT)
+	$(AM_V_GEN)$(calculator_kokkos_opt_LINK) $(calculator_kokkos_opt_OBJECTS) $(calculator_kokkos_opt_LDADD) $(LIBS)
 src/apps/calculator_oprof-calculator.$(OBJEXT):  \
 	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
 src/apps/calculator_oprof-L2system.$(OBJEXT):  \
@@ -15686,6 +15893,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_dbg-calculator.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_devel-L2system.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_devel-calculator.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_kokkos_dbg-L2system.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_kokkos_devel-L2system.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_kokkos_opt-L2system.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_oprof-L2system.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_oprof-calculator.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/apps/$(DEPDIR)/calculator_opt-L2system.Po@am__quote@ # am--include-marker
@@ -17055,6 +17268,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_dbg_la-laspack_vector.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_dbg_la-lumped_mass_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_dbg_la-numeric_vector.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_dbg_la-parsed_function_program.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix_base.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix_shell_matrix.Plo@am__quote@ # am--include-marker
@@ -17093,6 +17307,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_devel_la-laspack_vector.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_devel_la-lumped_mass_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_devel_la-numeric_vector.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_devel_la-parsed_function_program.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix_base.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix_shell_matrix.Plo@am__quote@ # am--include-marker
@@ -17131,6 +17346,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_oprof_la-laspack_vector.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_oprof_la-lumped_mass_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_oprof_la-numeric_vector.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_oprof_la-parsed_function_program.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix_base.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix_shell_matrix.Plo@am__quote@ # am--include-marker
@@ -17169,6 +17385,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_opt_la-laspack_vector.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_opt_la-lumped_mass_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_opt_la-numeric_vector.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_opt_la-parsed_function_program.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix_base.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix_shell_matrix.Plo@am__quote@ # am--include-marker
@@ -17207,6 +17424,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_prof_la-laspack_vector.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_prof_la-lumped_mass_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_prof_la-numeric_vector.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_prof_la-parsed_function_program.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix_base.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix_shell_matrix.Plo@am__quote@ # am--include-marker
@@ -20079,6 +20297,13 @@ src/numerics/libmesh_dbg_la-numeric_vector.lo: src/numerics/numeric_vector.C
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/numerics/numeric_vector.C' object='src/numerics/libmesh_dbg_la-numeric_vector.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_dbg_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_dbg_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_dbg_la-numeric_vector.lo `test -f 'src/numerics/numeric_vector.C' || echo '$(srcdir)/'`src/numerics/numeric_vector.C
+
+src/numerics/libmesh_dbg_la-parsed_function_program.lo: src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_dbg_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_dbg_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_dbg_la-parsed_function_program.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_dbg_la-parsed_function_program.Tpo -c -o src/numerics/libmesh_dbg_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/numerics/$(DEPDIR)/libmesh_dbg_la-parsed_function_program.Tpo src/numerics/$(DEPDIR)/libmesh_dbg_la-parsed_function_program.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/numerics/parsed_function_program.C' object='src/numerics/libmesh_dbg_la-parsed_function_program.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_dbg_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_dbg_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_dbg_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
 
 src/numerics/libmesh_dbg_la-petsc_matrix.lo: src/numerics/petsc_matrix.C
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_dbg_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_dbg_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_dbg_la-petsc_matrix.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix.Tpo -c -o src/numerics/libmesh_dbg_la-petsc_matrix.lo `test -f 'src/numerics/petsc_matrix.C' || echo '$(srcdir)/'`src/numerics/petsc_matrix.C
@@ -23412,6 +23637,13 @@ src/numerics/libmesh_devel_la-numeric_vector.lo: src/numerics/numeric_vector.C
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_devel_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_devel_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_devel_la-numeric_vector.lo `test -f 'src/numerics/numeric_vector.C' || echo '$(srcdir)/'`src/numerics/numeric_vector.C
 
+src/numerics/libmesh_devel_la-parsed_function_program.lo: src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_devel_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_devel_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_devel_la-parsed_function_program.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_devel_la-parsed_function_program.Tpo -c -o src/numerics/libmesh_devel_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/numerics/$(DEPDIR)/libmesh_devel_la-parsed_function_program.Tpo src/numerics/$(DEPDIR)/libmesh_devel_la-parsed_function_program.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/numerics/parsed_function_program.C' object='src/numerics/libmesh_devel_la-parsed_function_program.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_devel_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_devel_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_devel_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
+
 src/numerics/libmesh_devel_la-petsc_matrix.lo: src/numerics/petsc_matrix.C
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_devel_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_devel_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_devel_la-petsc_matrix.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix.Tpo -c -o src/numerics/libmesh_devel_la-petsc_matrix.lo `test -f 'src/numerics/petsc_matrix.C' || echo '$(srcdir)/'`src/numerics/petsc_matrix.C
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix.Tpo src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix.Plo
@@ -26743,6 +26975,13 @@ src/numerics/libmesh_oprof_la-numeric_vector.lo: src/numerics/numeric_vector.C
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/numerics/numeric_vector.C' object='src/numerics/libmesh_oprof_la-numeric_vector.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_oprof_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_oprof_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_oprof_la-numeric_vector.lo `test -f 'src/numerics/numeric_vector.C' || echo '$(srcdir)/'`src/numerics/numeric_vector.C
+
+src/numerics/libmesh_oprof_la-parsed_function_program.lo: src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_oprof_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_oprof_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_oprof_la-parsed_function_program.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_oprof_la-parsed_function_program.Tpo -c -o src/numerics/libmesh_oprof_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/numerics/$(DEPDIR)/libmesh_oprof_la-parsed_function_program.Tpo src/numerics/$(DEPDIR)/libmesh_oprof_la-parsed_function_program.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/numerics/parsed_function_program.C' object='src/numerics/libmesh_oprof_la-parsed_function_program.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_oprof_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_oprof_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_oprof_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
 
 src/numerics/libmesh_oprof_la-petsc_matrix.lo: src/numerics/petsc_matrix.C
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_oprof_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_oprof_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_oprof_la-petsc_matrix.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix.Tpo -c -o src/numerics/libmesh_oprof_la-petsc_matrix.lo `test -f 'src/numerics/petsc_matrix.C' || echo '$(srcdir)/'`src/numerics/petsc_matrix.C
@@ -30076,6 +30315,13 @@ src/numerics/libmesh_opt_la-numeric_vector.lo: src/numerics/numeric_vector.C
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_opt_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_opt_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_opt_la-numeric_vector.lo `test -f 'src/numerics/numeric_vector.C' || echo '$(srcdir)/'`src/numerics/numeric_vector.C
 
+src/numerics/libmesh_opt_la-parsed_function_program.lo: src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_opt_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_opt_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_opt_la-parsed_function_program.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_opt_la-parsed_function_program.Tpo -c -o src/numerics/libmesh_opt_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/numerics/$(DEPDIR)/libmesh_opt_la-parsed_function_program.Tpo src/numerics/$(DEPDIR)/libmesh_opt_la-parsed_function_program.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/numerics/parsed_function_program.C' object='src/numerics/libmesh_opt_la-parsed_function_program.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_opt_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_opt_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_opt_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
+
 src/numerics/libmesh_opt_la-petsc_matrix.lo: src/numerics/petsc_matrix.C
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_opt_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_opt_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_opt_la-petsc_matrix.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix.Tpo -c -o src/numerics/libmesh_opt_la-petsc_matrix.lo `test -f 'src/numerics/petsc_matrix.C' || echo '$(srcdir)/'`src/numerics/petsc_matrix.C
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix.Tpo src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix.Plo
@@ -33408,6 +33654,13 @@ src/numerics/libmesh_prof_la-numeric_vector.lo: src/numerics/numeric_vector.C
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_prof_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_prof_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_prof_la-numeric_vector.lo `test -f 'src/numerics/numeric_vector.C' || echo '$(srcdir)/'`src/numerics/numeric_vector.C
 
+src/numerics/libmesh_prof_la-parsed_function_program.lo: src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_prof_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_prof_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_prof_la-parsed_function_program.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_prof_la-parsed_function_program.Tpo -c -o src/numerics/libmesh_prof_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/numerics/$(DEPDIR)/libmesh_prof_la-parsed_function_program.Tpo src/numerics/$(DEPDIR)/libmesh_prof_la-parsed_function_program.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/numerics/parsed_function_program.C' object='src/numerics/libmesh_prof_la-parsed_function_program.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_prof_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_prof_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_prof_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
+
 src/numerics/libmesh_prof_la-petsc_matrix.lo: src/numerics/petsc_matrix.C
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_prof_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_prof_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_prof_la-petsc_matrix.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix.Tpo -c -o src/numerics/libmesh_prof_la-petsc_matrix.lo `test -f 'src/numerics/petsc_matrix.C' || echo '$(srcdir)/'`src/numerics/petsc_matrix.C
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix.Tpo src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix.Plo
@@ -34941,6 +35194,90 @@ src/apps/calculator_devel-L2system.obj: src/apps/L2system.C
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_devel_CPPFLAGS) $(CPPFLAGS) $(calculator_devel_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_devel-L2system.obj `if test -f 'src/apps/L2system.C'; then $(CYGPATH_W) 'src/apps/L2system.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/L2system.C'; fi`
 
+src/apps/calculator_kokkos_dbg-calculator.o: src/apps/calculator.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_dbg-calculator.o -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Tpo -c -o src/apps/calculator_kokkos_dbg-calculator.o `test -f 'src/apps/calculator.C' || echo '$(srcdir)/'`src/apps/calculator.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Tpo src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/calculator.C' object='src/apps/calculator_kokkos_dbg-calculator.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_dbg-calculator.o `test -f 'src/apps/calculator.C' || echo '$(srcdir)/'`src/apps/calculator.C
+
+src/apps/calculator_kokkos_dbg-calculator.obj: src/apps/calculator.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_dbg-calculator.obj -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Tpo -c -o src/apps/calculator_kokkos_dbg-calculator.obj `if test -f 'src/apps/calculator.C'; then $(CYGPATH_W) 'src/apps/calculator.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/calculator.C'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Tpo src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/calculator.C' object='src/apps/calculator_kokkos_dbg-calculator.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_dbg-calculator.obj `if test -f 'src/apps/calculator.C'; then $(CYGPATH_W) 'src/apps/calculator.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/calculator.C'; fi`
+
+@LIBMESH_ENABLE_KOKKOS_FALSE@src/apps/calculator_kokkos_dbg-L2system.o: src/apps/L2system.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_dbg-L2system.o -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_dbg-L2system.Tpo -c -o src/apps/calculator_kokkos_dbg-L2system.o `test -f 'src/apps/L2system.C' || echo '$(srcdir)/'`src/apps/L2system.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_dbg-L2system.Tpo src/apps/$(DEPDIR)/calculator_kokkos_dbg-L2system.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/L2system.C' object='src/apps/calculator_kokkos_dbg-L2system.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_dbg-L2system.o `test -f 'src/apps/L2system.C' || echo '$(srcdir)/'`src/apps/L2system.C
+
+src/apps/calculator_kokkos_dbg-L2system.obj: src/apps/L2system.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_dbg-L2system.obj -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_dbg-L2system.Tpo -c -o src/apps/calculator_kokkos_dbg-L2system.obj `if test -f 'src/apps/L2system.C'; then $(CYGPATH_W) 'src/apps/L2system.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/L2system.C'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_dbg-L2system.Tpo src/apps/$(DEPDIR)/calculator_kokkos_dbg-L2system.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/L2system.C' object='src/apps/calculator_kokkos_dbg-L2system.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_dbg-L2system.obj `if test -f 'src/apps/L2system.C'; then $(CYGPATH_W) 'src/apps/L2system.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/L2system.C'; fi`
+
+src/apps/calculator_kokkos_devel-calculator.o: src/apps/calculator.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_devel_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_devel-calculator.o -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Tpo -c -o src/apps/calculator_kokkos_devel-calculator.o `test -f 'src/apps/calculator.C' || echo '$(srcdir)/'`src/apps/calculator.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Tpo src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/calculator.C' object='src/apps/calculator_kokkos_devel-calculator.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_devel_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_devel-calculator.o `test -f 'src/apps/calculator.C' || echo '$(srcdir)/'`src/apps/calculator.C
+
+src/apps/calculator_kokkos_devel-calculator.obj: src/apps/calculator.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_devel_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_devel-calculator.obj -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Tpo -c -o src/apps/calculator_kokkos_devel-calculator.obj `if test -f 'src/apps/calculator.C'; then $(CYGPATH_W) 'src/apps/calculator.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/calculator.C'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Tpo src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/calculator.C' object='src/apps/calculator_kokkos_devel-calculator.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_devel_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_devel-calculator.obj `if test -f 'src/apps/calculator.C'; then $(CYGPATH_W) 'src/apps/calculator.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/calculator.C'; fi`
+
+@LIBMESH_ENABLE_KOKKOS_FALSE@src/apps/calculator_kokkos_devel-L2system.o: src/apps/L2system.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_devel_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_devel-L2system.o -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_devel-L2system.Tpo -c -o src/apps/calculator_kokkos_devel-L2system.o `test -f 'src/apps/L2system.C' || echo '$(srcdir)/'`src/apps/L2system.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_devel-L2system.Tpo src/apps/$(DEPDIR)/calculator_kokkos_devel-L2system.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/L2system.C' object='src/apps/calculator_kokkos_devel-L2system.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_devel_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_devel-L2system.o `test -f 'src/apps/L2system.C' || echo '$(srcdir)/'`src/apps/L2system.C
+
+src/apps/calculator_kokkos_devel-L2system.obj: src/apps/L2system.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_devel_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_devel-L2system.obj -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_devel-L2system.Tpo -c -o src/apps/calculator_kokkos_devel-L2system.obj `if test -f 'src/apps/L2system.C'; then $(CYGPATH_W) 'src/apps/L2system.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/L2system.C'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_devel-L2system.Tpo src/apps/$(DEPDIR)/calculator_kokkos_devel-L2system.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/L2system.C' object='src/apps/calculator_kokkos_devel-L2system.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_devel_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_devel-L2system.obj `if test -f 'src/apps/L2system.C'; then $(CYGPATH_W) 'src/apps/L2system.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/L2system.C'; fi`
+
+src/apps/calculator_kokkos_opt-calculator.o: src/apps/calculator.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_opt_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_opt_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_opt-calculator.o -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Tpo -c -o src/apps/calculator_kokkos_opt-calculator.o `test -f 'src/apps/calculator.C' || echo '$(srcdir)/'`src/apps/calculator.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Tpo src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/calculator.C' object='src/apps/calculator_kokkos_opt-calculator.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_opt_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_opt_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_opt-calculator.o `test -f 'src/apps/calculator.C' || echo '$(srcdir)/'`src/apps/calculator.C
+
+src/apps/calculator_kokkos_opt-calculator.obj: src/apps/calculator.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_opt_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_opt_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_opt-calculator.obj -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Tpo -c -o src/apps/calculator_kokkos_opt-calculator.obj `if test -f 'src/apps/calculator.C'; then $(CYGPATH_W) 'src/apps/calculator.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/calculator.C'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Tpo src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/calculator.C' object='src/apps/calculator_kokkos_opt-calculator.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_opt_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_opt_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_opt-calculator.obj `if test -f 'src/apps/calculator.C'; then $(CYGPATH_W) 'src/apps/calculator.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/calculator.C'; fi`
+
+@LIBMESH_ENABLE_KOKKOS_FALSE@src/apps/calculator_kokkos_opt-L2system.o: src/apps/L2system.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_opt_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_opt_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_opt-L2system.o -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_opt-L2system.Tpo -c -o src/apps/calculator_kokkos_opt-L2system.o `test -f 'src/apps/L2system.C' || echo '$(srcdir)/'`src/apps/L2system.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_opt-L2system.Tpo src/apps/$(DEPDIR)/calculator_kokkos_opt-L2system.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/L2system.C' object='src/apps/calculator_kokkos_opt-L2system.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_opt_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_opt_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_opt-L2system.o `test -f 'src/apps/L2system.C' || echo '$(srcdir)/'`src/apps/L2system.C
+
+src/apps/calculator_kokkos_opt-L2system.obj: src/apps/L2system.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_opt_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_opt_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_kokkos_opt-L2system.obj -MD -MP -MF src/apps/$(DEPDIR)/calculator_kokkos_opt-L2system.Tpo -c -o src/apps/calculator_kokkos_opt-L2system.obj `if test -f 'src/apps/L2system.C'; then $(CYGPATH_W) 'src/apps/L2system.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/L2system.C'; fi`
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_kokkos_opt-L2system.Tpo src/apps/$(DEPDIR)/calculator_kokkos_opt-L2system.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/apps/L2system.C' object='src/apps/calculator_kokkos_opt-L2system.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_kokkos_opt_CPPFLAGS) $(CPPFLAGS) $(calculator_kokkos_opt_CXXFLAGS) $(CXXFLAGS) -c -o src/apps/calculator_kokkos_opt-L2system.obj `if test -f 'src/apps/L2system.C'; then $(CYGPATH_W) 'src/apps/L2system.C'; else $(CYGPATH_W) '$(srcdir)/src/apps/L2system.C'; fi`
+
 src/apps/calculator_oprof-calculator.o: src/apps/calculator.C
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(calculator_oprof_CPPFLAGS) $(CPPFLAGS) $(calculator_oprof_CXXFLAGS) $(CXXFLAGS) -MT src/apps/calculator_oprof-calculator.o -MD -MP -MF src/apps/$(DEPDIR)/calculator_oprof-calculator.Tpo -c -o src/apps/calculator_oprof-calculator.o `test -f 'src/apps/calculator.C' || echo '$(srcdir)/'`src/apps/calculator.C
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/apps/$(DEPDIR)/calculator_oprof-calculator.Tpo src/apps/$(DEPDIR)/calculator_oprof-calculator.Po
@@ -36441,6 +36778,12 @@ distclean: distclean-recursive
 	-rm -f src/apps/$(DEPDIR)/calculator_dbg-calculator.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_devel-L2system.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_devel-calculator.Po
+	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_dbg-L2system.Po
+	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Po
+	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_devel-L2system.Po
+	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Po
+	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_opt-L2system.Po
+	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_oprof-L2system.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_oprof-calculator.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_opt-L2system.Po
@@ -37810,6 +38153,7 @@ distclean: distclean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix_shell_matrix.Plo
@@ -37848,6 +38192,7 @@ distclean: distclean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix_shell_matrix.Plo
@@ -37886,6 +38231,7 @@ distclean: distclean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix_shell_matrix.Plo
@@ -37924,6 +38270,7 @@ distclean: distclean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix_shell_matrix.Plo
@@ -37962,6 +38309,7 @@ distclean: distclean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix_shell_matrix.Plo
@@ -38952,6 +39300,12 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f src/apps/$(DEPDIR)/calculator_dbg-calculator.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_devel-L2system.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_devel-calculator.Po
+	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_dbg-L2system.Po
+	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_dbg-calculator.Po
+	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_devel-L2system.Po
+	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_devel-calculator.Po
+	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_opt-L2system.Po
+	-rm -f src/apps/$(DEPDIR)/calculator_kokkos_opt-calculator.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_oprof-L2system.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_oprof-calculator.Po
 	-rm -f src/apps/$(DEPDIR)/calculator_opt-L2system.Po
@@ -40321,6 +40675,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix_shell_matrix.Plo
@@ -40359,6 +40714,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix_shell_matrix.Plo
@@ -40397,6 +40753,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix_shell_matrix.Plo
@@ -40435,6 +40792,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix_shell_matrix.Plo
@@ -40473,6 +40831,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix_shell_matrix.Plo
@@ -41459,6 +41818,132 @@ uninstall-am: uninstall-binPROGRAMS uninstall-binSCRIPTS \
 
 export TAR_OPTIONS
 
+@LIBMESH_ENABLE_KOKKOS_TRUE@include/libmesh/dof_map_kokkos.h:
+@LIBMESH_ENABLE_KOKKOS_TRUE@	@$(MAKE) -C $(top_builddir)/include/libmesh dof_map_kokkos.h
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@include/libmesh/mesh_base_kokkos.h:
+@LIBMESH_ENABLE_KOKKOS_TRUE@	@$(MAKE) -C $(top_builddir)/include/libmesh mesh_base_kokkos.h
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/base/dof_map_kokkos_dbg.lo: src/base/dof_map_kokkos.K include/libmesh/dof_map_kokkos.h include/libmesh/mesh_base_kokkos.h
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_DBG) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/base/dof_map_kokkos_devel.lo: src/base/dof_map_kokkos.K include/libmesh/dof_map_kokkos.h include/libmesh/mesh_base_kokkos.h
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_DEVEL) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/base/dof_map_kokkos_opt.lo: src/base/dof_map_kokkos.K include/libmesh/dof_map_kokkos.h include/libmesh/mesh_base_kokkos.h
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_OPT) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/base/dof_map_kokkos_prof.lo: src/base/dof_map_kokkos.K include/libmesh/dof_map_kokkos.h include/libmesh/mesh_base_kokkos.h
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_PROF) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/base/dof_map_kokkos_oprof.lo: src/base/dof_map_kokkos.K include/libmesh/dof_map_kokkos.h include/libmesh/mesh_base_kokkos.h
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_OPROF) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/base/libmesh_kokkos_dbg.lo: src/base/libmesh_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_DBG) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/base/libmesh_kokkos_devel.lo: src/base/libmesh_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_DEVEL) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/base/libmesh_kokkos_opt.lo: src/base/libmesh_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_OPT) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/base/libmesh_kokkos_prof.lo: src/base/libmesh_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_PROF) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/base/libmesh_kokkos_oprof.lo: src/base/libmesh_kokkos.K
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_OPROF) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/mesh/mesh_base_kokkos_dbg.lo: src/mesh/mesh_base_kokkos.K include/libmesh/mesh_base_kokkos.h
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_DBG) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/mesh/mesh_base_kokkos_devel.lo: src/mesh/mesh_base_kokkos.K include/libmesh/mesh_base_kokkos.h
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_DEVEL) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/mesh/mesh_base_kokkos_opt.lo: src/mesh/mesh_base_kokkos.K include/libmesh/mesh_base_kokkos.h
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_OPT) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/mesh/mesh_base_kokkos_prof.lo: src/mesh/mesh_base_kokkos.K include/libmesh/mesh_base_kokkos.h
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_PROF) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/mesh/mesh_base_kokkos_oprof.lo: src/mesh/mesh_base_kokkos.K include/libmesh/mesh_base_kokkos.h
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX --mode=compile $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(KOKKOS_CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(CPPFLAGS_OPROF) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@src/apps/L2system_kokkos_dbg.o: src/apps/L2system_kokkos.K include/libmesh/dof_map_kokkos.h include/libmesh/mesh_base_kokkos.h
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@	$(KOKKOS_CXX) $(KOKKOS_CXXFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@	  $(CPPFLAGS_DBG) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@src/apps/L2system_kokkos_devel.o: src/apps/L2system_kokkos.K include/libmesh/dof_map_kokkos.h include/libmesh/mesh_base_kokkos.h
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@	$(KOKKOS_CXX) $(KOKKOS_CXXFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@	  $(CPPFLAGS_DEVEL) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@src/apps/L2system_kokkos_opt.o: src/apps/L2system_kokkos.K include/libmesh/dof_map_kokkos.h include/libmesh/mesh_base_kokkos.h
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@	$(KOKKOS_CXX) $(KOKKOS_CXXFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@	  $(CPPFLAGS_OPT) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
 # If our submodules have not all been initialized, throw an
 # error during "make dist". We need the submodules (and their
 # submodules) to be properly initalized so that the sources can be
@@ -41552,6 +42037,24 @@ beautify:
           echo $$file ; \
           emacs -batch $$file --eval '(delete-trailing-whitespace)' -f save-buffer 2>/dev/null ; \
         done
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/apps/calculator_kokkos_opt-L2system.o: src/apps/L2system.C
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(calculator_kokkos_opt_CPPFLAGS) $(CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(calculator_kokkos_opt_CXXFLAGS) $(CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/apps/calculator_kokkos_devel-L2system.o: src/apps/L2system.C
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(calculator_kokkos_devel_CXXFLAGS) $(CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@src/apps/calculator_kokkos_dbg-L2system.o: src/apps/L2system.C
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(calculator_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(calculator_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
 
 ###########################################################
 # Documentation

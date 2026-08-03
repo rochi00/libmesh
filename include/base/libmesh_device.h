@@ -18,6 +18,13 @@
 #ifndef LIBMESH_LIBMESH_DEVICE_H
 #define LIBMESH_LIBMESH_DEVICE_H
 
+// The shared autoconf Kokkos setup marks .K translation units with
+// ACSM_KOKKOS_COMPILATION.  Keep the libMesh-facing spelling as a source-level
+// alias so device-aware headers use the build system's canonical marker.
+#if defined(ACSM_KOKKOS_COMPILATION) && !defined(LIBMESH_KOKKOS_COMPILATION)
+#  define LIBMESH_KOKKOS_COMPILATION
+#endif
+
 // Defines LIBMESH_DEVICE_INLINE, mirroring MetaPhysicL's METAPHYSICL_INLINE
 // pattern (metaphysicl_device.h / METAPHYSICL_KOKKOS_COMPILATION).
 //
