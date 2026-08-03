@@ -40,9 +40,13 @@ else
 check_SCRIPTS += run_kokkos.sh
 
 KOKKOS_ADAPTIVITY_EX2_DEPS = adaptivity_ex2_kokkos.K \
+  $(top_srcdir)/include/base/dof_map_kokkos.h \
+  $(top_srcdir)/include/fe/fe_reference_element_traits.h \
   $(top_srcdir)/include/gpu/kokkos_fe_evaluator.h \
   $(top_srcdir)/include/gpu/kokkos_fe_map.h \
-  $(top_srcdir)/include/gpu/kokkos_quadrature.h
+  $(top_srcdir)/include/gpu/kokkos_quadrature.h \
+  $(top_srcdir)/include/mesh/mesh_base_kokkos.h \
+  $(top_srcdir)/include/numerics/petsc_vector.h
 
 adaptivity_ex2_kokkos_dbg.o: KOKKOS_ADAPTIVITY_EX2_METHOD_CPPFLAGS = $(CPPFLAGS_DBG)
 adaptivity_ex2_kokkos_devel.o: KOKKOS_ADAPTIVITY_EX2_METHOD_CPPFLAGS = $(CPPFLAGS_DEVEL)

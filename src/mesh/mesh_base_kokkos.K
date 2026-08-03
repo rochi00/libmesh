@@ -107,6 +107,10 @@ MeshBase::get_kokkos_geometry_cache() const
                                                         cache->host_element_ids.size(),
                                                         cache->max_sides,
                                                         cache->max_side_nodes);
+  cache->element_side_is_boundary_dual =
+    KokkosGeometryCache::elem_side_boundary_dual_view("mesh_kokkos_element_side_is_boundary",
+                                                      cache->host_element_ids.size(),
+                                                      cache->max_sides);
   cache->element_edge_positive_orientations_dual =
     KokkosGeometryCache::elem_edge_orientation_dual_view("mesh_kokkos_element_edge_orientations",
                                                          cache->host_element_ids.size(),
@@ -135,6 +139,7 @@ MeshBase::get_kokkos_geometry_cache() const
   auto h_element_side_types = cache->element_side_types_dual.view_host();
   auto h_element_side_n_nodes = cache->element_side_n_nodes_dual.view_host();
   auto h_element_side_local_nodes = cache->element_side_local_nodes_dual.view_host();
+  auto h_element_side_is_boundary = cache->element_side_is_boundary_dual.view_host();
   auto h_element_edge_positive_orientations =
     cache->element_edge_positive_orientations_dual.view_host();
   auto h_element_face_positive_orientations =
@@ -151,6 +156,7 @@ MeshBase::get_kokkos_geometry_cache() const
   ::Kokkos::deep_copy(h_element_side_types, INVALID_ELEM);
   ::Kokkos::deep_copy(h_element_side_n_nodes, 0);
   ::Kokkos::deep_copy(h_element_side_local_nodes, libMesh::invalid_uint);
+  ::Kokkos::deep_copy(h_element_side_is_boundary, static_cast<unsigned char>(0));
   ::Kokkos::deep_copy(h_element_edge_positive_orientations, static_cast<unsigned char>(0));
   ::Kokkos::deep_copy(h_element_face_positive_orientations, static_cast<unsigned char>(0));
 
@@ -192,6 +198,8 @@ MeshBase::get_kokkos_geometry_cache() const
           h_element_side_types(elem_index_uint, s) = elem.side_type(s);
           h_element_side_n_nodes(elem_index_uint, s) =
             cast_int<unsigned int>(side_nodes.size());
+          h_element_side_is_boundary(elem_index_uint, s) =
+            elem.neighbor_ptr(s) == nullptr ? 1 : 0;
           for (auto local_side_node_index : index_range(side_nodes))
             h_element_side_local_nodes(elem_index_uint,
                                        s,
@@ -221,6 +229,7 @@ MeshBase::get_kokkos_geometry_cache() const
   cache->element_side_types_dual.modify_host();
   cache->element_side_n_nodes_dual.modify_host();
   cache->element_side_local_nodes_dual.modify_host();
+  cache->element_side_is_boundary_dual.modify_host();
   cache->element_edge_positive_orientations_dual.modify_host();
   cache->element_face_positive_orientations_dual.modify_host();
   cache->element_p_levels_dual.modify_host();
@@ -239,6 +248,7 @@ MeshBase::get_kokkos_geometry_cache() const
   cache->element_side_types_dual.sync_device();
   cache->element_side_n_nodes_dual.sync_device();
   cache->element_side_local_nodes_dual.sync_device();
+  cache->element_side_is_boundary_dual.sync_device();
   cache->element_edge_positive_orientations_dual.sync_device();
   cache->element_face_positive_orientations_dual.sync_device();
   cache->element_p_levels_dual.sync_device();
@@ -257,6 +267,7 @@ MeshBase::get_kokkos_geometry_cache() const
   cache->element_side_types = cache->element_side_types_dual.view_device();
   cache->element_side_n_nodes = cache->element_side_n_nodes_dual.view_device();
   cache->element_side_local_nodes = cache->element_side_local_nodes_dual.view_device();
+  cache->element_side_is_boundary = cache->element_side_is_boundary_dual.view_device();
   cache->element_edge_positive_orientations =
     cache->element_edge_positive_orientations_dual.view_device();
   cache->element_face_positive_orientations =

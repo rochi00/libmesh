@@ -852,9 +852,13 @@ TESTS_ENVIRONMENT = LIBMESH_DIR=$(abs_top_srcdir); export LIBMESH_DIR; \
 	petscminor=@petscminor@ enableeigen=@enableeigen@
 TESTS = $(check_SCRIPTS)
 @LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@KOKKOS_ADAPTIVITY_EX2_DEPS = adaptivity_ex2_kokkos.K \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@  $(top_srcdir)/include/base/dof_map_kokkos.h \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@  $(top_srcdir)/include/fe/fe_reference_element_traits.h \
 @LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@  $(top_srcdir)/include/gpu/kokkos_fe_evaluator.h \
 @LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@  $(top_srcdir)/include/gpu/kokkos_fe_map.h \
-@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@  $(top_srcdir)/include/gpu/kokkos_quadrature.h
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@  $(top_srcdir)/include/gpu/kokkos_quadrature.h \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@  $(top_srcdir)/include/mesh/mesh_base_kokkos.h \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@  $(top_srcdir)/include/numerics/petsc_vector.h
 
 @LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_kokkos_dbg_SOURCES = adaptivity_ex2_kokkos.C
 @LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_kokkos_dbg_CPPFLAGS = $(CPPFLAGS_DBG) $(AM_CPPFLAGS)

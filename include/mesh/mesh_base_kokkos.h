@@ -45,6 +45,7 @@ struct MeshBase::KokkosGeometryCache
   using elem_side_type_dual_view = ::Kokkos::DualView<ElemType **, memory_space>;
   using elem_side_n_nodes_dual_view = ::Kokkos::DualView<unsigned int **, memory_space>;
   using elem_side_local_node_dual_view = ::Kokkos::DualView<unsigned int ***, memory_space>;
+  using elem_side_boundary_dual_view = ::Kokkos::DualView<unsigned char **, memory_space>;
   using elem_edge_orientation_dual_view = ::Kokkos::DualView<unsigned char **, memory_space>;
   using elem_face_orientation_dual_view = ::Kokkos::DualView<unsigned char **, memory_space>;
   using elem_p_level_dual_view = ::Kokkos::DualView<unsigned int *, memory_space>;
@@ -62,6 +63,7 @@ struct MeshBase::KokkosGeometryCache
   using elem_side_type_view = ::Kokkos::View<ElemType **, memory_space>;
   using elem_side_n_nodes_view = ::Kokkos::View<unsigned int **, memory_space>;
   using elem_side_local_node_view = ::Kokkos::View<unsigned int ***, memory_space>;
+  using elem_side_boundary_view = ::Kokkos::View<unsigned char **, memory_space>;
   using elem_edge_orientation_view = ::Kokkos::View<unsigned char **, memory_space>;
   using elem_face_orientation_view = ::Kokkos::View<unsigned char **, memory_space>;
   using elem_p_level_view = ::Kokkos::View<unsigned int *, memory_space>;
@@ -80,6 +82,7 @@ struct MeshBase::KokkosGeometryCache
   elem_side_type_dual_view element_side_types_dual;
   elem_side_n_nodes_dual_view element_side_n_nodes_dual;
   elem_side_local_node_dual_view element_side_local_nodes_dual;
+  elem_side_boundary_dual_view element_side_is_boundary_dual;
   elem_edge_orientation_dual_view element_edge_positive_orientations_dual;
   elem_face_orientation_dual_view element_face_positive_orientations_dual;
   elem_p_level_dual_view element_p_levels_dual;
@@ -97,6 +100,7 @@ struct MeshBase::KokkosGeometryCache
   elem_side_type_view element_side_types;
   elem_side_n_nodes_view element_side_n_nodes;
   elem_side_local_node_view element_side_local_nodes;
+  elem_side_boundary_view element_side_is_boundary;
   elem_edge_orientation_view element_edge_positive_orientations;
   elem_face_orientation_view element_face_positive_orientations;
   elem_p_level_view element_p_levels;
