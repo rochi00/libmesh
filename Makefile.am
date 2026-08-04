@@ -178,10 +178,12 @@ if LIBMESH_ENABLE_COMPLEX
 KOKKOS_L2SYSTEM_DBG_OBJECTS =
 KOKKOS_L2SYSTEM_DEVEL_OBJECTS =
 KOKKOS_L2SYSTEM_OPT_OBJECTS =
+KOKKOS_L2SYSTEM_OPROF_OBJECTS =
 else
 KOKKOS_L2SYSTEM_DBG_OBJECTS = src/apps/L2system_kokkos_dbg.o
 KOKKOS_L2SYSTEM_DEVEL_OBJECTS = src/apps/L2system_kokkos_devel.o
 KOKKOS_L2SYSTEM_OPT_OBJECTS = src/apps/L2system_kokkos_opt.o
+KOKKOS_L2SYSTEM_OPROF_OBJECTS = src/apps/L2system_kokkos_oprof.o
 
 src/apps/L2system_kokkos_dbg.o: src/apps/L2system_kokkos.K include/libmesh/dof_map_kokkos.h include/libmesh/mesh_base_kokkos.h
 	$(KOKKOS_CXX) $(KOKKOS_CXXFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
@@ -197,11 +199,17 @@ src/apps/L2system_kokkos_opt.o: src/apps/L2system_kokkos.K include/libmesh/dof_m
 	$(KOKKOS_CXX) $(KOKKOS_CXXFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	  $(CPPFLAGS_OPT) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
 	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+src/apps/L2system_kokkos_oprof.o: src/apps/L2system_kokkos.K include/libmesh/dof_map_kokkos.h include/libmesh/mesh_base_kokkos.h
+	$(KOKKOS_CXX) $(KOKKOS_CXXFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  $(CPPFLAGS_OPROF) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
 endif
 else
 KOKKOS_L2SYSTEM_DBG_OBJECTS =
 KOKKOS_L2SYSTEM_DEVEL_OBJECTS =
 KOKKOS_L2SYSTEM_OPT_OBJECTS =
+KOKKOS_L2SYSTEM_OPROF_OBJECTS =
 endif
 endif
 
@@ -737,7 +745,21 @@ calculator_oprof_SOURCES  = src/apps/calculator.C
 calculator_oprof_SOURCES += src/apps/L2system.C src/apps/L2system.h
 calculator_oprof_CPPFLAGS = $(CPPFLAGS_OPROF) $(AM_CPPFLAGS)
 calculator_oprof_CXXFLAGS = $(CXXFLAGS_OPROF)
+if LIBMESH_ENABLE_KOKKOS
+calculator_oprof_LDFLAGS  = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
+calculator_oprof_LDADD    = libmesh_oprof.la \
+                             $(KOKKOS_LIBMESH_OPROF_OBJECTS) \
+                             $(KOKKOS_L2SYSTEM_OPROF_OBJECTS) \
+                             $(KOKKOS_LIBS)
+calculator_oprof_LINK = \
+	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
+	$(calculator_oprof_LDFLAGS) $(LDFLAGS) -o $@
+else
 calculator_oprof_LDADD    = libmesh_oprof.la
+calculator_oprof_LINK = \
+	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
+	$(calculator_oprof_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+endif
 
 # compare
 opt_programs          += compare-opt

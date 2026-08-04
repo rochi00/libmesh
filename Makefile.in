@@ -4453,11 +4453,14 @@ am_calculator_oprof_OBJECTS =  \
 	src/apps/calculator_oprof-calculator.$(OBJEXT) \
 	src/apps/calculator_oprof-L2system.$(OBJEXT)
 calculator_oprof_OBJECTS = $(am_calculator_oprof_OBJECTS)
-calculator_oprof_DEPENDENCIES = libmesh_oprof.la
-calculator_oprof_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
-	$(calculator_oprof_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) \
-	$(LDFLAGS) -o $@
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@am__DEPENDENCIES_6 = src/apps/L2system_kokkos_oprof.o
+@LIBMESH_ENABLE_KOKKOS_FALSE@calculator_oprof_DEPENDENCIES =  \
+@LIBMESH_ENABLE_KOKKOS_FALSE@	libmesh_oprof.la
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_oprof_DEPENDENCIES =  \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	libmesh_oprof.la \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(KOKKOS_LIBMESH_OPROF_OBJECTS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_6) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_1)
 am__calculator_opt_SOURCES_DIST = src/apps/calculator.C \
 	src/apps/L2system.C src/apps/L2system.h
 @LIBMESH_ENABLE_KOKKOS_FALSE@am_calculator_opt_OBJECTS = src/apps/calculator_opt-calculator.$(OBJEXT) \
@@ -8121,6 +8124,9 @@ KOKKOS_AM_CPPFLAGS = -DLIBMESH_IS_COMPILING_ITSELF \
 @LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_L2SYSTEM_OPT_OBJECTS = src/apps/L2system_kokkos_opt.o
 @LIBMESH_ENABLE_COMPLEX_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_L2SYSTEM_OPT_OBJECTS = 
 @LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_FALSE@KOKKOS_L2SYSTEM_OPT_OBJECTS = 
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_L2SYSTEM_OPROF_OBJECTS = src/apps/L2system_kokkos_oprof.o
+@LIBMESH_ENABLE_COMPLEX_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_L2SYSTEM_OPROF_OBJECTS = 
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_FALSE@KOKKOS_L2SYSTEM_OPROF_OBJECTS = 
 
 # additional files which must be included in 'make dist'
 EXTRA_DIST = reference_elements \
@@ -8939,7 +8945,21 @@ calculator_oprof_SOURCES = src/apps/calculator.C src/apps/L2system.C \
 	src/apps/L2system.h
 calculator_oprof_CPPFLAGS = $(CPPFLAGS_OPROF) $(AM_CPPFLAGS)
 calculator_oprof_CXXFLAGS = $(CXXFLAGS_OPROF)
-calculator_oprof_LDADD = libmesh_oprof.la
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_oprof_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
+@LIBMESH_ENABLE_KOKKOS_FALSE@calculator_oprof_LDADD = libmesh_oprof.la
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_oprof_LDADD = libmesh_oprof.la \
+@LIBMESH_ENABLE_KOKKOS_TRUE@                             $(KOKKOS_LIBMESH_OPROF_OBJECTS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@                             $(KOKKOS_L2SYSTEM_OPROF_OBJECTS) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@                             $(KOKKOS_LIBS)
+
+@LIBMESH_ENABLE_KOKKOS_FALSE@calculator_oprof_LINK = \
+@LIBMESH_ENABLE_KOKKOS_FALSE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
+@LIBMESH_ENABLE_KOKKOS_FALSE@	$(calculator_oprof_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@calculator_oprof_LINK = \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	$(calculator_oprof_LDFLAGS) $(LDFLAGS) -o $@
+
 compare_opt_SOURCES = src/apps/compare.C
 compare_opt_CPPFLAGS = $(CPPFLAGS_OPT) $(AM_CPPFLAGS)
 compare_opt_CXXFLAGS = $(CXXFLAGS_OPT)
@@ -15323,7 +15343,7 @@ src/apps/calculator_oprof-L2system.$(OBJEXT):  \
 
 calculator-oprof$(EXEEXT): $(calculator_oprof_OBJECTS) $(calculator_oprof_DEPENDENCIES) $(EXTRA_calculator_oprof_DEPENDENCIES) 
 	@rm -f calculator-oprof$(EXEEXT)
-	$(AM_V_CXXLD)$(calculator_oprof_LINK) $(calculator_oprof_OBJECTS) $(calculator_oprof_LDADD) $(LIBS)
+	$(AM_V_GEN)$(calculator_oprof_LINK) $(calculator_oprof_OBJECTS) $(calculator_oprof_LDADD) $(LIBS)
 src/apps/calculator_opt-calculator.$(OBJEXT):  \
 	src/apps/$(am__dirstamp) src/apps/$(DEPDIR)/$(am__dirstamp)
 src/apps/calculator_opt-L2system.$(OBJEXT): src/apps/$(am__dirstamp) \
@@ -41942,6 +41962,11 @@ export TAR_OPTIONS
 @LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@src/apps/L2system_kokkos_opt.o: src/apps/L2system_kokkos.K include/libmesh/dof_map_kokkos.h include/libmesh/mesh_base_kokkos.h
 @LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@	$(KOKKOS_CXX) $(KOKKOS_CXXFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 @LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@	  $(CPPFLAGS_OPT) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@src/apps/L2system_kokkos_oprof.o: src/apps/L2system_kokkos.K include/libmesh/dof_map_kokkos.h include/libmesh/mesh_base_kokkos.h
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@	$(KOKKOS_CXX) $(KOKKOS_CXXFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@	  $(CPPFLAGS_OPROF) $(KOKKOS_AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
 @LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
 
 # If our submodules have not all been initialized, throw an
