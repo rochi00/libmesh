@@ -134,6 +134,7 @@ unit_tests_sources = \
   partitioning/morton_sfc_partitioner_test.C \
   partitioning/parmetis_partitioner_test.C \
   partitioning/sfc_partitioner_test.C \
+  quadrature/quadrature_exactness.h \
   quadrature/quadrature_test.C \
   solvers/time_solver_test_common.h \
   solvers/first_order_unsteady_solver_test.C \
