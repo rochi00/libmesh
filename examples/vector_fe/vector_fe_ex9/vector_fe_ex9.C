@@ -38,7 +38,6 @@
 
 // The finite element object and the geometric element type.
 #include "libmesh/fe.h"
-#include "libmesh/fe_interface.h"
 #include "libmesh/elem.h"
 
 // Gauss quadrature rules.
@@ -75,8 +74,7 @@ main(int argc, char ** argv)
   LibMeshInit init(argc, argv);
 
   // This example requires PETSc
-  libmesh_example_requires(libMesh::default_solver_package() == PETSC_SOLVERS,
-                           "--enable-petsc");
+  libmesh_example_requires(libMesh::default_solver_package() == PETSC_SOLVERS, "--enable-petsc");
 
   // Parse the input file.
   GetPot infile("vector_fe_ex9.in");
@@ -90,6 +88,7 @@ main(int argc, char ** argv)
   const bool mms = infile("mms", true);
   const Real nu = infile("nu", 1.);
   const bool cavity = infile("cavity", false);
+  const bool kokkos_backend = infile("kokkos_backend", false);
 
   // Skip higher-dimensional examples on a lower-dimensional libMesh build.
   libmesh_example_requires(dimension <= LIBMESH_DIM, dimension << "D support");
@@ -111,9 +110,7 @@ main(int argc, char ** argv)
 
   libmesh_error_msg_if(elem_str != "TRI6" && elem_str != "TRI7",
                        "You selected "
-                           << elem_str
-                           << " but this example must be run with TRI6, TRI7, QUAD8, or QUAD9 in 2d"
-                           << " or with TET14, or HEX27 in 3d.");
+                           << elem_str << " but this example must be run with TRI6 or TRI7.");
 
   if (mms && !cavity)
     MeshTools::Generation::build_square(
@@ -157,10 +154,10 @@ main(int argc, char ** argv)
 
   StaticCondensation * sc = nullptr;
   if (system.has_static_condensation())
-    {
-      sc = &system.get_static_condensation();
-      sc->dont_condense_vars({p_num});
-    }
+  {
+    sc = &system.get_static_condensation();
+    sc->dont_condense_vars({p_num});
+  }
 
   HDGProblem hdg(nu, cavity);
   hdg.mesh = &mesh;
@@ -175,6 +172,7 @@ main(int argc, char ** argv)
   hdg.lm_fe_face = FEBase::build(dimension, lm_fe_type);
   hdg.mms = mms;
   hdg.sc = sc;
+  hdg.use_kokkos_backend = kokkos_backend;
 
   system.nonlinear_solver->residual_object = &hdg;
   system.nonlinear_solver->jacobian_object = &hdg;

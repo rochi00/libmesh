@@ -73,6 +73,9 @@ public:
   // Whether we are performing an MMS study
   bool mms;
 
+  // Whether to use the Kokkos assembly backend
+  bool use_kokkos_backend;
+
   void init();
 
   virtual void residual(const NumericVector<Number> & X,
@@ -88,6 +91,18 @@ private:
                   const unsigned int ivar_num,
                   const unsigned int jvar_num,
                   const DenseMatrix<Number> & elem_mat);
+
+#if defined(LIBMESH_HAVE_KOKKOS) && defined(LIBMESH_HAVE_PETSC) &&                                 \
+    !defined(LIBMESH_USE_COMPLEX_NUMBERS)
+  void kokkos_set_petsc_defaults(bool need_ghost_vectors);
+  void kokkos_clear_cache();
+  void kokkos_residual(const NumericVector<Number> & X,
+                       NumericVector<Number> & R,
+                       NonlinearImplicitSystem & S);
+  void kokkos_jacobian(const NumericVector<Number> & X,
+                       SparseMatrix<Number> & J,
+                       NonlinearImplicitSystem & S);
+#endif
 
   void create_identity_residual(const QBase & quadrature,
                                 const std::vector<Real> & JxW_local,

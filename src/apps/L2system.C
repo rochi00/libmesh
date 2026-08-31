@@ -17,30 +17,80 @@
 
 #include "L2system.h"
 
+#include "../../include/systems/hilbert_assembly.h"
+
+#include "libmesh/dof_map.h"
 #include "libmesh/elem.h"
 #include "libmesh/fe_base.h"
 #include "libmesh/fe_interface.h"
 #include "libmesh/fem_context.h"
 #include "libmesh/getpot.h"
 #include "libmesh/mesh.h"
+#include "libmesh/parsed_function.h"
 #include "libmesh/quadrature.h"
 #include "libmesh/string_to_enum.h"
 #include "libmesh/utility.h"
 
 using namespace libMesh;
+namespace detail = libMesh::detail;
 
-HilbertSystem::~HilbertSystem () = default;
-
-void HilbertSystem::init_data ()
+#if !defined(LIBMESH_HAVE_KOKKOS) || !defined(LIBMESH_HAVE_PETSC) || defined(LIBMESH_USE_COMPLEX_NUMBERS)
+void
+destroy_hilbert_system_kokkos_state(HilbertSystemKokkosState * state)
 {
-  this->add_variable ("u", static_cast<Order>(_fe_order),
-                      Utility::string_to_enum<FEFamily>(_fe_family));
-
-  // Do the parent's initialization after variables are defined
-  FEMSystem::init_data();
+  libmesh_ignore(state);
 }
 
+#endif
 
+HilbertSystem::HilbertSystem(libMesh::EquationSystems & es,
+                             const std::string & name,
+                             const unsigned int number)
+  : libMesh::FEMSystem(es, name, number),
+    input_system(nullptr),
+    _fe_family("LAGRANGE"),
+    _fe_order(1),
+    _hilbert_order(0),
+    _use_kokkos_backend(false),
+    _use_exact_parsed_fem_host_path(false),
+    _kokkos_state(nullptr, destroy_hilbert_system_kokkos_state),
+    _fdm_eps(libMesh::TOLERANCE),
+    _subdomains_list()
+{
+}
+
+HilbertSystem::~HilbertSystem() = default;
+
+void HilbertSystem::rebuild_goal_gradient()
+{
+  if (_goal_func)
+    _goal_grad = std::make_unique<FDMGradient<Gradient>>(*_goal_func, _fdm_eps);
+  else
+    _goal_grad.reset();
+}
+
+void HilbertSystem::rebuild_analytic_goal_gradient()
+{
+  if (_analytic_goal_func)
+    {
+      _analytic_goal_grad =
+        std::make_unique<detail::FunctionFDMGradient<Gradient>>(*_analytic_goal_func, _fdm_eps);
+      _analytic_goal_grad->init();
+    }
+  else
+    _analytic_goal_grad.reset();
+}
+
+void HilbertSystem::init_data()
+{
+  this->get_dof_map().full_sparsity_pattern_needed();
+  this->add_variable("u",
+                     static_cast<Order>(_fe_order),
+                     Utility::string_to_enum<FEFamily>(_fe_family));
+
+  // Do the parent's initialization after variables are defined.
+  FEMSystem::init_data();
+}
 
 void HilbertSystem::init_context(DiffContext & context)
 {
@@ -48,16 +98,12 @@ void HilbertSystem::init_context(DiffContext & context)
 
   FEBase * my_fe = nullptr;
 
-  // Now make sure we have requested all the data
-  // we need to build the L2 system.
-
-  // We might have a multi-dimensional mesh
-  const std::set<unsigned char> & elem_dims =
-    c.elem_dimensions();
+  // We might have a multi-dimensional mesh.
+  const std::set<unsigned char> & elem_dims = c.elem_dimensions();
 
   for (const auto & dim : elem_dims)
     {
-      c.get_element_fe( 0, my_fe, dim );
+      c.get_element_fe(0, my_fe, dim);
 
       my_fe->get_JxW();
       my_fe->get_phi();
@@ -66,27 +112,39 @@ void HilbertSystem::init_context(DiffContext & context)
       if (this->_hilbert_order > 0)
         my_fe->get_dphi();
 
-      c.get_side_fe( 0, my_fe, dim );
+      c.get_side_fe(0, my_fe, dim);
       my_fe->get_nothing();
     }
 
-  // Build a corresponding context for the input system if we haven't
-  // already
+  // Build a corresponding context for the input system if we haven't already.
   auto & input_context = input_contexts[&c];
   if (input_system && !input_context)
-    {
-      input_context = std::make_unique<FEMContext>(*input_system);
+    input_context = std::make_unique<FEMContext>(*input_system);
 
-      libmesh_assert(_goal_func.get());
-      _goal_func->init_context(*input_context);
+  libmesh_assert(_goal_func || _analytic_goal_func);
+
+  if (_goal_func)
+    _goal_func->init_context(input_system ? *input_context : c);
+
+#if defined(LIBMESH_HAVE_KOKKOS) && defined(LIBMESH_HAVE_PETSC) && !defined(LIBMESH_USE_COMPLEX_NUMBERS)
+  if (input_system &&
+      this->_hilbert_order > 0 &&
+      this->needs_exact_kokkos_fem_goal_context())
+    {
+      for (const auto & dim : elem_dims)
+        for (unsigned int var = 0; var != input_system->n_vars(); ++var)
+          {
+            input_context->get_element_fe(var, my_fe, dim);
+            my_fe->get_dphi();
+          }
     }
+#endif
 
   FEMSystem::init_context(context);
 }
 
-
-bool HilbertSystem::element_time_derivative (bool request_jacobian,
-                                             DiffContext & context)
+bool HilbertSystem::element_time_derivative(const bool request_jacobian,
+                                            DiffContext & context)
 {
   FEMContext & c = cast_ref<FEMContext &>(context);
 
@@ -96,74 +154,93 @@ bool HilbertSystem::element_time_derivative (bool request_jacobian,
       !_subdomains_list.count(elem.subdomain_id()))
     return request_jacobian;
 
-  // First we get some references to cell-specific data that
-  // will be used to assemble the linear system.
-
-  // Element Jacobian * quadrature weights for interior integration
-  const std::vector<Real> & JxW = c.get_element_fe(0)->get_JxW();
-
-  const std::vector<std::vector<Real>> & phi = c.get_element_fe(0)->get_phi();
-
-  const std::vector<Point> & xyz = c.get_element_fe(0)->get_xyz();
-
-  // The number of local degrees of freedom in each variable
-  const unsigned int n_u_dofs = c.n_dof_indices(0);
-
-  // The subvectors and submatrices we need to fill:
   DenseSubMatrix<Number> & K = c.get_elem_jacobian(0, 0);
   DenseSubVector<Number> & F = c.get_elem_residual(0);
 
-  unsigned int n_qpoints = c.get_element_qrule().n_points();
-
-  FEMContext & input_c = *libmesh_map_find(input_contexts, &c);
-  if (input_system)
+#if defined(LIBMESH_HAVE_KOKKOS) && defined(LIBMESH_HAVE_PETSC)
+  if (_use_kokkos_backend)
     {
-      input_c.pre_fe_reinit(*input_system, &elem);
-      input_c.elem_fe_reinit();
+#if !defined(LIBMESH_USE_COMPLEX_NUMBERS)
+      if (this->kokkos_element_assembly(c, request_jacobian, F, K))
+        return request_jacobian;
+#else
+      if (_analytic_goal_func &&
+          dynamic_cast<ParsedFunction<Number> *>(_analytic_goal_func.get()))
+        libmesh_error_msg("HilbertSystem Kokkos backend does not support ParsedFunction goals "
+                          "when libMesh is built with complex Number.");
+#endif
+    }
+#endif
+
+  detail::HostHilbertFEAccess fe(c, 0, _hilbert_order);
+  const auto assemble_with_goal = [&](auto & goal)
+  {
+    auto solution =
+      detail::make_hilbert_solution_access(fe,
+                                           c.get_elem_solution(0),
+                                           c.get_elem_solution_derivative());
+    detail::HostHilbertAccumulator accum(F, K);
+    detail::assemble_hilbert_element(fe,
+                                     solution,
+                                     goal,
+                                     request_jacobian,
+                                     _hilbert_order,
+                                     accum);
+  };
+
+#if defined(LIBMESH_HAVE_KOKKOS) && defined(LIBMESH_HAVE_PETSC) && !defined(LIBMESH_USE_COMPLEX_NUMBERS)
+  if (_use_kokkos_backend)
+    {
+      if (this->kokkos_exact_analytic_goal_host_assembly(c, request_jacobian, F, K))
+        return request_jacobian;
+
+      if (_use_exact_parsed_fem_host_path && input_system)
+        if (this->kokkos_exact_fem_goal_host_assembly(c, request_jacobian, F, K))
+          return request_jacobian;
+    }
+#endif
+
+  if (_analytic_goal_func)
+    {
+      auto goal = detail::make_hilbert_analytic_goal_access(*_analytic_goal_func,
+                                                            *_analytic_goal_grad);
+      assemble_with_goal(goal);
+    }
+  else
+    {
+      FEMContext & goal_context =
+        input_system ? *libmesh_map_find(input_contexts, &c) : c;
+
+      if (input_system)
+        {
+          goal_context.pre_fe_reinit(*input_system, &elem);
+          goal_context.elem_fe_reinit();
+        }
+
+      detail::HostHilbertGoalAccess goal(*_goal_func, _goal_grad.get(), goal_context);
+      assemble_with_goal(goal);
     }
 
-  for (unsigned int qp=0; qp != n_qpoints; qp++)
-    {
-      const Number u = c.interior_value(0, qp);
-      const Number ufunc = (*_goal_func)(input_c, xyz[qp]);
-      const Number err_u = u - ufunc;
-
-      for (unsigned int i=0; i != n_u_dofs; i++)
-        F(i) += JxW[qp] * (err_u * phi[i][qp]);
-
-      if (_hilbert_order > 0)
-        {
-          const std::vector<std::vector<RealGradient>> & dphi =
-            c.get_element_fe(0)->get_dphi();
-
-          const Gradient grad_u = c.interior_gradient(0, qp);
-          Gradient ufuncgrad = (*_goal_grad)(input_c, xyz[qp]);
-          const Gradient err_grad_u = grad_u - ufuncgrad;
-
-          for (unsigned int i=0; i != n_u_dofs; i++)
-            F(i) += JxW[qp] * (err_grad_u * dphi[i][qp]);
-        }
-
-      if (request_jacobian)
-        {
-          const Number JxWxD = JxW[qp] *
-            context.get_elem_solution_derivative();
-
-          for (unsigned int i=0; i != n_u_dofs; i++)
-            for (unsigned int j=0; j != n_u_dofs; ++j)
-              K(i,j) += JxWxD * (phi[i][qp] * phi[j][qp]);
-
-          if (_hilbert_order > 0)
-            {
-              const std::vector<std::vector<RealGradient>> & dphi =
-                c.get_element_fe(0)->get_dphi();
-
-              for (unsigned int i=0; i != n_u_dofs; i++)
-                for (unsigned int j=0; j != n_u_dofs; ++j)
-                  K(i,j) += JxWxD * (dphi[i][qp] * dphi[j][qp]);
-            }
-        }
-    } // end of the quadrature point qp-loop
-
   return request_jacobian;
+}
+
+void HilbertSystem::solve()
+{
+  _last_kokkos_timing = {};
+#if defined(LIBMESH_HAVE_KOKKOS) && defined(LIBMESH_HAVE_PETSC) && !defined(LIBMESH_USE_COMPLEX_NUMBERS)
+  if (_use_kokkos_backend)
+    {
+      if (this->kokkos_petsc_solve())
+        return;
+
+      libmesh_error_msg("HilbertSystem Kokkos backend did not complete the direct PETSc "
+                        "storage solve path.");
+    }
+#else
+  libmesh_error_msg_if(_use_kokkos_backend,
+                       "HilbertSystem Kokkos backend requires a libMesh build with Kokkos, "
+                       "PETSc, and real Number support.");
+#endif
+
+  FEMSystem::solve();
 }

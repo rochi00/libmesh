@@ -55,15 +55,33 @@ HDGProblem::HDGProblem(const Real nu_in, const bool cavity_in)
     cavity(cavity_in),
     u_true_soln(nu, cavity),
     v_true_soln(nu, cavity),
-    p_true_soln(cavity)
+    p_true_soln(cavity),
+    use_kokkos_backend(false)
 {
 }
 
-HDGProblem::~HDGProblem() = default;
+HDGProblem::~HDGProblem()
+{
+#if defined(LIBMESH_HAVE_KOKKOS) && defined(LIBMESH_HAVE_PETSC) &&                                 \
+    !defined(LIBMESH_USE_COMPLEX_NUMBERS)
+  if (use_kokkos_backend)
+    this->kokkos_clear_cache();
+#endif
+}
 
 void
 HDGProblem::init()
 {
+#if defined(LIBMESH_HAVE_KOKKOS) && defined(LIBMESH_HAVE_PETSC) &&                                 \
+    !defined(LIBMESH_USE_COMPLEX_NUMBERS)
+  if (use_kokkos_backend)
+    this->kokkos_set_petsc_defaults(mesh->n_processors() != 1);
+#else
+  libmesh_error_msg_if(use_kokkos_backend,
+                       "vector_fe_ex9 Kokkos backend requires Kokkos, PETSc, and real-valued "
+                       "libMesh.");
+#endif
+
   // Attach quadrature rules for the FE objects that we will reinit within the element "volume"
   vector_fe->attach_quadrature_rule(qrule.get());
   scalar_fe->attach_quadrature_rule(qrule.get());
@@ -713,6 +731,15 @@ HDGProblem::residual(const NumericVector<Number> & X,
                      NumericVector<Number> & R,
                      NonlinearImplicitSystem & S)
 {
+#if defined(LIBMESH_HAVE_KOKKOS) && defined(LIBMESH_HAVE_PETSC) &&                                 \
+    !defined(LIBMESH_USE_COMPLEX_NUMBERS)
+  if (use_kokkos_backend)
+  {
+    this->kokkos_residual(X, R, S);
+    return;
+  }
+#endif
+
   R.zero();
 
   const auto u_num = S.variable_number("vel_x");
@@ -894,9 +921,19 @@ HDGProblem::add_matrix(NonlinearImplicitSystem & sys,
 
 void
 HDGProblem::jacobian(const NumericVector<Number> & X,
-                     SparseMatrix<Number> &,
+                     SparseMatrix<Number> & J_in,
                      NonlinearImplicitSystem & S)
 {
+#if defined(LIBMESH_HAVE_KOKKOS) && defined(LIBMESH_HAVE_PETSC) &&                                 \
+    !defined(LIBMESH_USE_COMPLEX_NUMBERS)
+  if (use_kokkos_backend)
+  {
+    this->kokkos_jacobian(X, J_in, S);
+    return;
+  }
+#endif
+
+  libmesh_ignore(J_in);
   auto * J = &S.get_system_matrix();
 
   if (!sc)

@@ -166,6 +166,44 @@ src/mesh/mesh_base_kokkos_oprof.lo: src/mesh/mesh_base_kokkos.K include/libmesh/
 	  $(CPPFLAGS_OPROF) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
 	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
 
+if LIBMESH_ENABLE_PETSC
+if LIBMESH_ENABLE_COMPLEX
+KOKKOS_L2SYSTEM_DBG_OBJECTS =
+KOKKOS_L2SYSTEM_DEVEL_OBJECTS =
+KOKKOS_L2SYSTEM_OPT_OBJECTS =
+KOKKOS_L2SYSTEM_OPROF_OBJECTS =
+else
+KOKKOS_L2SYSTEM_DBG_OBJECTS = src/apps/L2system_kokkos_dbg.o
+KOKKOS_L2SYSTEM_DEVEL_OBJECTS = src/apps/L2system_kokkos_devel.o
+KOKKOS_L2SYSTEM_OPT_OBJECTS = src/apps/L2system_kokkos_opt.o
+KOKKOS_L2SYSTEM_OPROF_OBJECTS = src/apps/L2system_kokkos_oprof.o
+
+src/apps/L2system_kokkos_dbg.o: src/apps/L2system_kokkos.K include/libmesh/dof_map_kokkos.h include/libmesh/mesh_base_kokkos.h
+	$(KOKKOS_CXX) $(KOKKOS_CXXFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  $(CPPFLAGS_DBG) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+src/apps/L2system_kokkos_devel.o: src/apps/L2system_kokkos.K include/libmesh/dof_map_kokkos.h include/libmesh/mesh_base_kokkos.h
+	$(KOKKOS_CXX) $(KOKKOS_CXXFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+src/apps/L2system_kokkos_opt.o: src/apps/L2system_kokkos.K include/libmesh/dof_map_kokkos.h include/libmesh/mesh_base_kokkos.h
+	$(KOKKOS_CXX) $(KOKKOS_CXXFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  $(CPPFLAGS_OPT) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+src/apps/L2system_kokkos_oprof.o: src/apps/L2system_kokkos.K include/libmesh/dof_map_kokkos.h include/libmesh/mesh_base_kokkos.h
+	$(KOKKOS_CXX) $(KOKKOS_CXXFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  $(CPPFLAGS_OPROF) $(AM_CPPFLAGS) $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+endif
+else
+KOKKOS_L2SYSTEM_DBG_OBJECTS =
+KOKKOS_L2SYSTEM_DEVEL_OBJECTS =
+KOKKOS_L2SYSTEM_OPT_OBJECTS =
+KOKKOS_L2SYSTEM_OPROF_OBJECTS =
+endif
 endif
 
 LIBS             = $(libmesh_optional_LIBS) $(libmesh_precision_LIBS)
@@ -610,6 +648,68 @@ meshtool_oprof_LDADD    = libmesh_oprof.la
 
 
 # calculator
+if LIBMESH_ENABLE_KOKKOS
+opt_programs                 += calculator-kokkos-opt
+calculator_kokkos_opt_SOURCES = src/apps/calculator.C
+calculator_kokkos_opt_SOURCES += src/apps/L2system.C src/apps/L2system.h
+calculator_kokkos_opt_CPPFLAGS = $(CPPFLAGS_OPT) $(AM_CPPFLAGS)
+calculator_kokkos_opt_CXXFLAGS = $(CXXFLAGS_OPT)
+calculator_kokkos_opt_LDFLAGS  = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
+calculator_kokkos_opt_LDADD    = libmesh_opt.la \
+                                 $(KOKKOS_LIBMESH_OPT_OBJECTS) \
+                                 $(KOKKOS_L2SYSTEM_OPT_OBJECTS) \
+                                 $(KOKKOS_LIBS)
+calculator_kokkos_opt_LINK = \
+	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
+	$(calculator_kokkos_opt_LDFLAGS) $(LDFLAGS) -o $@
+
+src/apps/calculator_kokkos_opt-L2system.o: src/apps/L2system.C
+	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  $(calculator_kokkos_opt_CPPFLAGS) $(CPPFLAGS) \
+	  $(calculator_kokkos_opt_CXXFLAGS) $(CXXFLAGS) \
+	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+devel_programs                   += calculator-kokkos-devel
+calculator_kokkos_devel_SOURCES   = src/apps/calculator.C
+calculator_kokkos_devel_SOURCES  += src/apps/L2system.C src/apps/L2system.h
+calculator_kokkos_devel_CPPFLAGS  = $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS)
+calculator_kokkos_devel_CXXFLAGS  = $(CXXFLAGS_DEVEL)
+calculator_kokkos_devel_LDFLAGS   = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
+calculator_kokkos_devel_LDADD     = libmesh_devel.la \
+                                    $(KOKKOS_LIBMESH_DEVEL_OBJECTS) \
+                                    $(KOKKOS_L2SYSTEM_DEVEL_OBJECTS) \
+                                    $(KOKKOS_LIBS)
+calculator_kokkos_devel_LINK = \
+	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
+	$(calculator_kokkos_devel_LDFLAGS) $(LDFLAGS) -o $@
+
+src/apps/calculator_kokkos_devel-L2system.o: src/apps/L2system.C
+	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  $(calculator_kokkos_devel_CPPFLAGS) $(CPPFLAGS) \
+	  $(calculator_kokkos_devel_CXXFLAGS) $(CXXFLAGS) \
+	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+dbg_programs                 += calculator-kokkos-dbg
+calculator_kokkos_dbg_SOURCES = src/apps/calculator.C
+calculator_kokkos_dbg_SOURCES += src/apps/L2system.C src/apps/L2system.h
+calculator_kokkos_dbg_CPPFLAGS = $(CPPFLAGS_DBG) $(AM_CPPFLAGS)
+calculator_kokkos_dbg_CXXFLAGS = $(CXXFLAGS_DBG)
+calculator_kokkos_dbg_LDFLAGS  = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
+calculator_kokkos_dbg_LDADD    = libmesh_dbg.la \
+                                 $(KOKKOS_LIBMESH_DBG_OBJECTS) \
+                                 $(KOKKOS_L2SYSTEM_DBG_OBJECTS) \
+                                 $(KOKKOS_LIBS)
+calculator_kokkos_dbg_LINK = \
+	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
+	$(calculator_kokkos_dbg_LDFLAGS) $(LDFLAGS) -o $@
+
+src/apps/calculator_kokkos_dbg-L2system.o: src/apps/L2system.C
+	$(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  $(calculator_kokkos_dbg_CPPFLAGS) $(CPPFLAGS) \
+	  $(calculator_kokkos_dbg_CXXFLAGS) $(CXXFLAGS) \
+	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
+
+else
 opt_programs          += calculator-opt
 calculator_opt_SOURCES    = src/apps/calculator.C
 calculator_opt_SOURCES   += src/apps/L2system.C src/apps/L2system.h
@@ -631,13 +731,28 @@ calculator_dbg_CPPFLAGS   = $(CPPFLAGS_DBG) $(AM_CPPFLAGS)
 calculator_dbg_CXXFLAGS   = $(CXXFLAGS_DBG)
 calculator_dbg_LDADD      = libmesh_dbg.la
 
+endif
+
 oprof_programs        += calculator-oprof
 calculator_oprof_SOURCES  = src/apps/calculator.C
 calculator_oprof_SOURCES += src/apps/L2system.C src/apps/L2system.h
 calculator_oprof_CPPFLAGS = $(CPPFLAGS_OPROF) $(AM_CPPFLAGS)
 calculator_oprof_CXXFLAGS = $(CXXFLAGS_OPROF)
+if LIBMESH_ENABLE_KOKKOS
+calculator_oprof_LDFLAGS  = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
+calculator_oprof_LDADD    = libmesh_oprof.la \
+                             $(KOKKOS_LIBMESH_OPROF_OBJECTS) \
+                             $(KOKKOS_L2SYSTEM_OPROF_OBJECTS) \
+                             $(KOKKOS_LIBS)
+calculator_oprof_LINK = \
+	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
+	$(calculator_oprof_LDFLAGS) $(LDFLAGS) -o $@
+else
 calculator_oprof_LDADD    = libmesh_oprof.la
-
+calculator_oprof_LINK = \
+	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
+	$(calculator_oprof_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+endif
 
 # compare
 opt_programs          += compare-opt

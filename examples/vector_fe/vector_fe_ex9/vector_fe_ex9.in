@@ -15,3 +15,6 @@ nu = 1
 
 # Whether to do a lid cavity problem. This is incompatible with mms=true
 cavity = false
+
+# Whether to use the Kokkos assembly backend.
+kokkos_backend = false

@@ -53,7 +53,6 @@
 #include <memory>
 #include <string>
 
-
 using namespace libMesh;
 
 
@@ -70,6 +69,7 @@ void usage_error(const char * progname)
                << " --calc       func      function to calculate\n"
                << " --insys      sysnum    input system number          [default: 0]\n"
                << " --outsoln    filename  output solution file         [default: out_<insoln>]\n"
+               << " --skip-output         do not write output solution file\n"
                << " --family     famname   output FEM family            [default: LAGRANGE]\n"
                << " --order      p         output FEM order             [default: 1]\n"
                << " --subdomain  \"sbd_ids\" each subdomain to check      [default: all subdomains]\n"
@@ -81,6 +81,8 @@ void usage_error(const char * progname)
                << "                       Hilbert order                 [default: off]\n"
                << " --jump_slits           calculate jumps across slits [default: off]\n"
                << " --integral             only calculate func integral, not projection\n"
+               << " --kokkos               use Kokkos local element assembly when supported\n"
+               << " --kokkos-timing        print Kokkos Hilbert path timing details\n"
                << std::endl;
 
   exit(1);
@@ -98,6 +100,20 @@ T assert_argument (const std::string & argname,
       usage_error(progname);
     }
   return libMesh::command_line_next(argname, defaultarg);
+}
+
+const char *
+kokkos_assembly_path_name(const HilbertSystem::KokkosAssemblyPath path)
+{
+  switch (path)
+    {
+    case HilbertSystem::KokkosAssemblyPath::none:
+      return "none";
+    case HilbertSystem::KokkosAssemblyPath::petsc_coo:
+      return "petsc_coo";
+    }
+
+  return "unknown";
 }
 
 
@@ -159,10 +175,16 @@ private:
   Number _integral;
 };
 
-
 int main(int argc, char ** argv)
 {
   LibMeshInit init(argc, argv);
+
+  const bool use_kokkos = libMesh::on_command_line("--kokkos");
+
+#if !defined(LIBMESH_HAVE_KOKKOS) || !defined(LIBMESH_HAVE_PETSC) || defined(LIBMESH_USE_COMPLEX_NUMBERS)
+  libmesh_error_msg_if(use_kokkos,
+                       "--kokkos requires a libMesh build with Kokkos, PETSc, and real Number support");
+#endif
 
   // In case the mesh file doesn't let us auto-infer dimension, we let
   // the user specify it on the command line
@@ -228,6 +250,7 @@ int main(int argc, char ** argv)
   const unsigned int order = libMesh::command_line_next("--order", 1u);
 
   std::unique_ptr<FEMFunctionBase<Number>> goal_function;
+  std::unique_ptr<FunctionBase<Number>> analytic_goal_function;
 
   if (solnname != "")
     {
@@ -270,8 +293,10 @@ int main(int argc, char ** argv)
 
       old_es.print_info();
 
+      analytic_goal_function =
+        std::make_unique<ParsedFunction<Number>>(calcfunc);
       goal_function =
-        std::make_unique<WrappedFunctor<Number>>(ParsedFunction<Number>(calcfunc));
+        std::make_unique<WrappedFunctor<Number>>(*analytic_goal_function);
     }
 
   libMesh::out << "Calculating with system " << current_sys_name << std::endl;
@@ -287,6 +312,7 @@ int main(int argc, char ** argv)
     default_outsolnname = "out_"+solnname;
   const std::string outsolnname =
     libMesh::command_line_next("--outsoln", default_outsolnname);
+  const bool skip_output = libMesh::on_command_line("--skip-output");
 
   // Output results in high precision
   libMesh::out << std::setprecision(std::numeric_limits<Real>::max_digits10);
@@ -310,8 +336,12 @@ int main(int argc, char ** argv)
 
       new_sys.fe_family() = family;
       new_sys.fe_order() = order;
+      new_sys.use_kokkos_backend(use_kokkos);
 
-      new_sys.set_goal_func(*goal_function);
+      if (analytic_goal_function)
+        new_sys.set_goal_func(*analytic_goal_function);
+      else
+        new_sys.set_goal_func(*goal_function);
 
       const Real fdm_eps = libMesh::command_line_next("--fdm_eps", Real(TOLERANCE));
 
@@ -328,6 +358,24 @@ int main(int argc, char ** argv)
       solver.relative_step_tolerance = 1e-10;
 
       new_sys.solve();
+
+      if (use_kokkos && libMesh::on_command_line("--kokkos-timing"))
+        {
+          const auto & timing = new_sys.last_kokkos_timing();
+          libMesh::out << "Kokkos timing:"
+                       << " path=" << kokkos_assembly_path_name(timing.assembly_path)
+                       << " plan=" << timing.plan_seconds
+                       << " assembly=" << timing.assembly_seconds
+                       << " solve=" << timing.solve_seconds
+                       << " total=" << timing.total_seconds
+                       << std::endl;
+          libMesh::out << "Kokkos assembly timing:"
+                       << " coo_setup=" << timing.assembly_coo_setup_seconds
+                       << " records=" << timing.assembly_record_seconds
+                       << " vecset_values=" << timing.assembly_vecset_values_seconds
+                       << " matset_values=" << timing.assembly_matset_values_seconds
+                       << std::endl;
+        }
 
       // Integrate the error if requested
       if (libMesh::on_command_line("--error_q"))
@@ -426,11 +474,16 @@ int main(int argc, char ** argv)
             }
         }
 
-      // Write out the new solution file
-      new_es.write(outsolnname.c_str(),
-                   EquationSystems::WRITE_DATA |
-                   EquationSystems::WRITE_ADDITIONAL_DATA);
-      libMesh::out << "Wrote solution " << outsolnname << std::endl;
+      if (!skip_output)
+        {
+          // Write out the new solution file
+          new_es.write(outsolnname.c_str(),
+                       EquationSystems::WRITE_DATA |
+                       EquationSystems::WRITE_ADDITIONAL_DATA);
+          libMesh::out << "Wrote solution " << outsolnname << std::endl;
+        }
+      else
+        libMesh::out << "Skipped writing solution" << std::endl;
     }
   else
     {
