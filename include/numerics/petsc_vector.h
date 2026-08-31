@@ -44,6 +44,10 @@
 # undef I // Avoid complex.h contamination
 #endif
 
+#if defined(LIBMESH_HAVE_KOKKOS) && defined(ACSM_KOKKOS_COMPILATION)
+#include <Kokkos_Core.hpp>
+#endif
+
 // C++ includes
 #include <cstddef>
 #include <cstring>
@@ -226,6 +230,157 @@ public:
    * using it unless you know what you are doing!
    */
   const PetscScalar * get_array_read() const;
+
+  /**
+   * Query PETSc for the memory type backing this vector.
+   *
+   * \note If the raw array is currently borrowed via get_array() or
+   * get_array_read(), this method is not valid.
+   */
+  PetscMemType get_mem_type() const;
+
+  bool supports_kokkos_access() const;
+
+#if defined(LIBMESH_HAVE_KOKKOS) && defined(ACSM_KOKKOS_COMPILATION)
+  using kokkos_read_view =
+    ::Kokkos::View<const T *,
+                   typename ::Kokkos::DefaultExecutionSpace::memory_space,
+                   ::Kokkos::MemoryTraits<::Kokkos::Unmanaged>>;
+  using kokkos_write_view =
+    ::Kokkos::View<T *,
+                   typename ::Kokkos::DefaultExecutionSpace::memory_space,
+                   ::Kokkos::MemoryTraits<::Kokkos::Unmanaged>>;
+
+  class KokkosReadViewGuard
+  {
+  public:
+    explicit KokkosReadViewGuard(PetscVector<T> & vector)
+      : _vector(vector)
+    {
+      _borrowed_vec = vector._vec;
+      if (vector.is_effectively_ghosted())
+        {
+          LibmeshPetscCallA(_vector.comm().get(), VecGhostGetLocalForm(vector._vec, &_borrowed_vec));
+          PetscInt my_local_size = 0;
+          LibmeshPetscCallA(_vector.comm().get(), VecGetLocalSize(_borrowed_vec, &my_local_size));
+          _local_size = static_cast<numeric_index_type>(my_local_size);
+        }
+      else
+        _local_size = vector.local_size();
+
+      const PetscScalar * data = nullptr;
+      LibmeshPetscCallA(_vector.comm().get(),
+                        VecGetArrayReadAndMemType(_borrowed_vec, &data, &_mem_type));
+      _data = reinterpret_cast<const T *>(data);
+      const bool host_inaccessible =
+        PetscMemTypeHost(_mem_type) &&
+        !::Kokkos::SpaceAccessibility<typename ::Kokkos::DefaultExecutionSpace::memory_space,
+                                      ::Kokkos::HostSpace>::accessible;
+      libmesh_error_msg_if(host_inaccessible,
+                           "PetscVector Kokkos read access requires host-accessible execution "
+                           "space for host PETSc memory.");
+      _view = kokkos_read_view(_data, _local_size);
+    }
+
+    KokkosReadViewGuard(const KokkosReadViewGuard &) = delete;
+    KokkosReadViewGuard & operator=(const KokkosReadViewGuard &) = delete;
+
+    ~KokkosReadViewGuard()
+    {
+      const PetscScalar * data = reinterpret_cast<const PetscScalar *>(_data);
+      const auto restore_ierr = VecRestoreArrayReadAndMemType(_borrowed_vec, &data);
+      libmesh_ignore(restore_ierr);
+      if (_vector.is_effectively_ghosted())
+        {
+          const auto ghost_ierr = VecGhostRestoreLocalForm(_vector._vec, &_borrowed_vec);
+          libmesh_ignore(ghost_ierr);
+        }
+    }
+
+    const kokkos_read_view & view() const
+    {
+      return _view;
+    }
+
+  private:
+    PetscVector<T> & _vector;
+    Vec _borrowed_vec = nullptr;
+    const T * _data = nullptr;
+    PetscMemType _mem_type = PETSC_MEMTYPE_HOST;
+    numeric_index_type _local_size = 0;
+    kokkos_read_view _view;
+  };
+
+  KokkosReadViewGuard make_kokkos_read_view_guard()
+  {
+    return KokkosReadViewGuard(*this);
+  }
+
+  class KokkosWriteViewGuard
+  {
+  public:
+    explicit KokkosWriteViewGuard(PetscVector<T> & vector)
+      : _vector(vector)
+    {
+      _borrowed_vec = vector._vec;
+      if (vector.is_effectively_ghosted())
+        {
+          LibmeshPetscCallA(_vector.comm().get(), VecGhostGetLocalForm(vector._vec, &_borrowed_vec));
+          PetscInt my_local_size = 0;
+          LibmeshPetscCallA(_vector.comm().get(), VecGetLocalSize(_borrowed_vec, &my_local_size));
+          _local_size = static_cast<numeric_index_type>(my_local_size);
+        }
+      else
+        _local_size = vector.local_size();
+
+      PetscScalar * data = nullptr;
+      LibmeshPetscCallA(_vector.comm().get(),
+                        VecGetArrayWriteAndMemType(_borrowed_vec, &data, &_mem_type));
+      _data = reinterpret_cast<T *>(data);
+      const bool host_inaccessible =
+        PetscMemTypeHost(_mem_type) &&
+        !::Kokkos::SpaceAccessibility<typename ::Kokkos::DefaultExecutionSpace::memory_space,
+                                      ::Kokkos::HostSpace>::accessible;
+      libmesh_error_msg_if(host_inaccessible,
+                           "PetscVector Kokkos write access requires host-accessible execution "
+                           "space for host PETSc memory.");
+      _view = kokkos_write_view(_data, _local_size);
+    }
+
+    KokkosWriteViewGuard(const KokkosWriteViewGuard &) = delete;
+    KokkosWriteViewGuard & operator=(const KokkosWriteViewGuard &) = delete;
+
+    ~KokkosWriteViewGuard()
+    {
+      PetscScalar * data = reinterpret_cast<PetscScalar *>(_data);
+      const auto restore_ierr = VecRestoreArrayWriteAndMemType(_borrowed_vec, &data);
+      libmesh_ignore(restore_ierr);
+      if (_vector.is_effectively_ghosted())
+        {
+          const auto ghost_ierr = VecGhostRestoreLocalForm(_vector._vec, &_borrowed_vec);
+          libmesh_ignore(ghost_ierr);
+        }
+    }
+
+    const kokkos_write_view & view() const
+    {
+      return _view;
+    }
+
+  private:
+    PetscVector<T> & _vector;
+    Vec _borrowed_vec = nullptr;
+    T * _data = nullptr;
+    PetscMemType _mem_type = PETSC_MEMTYPE_HOST;
+    numeric_index_type _local_size = 0;
+    kokkos_write_view _view;
+  };
+
+  KokkosWriteViewGuard make_kokkos_write_view_guard()
+  {
+    return KokkosWriteViewGuard(*this);
+  }
+#endif
 
   /**
    * Restore the data array.
@@ -1194,6 +1349,42 @@ const PetscScalar * PetscVector<T>::get_array_read() const
   _values_manually_retrieved = true;
 
   return _read_only_values;
+}
+
+template <typename T>
+inline
+PetscMemType PetscVector<T>::get_mem_type() const
+{
+  libmesh_error_msg_if(_values_manually_retrieved,
+                       "Cannot query PetscVector memory type while a raw array is borrowed");
+
+#ifdef LIBMESH_HAVE_CXX11_THREAD
+  const bool array_is_present = _array_is_present.load(std::memory_order_acquire);
+#else
+  const bool array_is_present = _array_is_present;
+#endif
+
+  if (array_is_present)
+    _restore_array();
+
+  PetscScalar * dummyarray = nullptr;
+  PetscMemType mem_type = PETSC_MEMTYPE_HOST;
+  LibmeshPetscCall(VecGetArrayAndMemType(_vec, &dummyarray, &mem_type));
+  LibmeshPetscCall(VecRestoreArrayAndMemType(_vec, &dummyarray));
+  return mem_type;
+}
+
+template <typename T>
+inline
+bool PetscVector<T>::supports_kokkos_access() const
+{
+#if defined(LIBMESH_HAVE_KOKKOS) && defined(ACSM_KOKKOS_COMPILATION)
+  return !PetscMemTypeHost(this->get_mem_type()) ||
+         ::Kokkos::SpaceAccessibility<typename ::Kokkos::DefaultExecutionSpace::memory_space,
+                                      ::Kokkos::HostSpace>::accessible;
+#else
+  return false;
+#endif
 }
 
 template <typename T>

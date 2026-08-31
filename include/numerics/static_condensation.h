@@ -21,8 +21,9 @@
 #include "libmesh/libmesh_config.h"
 
 // Forward declarations
-namespace libMesh {
-  class Elem;
+namespace libMesh
+{
+class Elem;
 }
 
 // shell matrices currently only work with petsc,
@@ -36,6 +37,7 @@ namespace libMesh {
 #include "libmesh/variable.h"
 #include "libmesh/sparsity_pattern.h"
 
+#include <functional>
 #include <unordered_map>
 #include <memory>
 #include <vector>
@@ -66,6 +68,11 @@ typedef Eigen::Matrix<Number, Eigen::Dynamic, 1> EigenVector;
 class StaticCondensation : public PetscMatrixShellMatrix<Number>
 {
 public:
+  using BackwardsSubstitutionCallback =
+      std::function<bool(const NumericVector<Number> &, NumericVector<Number> &)>;
+  using ForwardEliminationCallback =
+      std::function<bool(const NumericVector<Number> &, NumericVector<Number> &)>;
+
   StaticCondensation(const MeshBase & mesh,
                      System & system,
                      const DofMap & full_dof_map,
@@ -170,10 +177,34 @@ public:
 
   const SparseMatrix<Number> & get_condensed_mat() const;
 
+  SparseMatrix<Number> & get_condensed_mat();
+
   /**
    * Set the current element. This enables fast lookups of local indices from global indices
    */
   void set_current_elem(const Elem & elem);
+
+  /**
+   * Add device/precomputed local solve products for the current element:
+   * \p inverse is A_cc^{-1}, and \p inverse_times_cu is A_cc^{-1} A_cu.
+   */
+  void add_precondensed_solve_data(const DenseMatrix<Number> & inverse,
+                                   const std::vector<numeric_index_type> & condensed_indices,
+                                   const DenseMatrix<Number> & inverse_times_cu,
+                                   const std::vector<numeric_index_type> & uncondensed_indices);
+
+  dof_id_type reduced_dof_for_uncondensed_dof(const Elem & elem, dof_id_type full_dof) const;
+
+  void mark_preassembled_matrix_entries(const Elem & elem,
+                                        const std::vector<numeric_index_type> & rows,
+                                        const std::vector<numeric_index_type> & cols);
+
+  void local_uncondensed_dof_map(std::vector<dof_id_type> & full_dofs,
+                                 std::vector<dof_id_type> & reduced_dofs) const;
+
+  void set_backwards_substitution_callback(BackwardsSubstitutionCallback callback);
+
+  void set_forward_elimination_callback(ForwardEliminationCallback callback);
 
   /**
    * Get the preconditioning wrapper
@@ -240,6 +271,14 @@ private:
     EigenMatrix Auc;
     /// uncondensed-uncondensed matrix entries
     EigenMatrix Auu;
+    /// mask for entries already inserted into the reduced matrix through another assembly path
+    std::vector<char> preassembled_Auu_mask;
+    /// caller-provided A_cc^{-1}
+    EigenMatrix precondensed_Acc_inverse;
+    /// caller-provided A_cc^{-1} A_cu
+    EigenMatrix precondensed_Acc_inverse_Acu;
+    /// whether caller-provided solve data are available
+    bool have_precondensed_solve_data = false;
 
     // Acc LU decompositions
     typename std::remove_const<decltype(Acc.partialPivLu())>::type AccFactor;
@@ -278,6 +317,12 @@ private:
   /// Preconditioner object which will call back to us for the preconditioning action
   std::unique_ptr<StaticCondensationPreconditioner> _scp;
 
+  /// Optional optimized replacement for the element back-substitution stage.
+  BackwardsSubstitutionCallback _backwards_substitution_callback;
+
+  /// Optional optimized replacement for the element forward-elimination stage.
+  ForwardEliminationCallback _forward_elimination_callback;
+
   /// Whether our object has been initialized
   bool _sc_is_initialized;
 
@@ -293,13 +338,22 @@ private:
   bool _uncondensed_dofs_only;
 };
 
-inline const SparseMatrix<Number> & StaticCondensation::get_condensed_mat() const
+inline const SparseMatrix<Number> &
+StaticCondensation::get_condensed_mat() const
 {
   libmesh_assert(_reduced_sys_mat);
   return *_reduced_sys_mat;
 }
 
-inline LinearSolver<Number> & StaticCondensation::reduced_system_solver()
+inline SparseMatrix<Number> &
+StaticCondensation::get_condensed_mat()
+{
+  libmesh_assert(_reduced_sys_mat);
+  return *_reduced_sys_mat;
+}
+
+inline LinearSolver<Number> &
+StaticCondensation::reduced_system_solver()
 {
   libmesh_assert_msg(_reduced_solver, "Reduced system solver not built yet");
   return *_reduced_solver;
@@ -310,6 +364,7 @@ inline LinearSolver<Number> & StaticCondensation::reduced_system_solver()
 #else
 
 #include "libmesh/sparse_matrix.h"
+#include <functional>
 #include <unordered_set>
 
 namespace libMesh
@@ -317,12 +372,19 @@ namespace libMesh
 class MeshBase;
 class System;
 class DofMap;
+template <typename>
+class NumericVector;
 class StaticCondensationPreconditioner;
 class StaticCondensationDofMap;
 
 class StaticCondensation : public SparseMatrix<Number>
 {
 public:
+  using BackwardsSubstitutionCallback =
+      std::function<bool(const NumericVector<Number> &, NumericVector<Number> &)>;
+  using ForwardEliminationCallback =
+      std::function<bool(const NumericVector<Number> &, NumericVector<Number> &)>;
+
   StaticCondensation(const MeshBase &,
                      const System &,
                      const DofMap & full_dof_map,
@@ -330,6 +392,14 @@ public:
 
   const std::unordered_set<unsigned int> & uncondensed_vars() const { libmesh_not_implemented(); }
   StaticCondensationPreconditioner & get_preconditioner() { libmesh_not_implemented(); }
+  void set_backwards_substitution_callback(BackwardsSubstitutionCallback)
+  {
+    libmesh_not_implemented();
+  }
+  void set_forward_elimination_callback(ForwardEliminationCallback)
+  {
+    libmesh_not_implemented();
+  }
   virtual SparseMatrix<Number> & operator=(const SparseMatrix<Number> &) override
   {
     libmesh_not_implemented();
@@ -409,7 +479,30 @@ public:
   void setup() { libmesh_not_implemented(); }
   void apply(const NumericVector<Number> &, NumericVector<Number> &) { libmesh_not_implemented(); }
 
+  const SparseMatrix<Number> & get_condensed_mat() const { libmesh_not_implemented(); }
+  SparseMatrix<Number> & get_condensed_mat() { libmesh_not_implemented(); }
   void set_current_elem(const Elem &) {}
+  void add_precondensed_solve_data(const DenseMatrix<Number> &,
+                                   const std::vector<numeric_index_type> &,
+                                   const DenseMatrix<Number> &,
+                                   const std::vector<numeric_index_type> &)
+  {
+    libmesh_not_implemented();
+  }
+  dof_id_type reduced_dof_for_uncondensed_dof(const Elem &, dof_id_type) const
+  {
+    libmesh_not_implemented();
+  }
+  void mark_preassembled_matrix_entries(const Elem &,
+                                        const std::vector<numeric_index_type> &,
+                                        const std::vector<numeric_index_type> &)
+  {
+    libmesh_not_implemented();
+  }
+  void local_uncondensed_dof_map(std::vector<dof_id_type> &, std::vector<dof_id_type> &) const
+  {
+    libmesh_not_implemented();
+  }
   void dont_condense_vars(const std::unordered_set<unsigned int> &) {}
 };
 }

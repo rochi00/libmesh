@@ -189,7 +189,10 @@ BUILT_SOURCES = \
         kokkos_fe_monomial.h \
         kokkos_fe_shape_dispatch.h \
         kokkos_fe_types.h \
+        kokkos_hilbert_assembly.h \
+        kokkos_hilbert_system.h \
         kokkos_linalg_base.h \
+        kokkos_parsed_function.h \
         kokkos_quadrature.h \
         kokkos_storage.h \
         kokkos_storage_policy.h \
@@ -460,6 +463,8 @@ BUILT_SOURCES = \
         fem_system.h \
         frequency_system.h \
         generic_projector.h \
+        hilbert_assembly.h \
+        hilbert_assembly_kernel.h \
         implicit_system.h \
         inter_mesh_projection.h \
         linear_implicit_system.h \
@@ -1196,7 +1201,16 @@ kokkos_fe_shape_dispatch.h: $(top_srcdir)/include/gpu/kokkos_fe_shape_dispatch.h
 kokkos_fe_types.h: $(top_srcdir)/include/gpu/kokkos_fe_types.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
+kokkos_hilbert_assembly.h: $(top_srcdir)/include/gpu/kokkos_hilbert_assembly.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+kokkos_hilbert_system.h: $(top_srcdir)/include/gpu/kokkos_hilbert_system.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
 kokkos_linalg_base.h: $(top_srcdir)/include/gpu/kokkos_linalg_base.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+kokkos_parsed_function.h: $(top_srcdir)/include/gpu/kokkos_parsed_function.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 kokkos_quadrature.h: $(top_srcdir)/include/gpu/kokkos_quadrature.h
@@ -2007,6 +2021,12 @@ frequency_system.h: $(top_srcdir)/include/systems/frequency_system.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 generic_projector.h: $(top_srcdir)/include/systems/generic_projector.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+hilbert_assembly.h: $(top_srcdir)/include/systems/hilbert_assembly.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+hilbert_assembly_kernel.h: $(top_srcdir)/include/systems/hilbert_assembly_kernel.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 implicit_system.h: $(top_srcdir)/include/systems/implicit_system.h
