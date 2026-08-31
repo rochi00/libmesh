@@ -50,6 +50,12 @@ public:
   bool isEmpty() { return this->mData->mByteCode.empty(); }
 
   /**
+   * The bytecode and constants, which libMesh copies so that Kokkos
+   * kernels can evaluate this function.
+   */
+  const typename FunctionParserBase<Value_t>::Data * parser_data() const { return this->mData; }
+
+  /**
    * set the bytecode of this function to return constant zero.
    * this provides a well defined state in case AutoDiff fails
    */
