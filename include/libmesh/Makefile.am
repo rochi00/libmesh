@@ -275,6 +275,7 @@ BUILT_SOURCES = \
         parsed_fem_function_parameter.h \
         parsed_function.h \
         parsed_function_parameter.h \
+        parsed_function_program.h \
         petsc_macro.h \
         petsc_matrix.h \
         petsc_matrix_base.h \
@@ -1438,6 +1439,9 @@ parsed_function.h: $(top_srcdir)/include/numerics/parsed_function.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 parsed_function_parameter.h: $(top_srcdir)/include/numerics/parsed_function_parameter.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+parsed_function_program.h: $(top_srcdir)/include/numerics/parsed_function_program.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 petsc_macro.h: $(top_srcdir)/include/numerics/petsc_macro.h
