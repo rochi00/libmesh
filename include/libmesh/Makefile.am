@@ -178,7 +178,18 @@ BUILT_SOURCES = \
         overlap_coupling.h \
         point_neighbor_coupling.h \
         sibling_coupling.h \
+        kokkos_fe_base.h \
+        kokkos_fe_evaluator.h \
+        kokkos_fe_face_map.h \
+        kokkos_fe_lagrange_1d.h \
+        kokkos_fe_lagrange_2d.h \
+        kokkos_fe_lagrange_3d.h \
+        kokkos_fe_map.h \
+        kokkos_fe_monomial.h \
+        kokkos_fe_shape_dispatch.h \
+        kokkos_fe_types.h \
         kokkos_linalg_base.h \
+        kokkos_quadrature.h \
         kokkos_storage.h \
         kokkos_storage_policy.h \
         kokkos_tensor_ops.h \
@@ -1150,7 +1161,40 @@ point_neighbor_coupling.h: $(top_srcdir)/include/ghosting/point_neighbor_couplin
 sibling_coupling.h: $(top_srcdir)/include/ghosting/sibling_coupling.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
+kokkos_fe_base.h: $(top_srcdir)/include/gpu/kokkos_fe_base.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+kokkos_fe_evaluator.h: $(top_srcdir)/include/gpu/kokkos_fe_evaluator.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+kokkos_fe_face_map.h: $(top_srcdir)/include/gpu/kokkos_fe_face_map.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+kokkos_fe_lagrange_1d.h: $(top_srcdir)/include/gpu/kokkos_fe_lagrange_1d.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+kokkos_fe_lagrange_2d.h: $(top_srcdir)/include/gpu/kokkos_fe_lagrange_2d.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+kokkos_fe_lagrange_3d.h: $(top_srcdir)/include/gpu/kokkos_fe_lagrange_3d.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+kokkos_fe_map.h: $(top_srcdir)/include/gpu/kokkos_fe_map.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+kokkos_fe_monomial.h: $(top_srcdir)/include/gpu/kokkos_fe_monomial.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+kokkos_fe_shape_dispatch.h: $(top_srcdir)/include/gpu/kokkos_fe_shape_dispatch.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+kokkos_fe_types.h: $(top_srcdir)/include/gpu/kokkos_fe_types.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
 kokkos_linalg_base.h: $(top_srcdir)/include/gpu/kokkos_linalg_base.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+kokkos_quadrature.h: $(top_srcdir)/include/gpu/kokkos_quadrature.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 kokkos_storage.h: $(top_srcdir)/include/gpu/kokkos_storage.h
