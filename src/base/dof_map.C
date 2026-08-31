@@ -43,6 +43,10 @@
 #include "libmesh/system.h"
 #include "libmesh/parallel_fe_type.h"
 
+#ifdef LIBMESH_HAVE_PETSC
+#include "libmesh/petsc_vector.h"
+#endif
+
 // TIMPI includes
 #include "timpi/parallel_implementation.h"
 #include "timpi/parallel_sync.h"
@@ -210,6 +214,14 @@ DofMap::~DofMap()
   _mesh.remove_ghosting_functor(*_default_coupling);
   _mesh.remove_ghosting_functor(*_default_evaluating);
 }
+
+#ifdef LIBMESH_HAVE_KOKKOS
+void DofMap::clear_kokkos_caches() const
+{
+  _kokkos_dof_index_caches.clear();
+  _kokkos_local_index_caches.clear();
+}
+#endif
 
 
 #ifdef LIBMESH_ENABLE_PERIODIC
@@ -471,6 +483,10 @@ void DofMap::reinit
      constraining_subdomains)
 {
   libmesh_assert (mesh.is_prepared());
+
+#ifdef LIBMESH_HAVE_KOKKOS
+  this->clear_kokkos_caches();
+#endif
 
   LOG_SCOPE("reinit()", "DofMap");
 
@@ -870,6 +886,10 @@ void DofMap::invalidate_dofs(MeshBase & mesh) const
 
 void DofMap::clear()
 {
+#ifdef LIBMESH_HAVE_KOKKOS
+  this->clear_kokkos_caches();
+#endif
+
   DofMapBase::clear();
 
   // we don't want to clear
@@ -948,6 +968,10 @@ void DofMap::clear()
 
 std::size_t DofMap::distribute_dofs (MeshBase & mesh)
 {
+#ifdef LIBMESH_HAVE_KOKKOS
+  this->clear_kokkos_caches();
+#endif
+
   // This function must be run on all processors at once
   parallel_object_only();
 

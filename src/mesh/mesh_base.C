@@ -36,6 +36,7 @@
 #include "libmesh/point_locator_base.h"
 #include "libmesh/sparse_matrix.h"
 #include "libmesh/threads.h"
+#include "libmesh/utility.h"
 #include "libmesh/enum_elem_type.h"
 #include "libmesh/enum_point_locator_type.h"
 #include "libmesh/enum_to_string.h"
@@ -200,6 +201,9 @@ MeshBase& MeshBase::operator= (MeshBase && other_mesh)
   _element_stored_range = std::move(other_mesh._element_stored_range);
   _const_active_local_element_stored_range = std::move(other_mesh._const_active_local_element_stored_range);
   _point_locator = std::move(other_mesh._point_locator);
+#ifdef LIBMESH_HAVE_KOKKOS
+  _kokkos_geometry_cache.reset();
+#endif
   _count_lower_dim_elems_in_point_locator = other_mesh.get_count_lower_dim_elems_in_point_locator();
 #ifdef LIBMESH_ENABLE_UNIQUE_ID
   _next_unique_id = other_mesh.next_unique_id();
@@ -611,6 +615,9 @@ void MeshBase::set_spatial_dimension(unsigned char d)
   // libMesh will only *increase* the spatial dimension, however,
   // never decrease it.
   _spatial_dimension = d;
+#ifdef LIBMESH_HAVE_KOKKOS
+  _kokkos_geometry_cache.reset();
+#endif
 }
 
 
@@ -1014,6 +1021,7 @@ void MeshBase::complete_preparation()
   MeshTools::libmesh_assert_valid_unique_ids(*this);
 #endif
 #endif
+
 }
 
 void
@@ -1053,7 +1061,17 @@ void MeshBase::clear ()
   // Clear our point locator.
   this->clear_point_locator();
   this->clear_stored_ranges();
+  this->clear_kokkos_geometry_cache();
 }
+
+#ifdef LIBMESH_HAVE_KOKKOS
+void MeshBase::clear_kokkos_geometry_cache() const
+{
+  _kokkos_geometry_cache.reset();
+}
+#else
+void MeshBase::clear_kokkos_geometry_cache() const {}
+#endif
 
 
 bool MeshBase::is_prepared() const
@@ -1067,6 +1085,7 @@ void MeshBase::unset_is_prepared()
   _preparation = false;
   this->clear_point_locator();
   this->clear_stored_ranges();
+  this->clear_kokkos_geometry_cache();
 }
 
 
@@ -1807,6 +1826,9 @@ void MeshBase::partition (const unsigned int n_parts)
     }
 
   _preparation.is_partitioned = true;
+#ifdef LIBMESH_HAVE_KOKKOS
+  _kokkos_geometry_cache.reset();
+#endif
 }
 
 void MeshBase::all_second_order (const bool full_ordered)
@@ -2433,6 +2455,10 @@ MeshBase::post_dofobject_moves(MeshBase && other_mesh)
 
   if (other_mesh.partitioner())
     _partitioner = std::move(other_mesh.partitioner());
+
+#ifdef LIBMESH_HAVE_KOKKOS
+  _kokkos_geometry_cache.reset();
+#endif
 }
 
 

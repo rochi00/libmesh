@@ -50,6 +50,7 @@
 #include <iterator>
 #include <map>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include <memory>
 
@@ -1813,7 +1814,43 @@ public:
    */
   void reinit_static_condensation();
 
+#ifdef LIBMESH_HAVE_KOKKOS
+  struct KokkosDofIndexCache;
+  struct KokkosLocalIndexCache;
+  struct KokkosDofIndexCacheDeleter
+  {
+    void operator()(KokkosDofIndexCache *) const;
+  };
+  struct KokkosLocalIndexCacheDeleter
+  {
+    void operator()(KokkosLocalIndexCache *) const;
+  };
+  using kokkos_dof_index_cache_ptr =
+    std::unique_ptr<KokkosDofIndexCache, KokkosDofIndexCacheDeleter>;
+  using kokkos_local_index_cache_ptr =
+    std::unique_ptr<KokkosLocalIndexCache, KokkosLocalIndexCacheDeleter>;
+
+  const KokkosDofIndexCache *
+  get_kokkos_dof_index_cache(const unsigned int vn = libMesh::invalid_uint) const;
+
+  const KokkosLocalIndexCache *
+  get_kokkos_local_index_cache(const NumericVector<Number> & local_vector,
+                               const unsigned int vn = libMesh::invalid_uint) const;
+
+  const KokkosLocalIndexCache *
+  require_kokkos_local_index_cache(const NumericVector<Number> & local_vector,
+                                   const unsigned int vn = libMesh::invalid_uint) const;
+
+  void prepare_kokkos_dof_index_caches() const;
+  void prepare_kokkos_local_index_cache(const NumericVector<Number> & local_vector,
+                                        const unsigned int vn = libMesh::invalid_uint) const;
+  void clear_kokkos_caches() const;
+
 private:
+#else
+
+private:
+#endif
 
   /**
    * Retrieve the array variable bounds for a given variable \p vi. This variable may
@@ -2138,6 +2175,13 @@ private:
    * The mesh that system uses.
    */
   MeshBase & _mesh;
+
+#ifdef LIBMESH_HAVE_KOKKOS
+  mutable std::map<unsigned int,
+                   kokkos_dof_index_cache_ptr> _kokkos_dof_index_caches;
+  mutable std::map<std::pair<unsigned int, const NumericVector<Number> *>,
+                   kokkos_local_index_cache_ptr> _kokkos_local_index_caches;
+#endif
 
   /**
    * Additional matrices handled by this object.  These pointers do \e

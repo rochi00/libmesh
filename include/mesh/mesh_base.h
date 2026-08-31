@@ -35,6 +35,8 @@
 #include <cstddef>
 #include <string>
 #include <memory>
+#include <unordered_map>
+#include <vector>
 
 #include "libmesh/vector_value.h"
 
@@ -183,6 +185,26 @@ public:
    */
   virtual void clear ();
 
+#ifdef LIBMESH_HAVE_KOKKOS
+  struct KokkosGeometryCache;
+  struct KokkosGeometryCacheDeleter
+  {
+    void operator()(KokkosGeometryCache *) const;
+  };
+  using kokkos_geometry_cache_ptr =
+    std::unique_ptr<KokkosGeometryCache, KokkosGeometryCacheDeleter>;
+
+  const KokkosGeometryCache & get_kokkos_geometry_cache() const;
+  unsigned int get_kokkos_elem_index(const Elem & elem) const;
+  void prepare_kokkos_geometry_cache() const;
+private:
+#else
+  void prepare_kokkos_geometry_cache() const {}
+private:
+#endif
+public:
+  void clear_kokkos_geometry_cache() const;
+
   /**
    * Deletes all the element data that is currently stored.
    *
@@ -244,7 +266,10 @@ public:
    * them too or call this method.
    */
   void unset_is_partitioned()
-  { _preparation.is_partitioned = false; }
+  {
+    _preparation.is_partitioned = false;
+    this->clear_kokkos_geometry_cache();
+  }
 
   /**
    * Tells this we have done some operation (e.g. adding objects to a
@@ -2219,6 +2244,10 @@ protected:
    * and it operates on a constant reference to the mesh, this is OK.
    */
   mutable std::unique_ptr<PointLocatorBase> _point_locator;
+
+#ifdef LIBMESH_HAVE_KOKKOS
+  mutable kokkos_geometry_cache_ptr _kokkos_geometry_cache;
+#endif
 
   /**
    * Do we count lower dimensional elements in point locator refinement?

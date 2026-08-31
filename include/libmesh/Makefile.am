@@ -9,6 +9,7 @@ BUILT_SOURCES = \
         dirichlet_boundaries.h \
         dof_map.h \
         dof_map_base.h \
+        dof_map_kokkos.h \
         dof_object.h \
         factory.h \
         float128_shims.h \
@@ -213,6 +214,7 @@ BUILT_SOURCES = \
         medit_io.h \
         mesh.h \
         mesh_base.h \
+        mesh_base_kokkos.h \
         mesh_communication.h \
         mesh_function.h \
         mesh_generation.h \
@@ -652,6 +654,9 @@ dof_map.h: $(top_srcdir)/include/base/dof_map.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 dof_map_base.h: $(top_srcdir)/include/base/dof_map_base.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+dof_map_kokkos.h: $(top_srcdir)/include/base/dof_map_kokkos.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 dof_object.h: $(top_srcdir)/include/base/dof_object.h
@@ -1264,6 +1269,9 @@ mesh.h: $(top_srcdir)/include/mesh/mesh.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 mesh_base.h: $(top_srcdir)/include/mesh/mesh_base.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+mesh_base_kokkos.h: $(top_srcdir)/include/mesh/mesh_base_kokkos.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 mesh_communication.h: $(top_srcdir)/include/mesh/mesh_communication.h
