@@ -22,6 +22,7 @@
 
 // Local includes
 #include "libmesh/libmesh_common.h"
+#include "libmesh/fe_reference_element_traits.h"
 #include "libmesh/face_tri.h"
 
 namespace libMesh
@@ -204,7 +205,7 @@ public:
    * This maps the \f$ j^{th} \f$ node of the \f$ i^{th} \f$ side to
    * element node numbers.
    */
-  static const unsigned int side_nodes_map[num_sides][nodes_per_side];
+  static const ReferenceElementTable<num_sides, nodes_per_side> side_nodes_map;
 
   /**
    * An optimized method for approximating the area of a

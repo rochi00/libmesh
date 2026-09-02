@@ -18,6 +18,7 @@
 // Local includes
 #include "libmesh/edge_edge3.h"
 #include "libmesh/face_quad9.h"
+#include "libmesh/fe_reference_element_traits.h"
 #include "libmesh/enum_io_package.h"
 #include "libmesh/enum_order.h"
 
@@ -32,13 +33,8 @@ namespace libMesh
 const int Quad9::num_nodes;
 const int Quad9::nodes_per_side;
 
-const unsigned int Quad9::side_nodes_map[Quad9::num_sides][Quad9::nodes_per_side] =
-  {
-    {0, 1, 4}, // Side 0
-    {1, 2, 5}, // Side 1
-    {2, 3, 6}, // Side 2
-    {3, 0, 7}  // Side 3
-  };
+const ReferenceElementTable<Quad9::num_sides, Quad9::nodes_per_side>
+Quad9::side_nodes_map = build_side_nodes<Quad9::num_sides, Quad9::nodes_per_side>(QUAD9);
 
 
 #ifdef LIBMESH_ENABLE_AMR

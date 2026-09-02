@@ -18,6 +18,7 @@
 // Local includes
 #include "libmesh/edge_edge3.h"
 #include "libmesh/face_tri6.h"
+#include "libmesh/fe_reference_element_traits.h"
 #include "libmesh/enum_io_package.h"
 #include "libmesh/enum_order.h"
 
@@ -32,12 +33,8 @@ namespace libMesh
 const int Tri6::num_nodes;
 const int Tri6::nodes_per_side;
 
-const unsigned int Tri6::side_nodes_map[Tri6::num_sides][Tri6::nodes_per_side] =
-  {
-    {0, 1, 3}, // Side 0
-    {1, 2, 4}, // Side 1
-    {2, 0, 5}  // Side 2
-  };
+const ReferenceElementTable<Tri6::num_sides, Tri6::nodes_per_side>
+Tri6::side_nodes_map = build_side_nodes<Tri6::num_sides, Tri6::nodes_per_side>(TRI6);
 
 
 #ifdef LIBMESH_ENABLE_AMR

@@ -22,6 +22,7 @@
 
 // Local includes
 #include "libmesh/cell_prism.h"
+#include "libmesh/fe_reference_element_traits.h"
 
 namespace libMesh
 {
@@ -248,13 +249,13 @@ public:
    * This maps the \f$ j^{th} \f$ node of the \f$ i^{th} \f$ side to
    * element node numbers.
    */
-  static const unsigned int side_nodes_map[num_sides][nodes_per_side];
+  static const ReferenceElementTable<num_sides, nodes_per_side> side_nodes_map;
 
   /**
    * This maps the \f$ j^{th} \f$ node of the \f$ i^{th} \f$ edge to
    * element node numbers.
    */
-  static const unsigned int edge_nodes_map[num_edges][nodes_per_edge];
+  static const ReferenceElementTable<num_edges, nodes_per_edge> edge_nodes_map;
 
   virtual void permute(unsigned int perm_num) override final;
 
