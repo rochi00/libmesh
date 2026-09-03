@@ -41,6 +41,7 @@ BUILT_SOURCES = \
         enum_elem_quality.h \
         enum_elem_type.h \
         enum_error_estimator_type.h \
+        enum_fe_elem_class.h \
         enum_fe_family.h \
         enum_inf_map_type.h \
         enum_io_package.h \
@@ -82,6 +83,7 @@ BUILT_SOURCES = \
         fe_macro.h \
         fe_map.h \
         fe_reference_element_traits.h \
+        fe_shape_traits.h \
         fe_transformation_base.h \
         fe_type.h \
         fe_xyz_map.h \
@@ -733,6 +735,9 @@ enum_elem_type.h: $(top_srcdir)/include/enums/enum_elem_type.h
 enum_error_estimator_type.h: $(top_srcdir)/include/enums/enum_error_estimator_type.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
+enum_fe_elem_class.h: $(top_srcdir)/include/enums/enum_fe_elem_class.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
 enum_fe_family.h: $(top_srcdir)/include/enums/enum_fe_family.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
@@ -854,6 +859,9 @@ fe_map.h: $(top_srcdir)/include/fe/fe_map.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 fe_reference_element_traits.h: $(top_srcdir)/include/fe/fe_reference_element_traits.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+fe_shape_traits.h: $(top_srcdir)/include/fe/fe_shape_traits.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 fe_transformation_base.h: $(top_srcdir)/include/fe/fe_transformation_base.h
