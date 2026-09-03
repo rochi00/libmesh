@@ -700,6 +700,264 @@ try_local_side_node(ElemType parent,
   }
 }
 
+// Reference-element vertex locations, per family (higher-order family
+// members share their linear sibling's vertices).
+LIBMESH_DEVICE_INLINE unsigned int
+reference_vertex_count(ElemType type)
+{
+  switch (type)
+  {
+    case EDGE2:
+    case EDGE3:
+    case EDGE4:
+      return 2;
+    case TRI3:
+    case TRISHELL3:
+    case TRI6:
+    case TRI7:
+      return 3;
+    case QUAD4:
+    case QUADSHELL4:
+    case QUAD8:
+    case QUADSHELL8:
+    case QUAD9:
+    case QUADSHELL9:
+    case TET4:
+    case TET10:
+    case TET14:
+      return 4;
+    case PYRAMID5:
+    case PYRAMID13:
+    case PYRAMID14:
+    case PYRAMID18:
+      return 5;
+    case PRISM6:
+    case PRISM15:
+    case PRISM18:
+    case PRISM20:
+    case PRISM21:
+      return 6;
+    case HEX8:
+    case HEX20:
+    case HEX27:
+      return 8;
+    default:
+      return 0;
+  }
+}
+
+LIBMESH_DEVICE_INLINE bool
+reference_vertex(ElemType type,
+                 unsigned int v,
+                 Point & pt)
+{
+  if (v >= reference_vertex_count(type))
+    return false;
+
+  switch (type)
+  {
+    case EDGE2:
+    case EDGE3:
+    case EDGE4:
+      pt = Point(v == 0 ? -1.0 : 1.0);
+      return true;
+    case TRI3:
+    case TRISHELL3:
+    case TRI6:
+    case TRI7:
+      pt = Point(v == 1 ? 1.0 : 0.0, v == 2 ? 1.0 : 0.0);
+      return true;
+    case QUAD4:
+    case QUADSHELL4:
+    case QUAD8:
+    case QUADSHELL8:
+    case QUAD9:
+    case QUADSHELL9:
+      pt = Point((v == 1 || v == 2) ? 1.0 : -1.0,
+                 (v == 2 || v == 3) ? 1.0 : -1.0);
+      return true;
+    case TET4:
+    case TET10:
+    case TET14:
+      pt = Point(v == 1 ? 1.0 : 0.0, v == 2 ? 1.0 : 0.0, v == 3 ? 1.0 : 0.0);
+      return true;
+    case PYRAMID5:
+    case PYRAMID13:
+    case PYRAMID14:
+    case PYRAMID18:
+      pt = v == 4 ? Point(0.0, 0.0, 1.0)
+                  : Point((v == 1 || v == 2) ? 1.0 : -1.0,
+                          (v == 2 || v == 3) ? 1.0 : -1.0,
+                          0.0);
+      return true;
+    case PRISM6:
+    case PRISM15:
+    case PRISM18:
+    case PRISM20:
+    case PRISM21:
+      pt = Point(v % 3 == 1 ? 1.0 : 0.0,
+                 v % 3 == 2 ? 1.0 : 0.0,
+                 v < 3 ? -1.0 : 1.0);
+      return true;
+    case HEX8:
+    case HEX20:
+    case HEX27:
+      pt = Point((v % 4 == 1 || v % 4 == 2) ? 1.0 : -1.0,
+                 (v % 4 == 2 || v % 4 == 3) ? 1.0 : -1.0,
+                 v < 4 ? -1.0 : 1.0);
+      return true;
+    default:
+      return false;
+  }
+}
+
+// The node holding an element's vertex-centroid, if it has one.
+LIBMESH_DEVICE_INLINE unsigned int
+centroid_node_or_invalid(ElemType type)
+{
+  switch (type)
+  {
+    case EDGE3:
+      return 2;
+    case TRI7:
+      return 6;
+    case QUAD9:
+    case QUADSHELL9:
+      return 8;
+    case HEX27:
+      return 26;
+    case PRISM21:
+      return 20;
+    default:
+      return invalid_uint;
+  }
+}
+
+// Every higher-order reference node sits at the centroid of its
+// subentity's vertices -- mid-edge nodes at edge midpoints, face nodes at
+// face-corner centroids, interior nodes at the vertex centroid -- so only
+// the vertices are tabulated and the rest is derived through the same
+// side/edge topology tables everything else uses.  The one exception is
+// the cubic EDGE4, whose two interior nodes trisect the edge.
+LIBMESH_DEVICE_INLINE bool
+try_reference_node(ElemType type,
+                   unsigned int node,
+                   Point & pt)
+{
+  const unsigned int nv = reference_vertex_count(type);
+  if (node < nv)
+    return reference_vertex(type, node, pt);
+
+  if (type == EDGE4)
+    {
+      if (node > 3)
+        return false;
+      pt = Point(node == 2 ? Real(-1) / 3 : Real(1) / 3);
+      return true;
+    }
+
+  if (node == centroid_node_or_invalid(type))
+    {
+      Point sum;
+      for (unsigned int v = 0; v != nv; ++v)
+        {
+          Point pv;
+          reference_vertex(type, v, pv);
+          sum += pv;
+        }
+      pt = sum / Real(nv);
+      return true;
+    }
+
+  // Mid-edge nodes: the third entry of an edge-table row {v0, v1, mid}.
+  for (unsigned int e = 0; edge_node_count_or_zero(type, e); ++e)
+    {
+      unsigned int mid, v0, v1;
+      if (try_local_edge_node(type, e, 2, mid) && mid == node &&
+          try_local_edge_node(type, e, 0, v0) &&
+          try_local_edge_node(type, e, 1, v1))
+        {
+          Point p0, p1;
+          reference_vertex(type, v0, p0);
+          reference_vertex(type, v1, p1);
+          pt = (p0 + p1) / 2;
+          return true;
+        }
+    }
+
+  // 2D mid-side nodes ({v0, v1, mid} side rows) and 3D face-center nodes
+  // (the last entry of a 7- or 9-node side row, behind 3 or 4 corners).
+  for (unsigned int s = 0; ; ++s)
+    {
+      const unsigned int count = side_node_count_or_zero(type, s);
+      if (!count)
+        break;
+      const unsigned int corners =
+        count == 3 ? 2 : count == 7 ? 3 : count == 9 ? 4 : 0;
+      unsigned int last;
+      if (!corners ||
+          !try_local_side_node(type, s, count - 1, last) || last != node)
+        continue;
+      Point sum;
+      for (unsigned int k = 0; k != corners; ++k)
+        {
+          unsigned int v;
+          try_local_side_node(type, s, k, v);
+          Point pv;
+          reference_vertex(type, v, pv);
+          sum += pv;
+        }
+      pt = sum / Real(corners);
+      return true;
+    }
+
+  return false;
+}
+LIBMESH_DEVICE_INLINE bool
+try_refspace_node(ElemType type,
+                  unsigned int node,
+                  Point & pt)
+{
+  switch (type)
+  {
+    case NODEELEM:
+      if (!node)
+      {
+        pt = Point(0.0, 0.0, 0.0);
+        return true;
+      }
+      return false;
+
+    case TRISHELL3:
+      return try_reference_node(TRI3, node, pt);
+
+    case QUADSHELL4:
+      return try_reference_node(QUAD4, node, pt);
+
+    case QUADSHELL8:
+      return try_reference_node(QUAD8, node, pt);
+
+    case QUADSHELL9:
+      return try_reference_node(QUAD9, node, pt);
+
+    default:
+      return try_reference_node(type, node, pt);
+  }
+}
+
+LIBMESH_DEVICE_INLINE bool
+try_reference_side_node(ElemType parent,
+                        unsigned int side,
+                        unsigned int side_node,
+                        Point & pt)
+{
+  unsigned int node = libMesh::invalid_uint;
+  if (!try_local_side_node(parent, side, side_node, node))
+    return false;
+
+  return try_reference_node(parent, node, pt);
+}
+
 } // namespace libMesh
 
 #endif // LIBMESH_FE_REFERENCE_ELEMENT_TRAITS_H
