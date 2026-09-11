@@ -99,6 +99,11 @@ check_PROGRAMS = $(am__EXEEXT_1) $(am__EXEEXT_2) $(am__EXEEXT_3) \
 @LIBMESH_OPT_MODE_TRUE@am__append_4 = example-opt
 @LIBMESH_PROF_MODE_TRUE@am__append_5 = example-prof
 @LIBMESH_OPROF_MODE_TRUE@am__append_6 = example-oprof
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_7 = $(KOKKOS_VECTOR_FE_EX9_DBG_OBJECTS) $(KOKKOS_LIBS)
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_8 = $(KOKKOS_VECTOR_FE_EX9_DEVEL_OBJECTS) $(KOKKOS_LIBS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@am__append_9 = $(KOKKOS_VECTOR_FE_EX9_OPT_OBJECTS) $(KOKKOS_LIBS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@am__append_10 = $(KOKKOS_VECTOR_FE_EX9_PROF_OBJECTS) $(KOKKOS_LIBS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@am__append_11 = $(KOKKOS_VECTOR_FE_EX9_OPROF_OBJECTS) $(KOKKOS_LIBS)
 subdir = examples/vector_fe/vector_fe_ex9
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \
@@ -173,72 +178,67 @@ CONFIG_CLEAN_VPATH_FILES =
 @LIBMESH_OPT_MODE_TRUE@am__EXEEXT_3 = example-opt$(EXEEXT)
 @LIBMESH_PROF_MODE_TRUE@am__EXEEXT_4 = example-prof$(EXEEXT)
 @LIBMESH_OPROF_MODE_TRUE@am__EXEEXT_5 = example-oprof$(EXEEXT)
-am__example_dbg_SOURCES_DIST = vector_fe_ex9.C vector_fe_ex9.in \
-	hdg_problem.h hdg_problem.C exact_soln.h run.sh
+am__example_dbg_SOURCES_DIST = vector_fe_ex9.C hdg_problem.C \
+	hdg_problem.h exact_soln.h
 am__objects_1 = example_dbg-vector_fe_ex9.$(OBJEXT) \
 	example_dbg-hdg_problem.$(OBJEXT)
-am__objects_2 = $(am__objects_1)
-@LIBMESH_DBG_MODE_TRUE@am_example_dbg_OBJECTS = $(am__objects_2)
+@LIBMESH_DBG_MODE_TRUE@am_example_dbg_OBJECTS = $(am__objects_1)
 example_dbg_OBJECTS = $(am_example_dbg_OBJECTS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@am__DEPENDENCIES_1 = vector_fe_ex9_kokkos_dbg.o
+am__DEPENDENCIES_2 =
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@am__DEPENDENCIES_3 = $(am__DEPENDENCIES_1) \
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_2)
 @LIBMESH_DBG_MODE_TRUE@example_dbg_DEPENDENCIES =  \
-@LIBMESH_DBG_MODE_TRUE@	$(top_builddir)/libmesh_dbg.la
-AM_V_lt = $(am__v_lt_@AM_V@)
-am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
-am__v_lt_0 = --silent
-am__v_lt_1 = 
-example_dbg_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(example_dbg_CXXFLAGS) \
-	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-am__example_devel_SOURCES_DIST = vector_fe_ex9.C vector_fe_ex9.in \
-	hdg_problem.h hdg_problem.C exact_soln.h run.sh
-am__objects_3 = example_devel-vector_fe_ex9.$(OBJEXT) \
+@LIBMESH_DBG_MODE_TRUE@	$(top_builddir)/libmesh_dbg.la \
+@LIBMESH_DBG_MODE_TRUE@	$(am__DEPENDENCIES_3)
+am__example_devel_SOURCES_DIST = vector_fe_ex9.C hdg_problem.C \
+	hdg_problem.h exact_soln.h
+am__objects_2 = example_devel-vector_fe_ex9.$(OBJEXT) \
 	example_devel-hdg_problem.$(OBJEXT)
-am__objects_4 = $(am__objects_3)
-@LIBMESH_DEVEL_MODE_TRUE@am_example_devel_OBJECTS = $(am__objects_4)
+@LIBMESH_DEVEL_MODE_TRUE@am_example_devel_OBJECTS = $(am__objects_2)
 example_devel_OBJECTS = $(am_example_devel_OBJECTS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@am__DEPENDENCIES_4 = vector_fe_ex9_kokkos_devel.o
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@am__DEPENDENCIES_5 = $(am__DEPENDENCIES_4) \
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@	$(am__DEPENDENCIES_2)
 @LIBMESH_DEVEL_MODE_TRUE@example_devel_DEPENDENCIES =  \
-@LIBMESH_DEVEL_MODE_TRUE@	$(top_builddir)/libmesh_devel.la
-example_devel_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
-	$(example_devel_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
-	-o $@
-am__example_oprof_SOURCES_DIST = vector_fe_ex9.C vector_fe_ex9.in \
-	hdg_problem.h hdg_problem.C exact_soln.h run.sh
-am__objects_5 = example_oprof-vector_fe_ex9.$(OBJEXT) \
+@LIBMESH_DEVEL_MODE_TRUE@	$(top_builddir)/libmesh_devel.la \
+@LIBMESH_DEVEL_MODE_TRUE@	$(am__DEPENDENCIES_5)
+am__example_oprof_SOURCES_DIST = vector_fe_ex9.C hdg_problem.C \
+	hdg_problem.h exact_soln.h
+am__objects_3 = example_oprof-vector_fe_ex9.$(OBJEXT) \
 	example_oprof-hdg_problem.$(OBJEXT)
-am__objects_6 = $(am__objects_5)
-@LIBMESH_OPROF_MODE_TRUE@am_example_oprof_OBJECTS = $(am__objects_6)
+@LIBMESH_OPROF_MODE_TRUE@am_example_oprof_OBJECTS = $(am__objects_3)
 example_oprof_OBJECTS = $(am_example_oprof_OBJECTS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@am__DEPENDENCIES_6 = vector_fe_ex9_kokkos_oprof.o
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@am__DEPENDENCIES_7 = $(am__DEPENDENCIES_6) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@	$(am__DEPENDENCIES_2)
 @LIBMESH_OPROF_MODE_TRUE@example_oprof_DEPENDENCIES =  \
-@LIBMESH_OPROF_MODE_TRUE@	$(top_builddir)/libmesh_oprof.la
-example_oprof_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
-	$(example_oprof_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
-	-o $@
-am__example_opt_SOURCES_DIST = vector_fe_ex9.C vector_fe_ex9.in \
-	hdg_problem.h hdg_problem.C exact_soln.h run.sh
-am__objects_7 = example_opt-vector_fe_ex9.$(OBJEXT) \
+@LIBMESH_OPROF_MODE_TRUE@	$(top_builddir)/libmesh_oprof.la \
+@LIBMESH_OPROF_MODE_TRUE@	$(am__DEPENDENCIES_7)
+am__example_opt_SOURCES_DIST = vector_fe_ex9.C hdg_problem.C \
+	hdg_problem.h exact_soln.h
+am__objects_4 = example_opt-vector_fe_ex9.$(OBJEXT) \
 	example_opt-hdg_problem.$(OBJEXT)
-am__objects_8 = $(am__objects_7)
-@LIBMESH_OPT_MODE_TRUE@am_example_opt_OBJECTS = $(am__objects_8)
+@LIBMESH_OPT_MODE_TRUE@am_example_opt_OBJECTS = $(am__objects_4)
 example_opt_OBJECTS = $(am_example_opt_OBJECTS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@am__DEPENDENCIES_8 = vector_fe_ex9_kokkos_opt.o
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@am__DEPENDENCIES_9 = $(am__DEPENDENCIES_8) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@	$(am__DEPENDENCIES_2)
 @LIBMESH_OPT_MODE_TRUE@example_opt_DEPENDENCIES =  \
-@LIBMESH_OPT_MODE_TRUE@	$(top_builddir)/libmesh_opt.la
-example_opt_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(example_opt_CXXFLAGS) \
-	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-am__example_prof_SOURCES_DIST = vector_fe_ex9.C vector_fe_ex9.in \
-	hdg_problem.h hdg_problem.C exact_soln.h run.sh
-am__objects_9 = example_prof-vector_fe_ex9.$(OBJEXT) \
+@LIBMESH_OPT_MODE_TRUE@	$(top_builddir)/libmesh_opt.la \
+@LIBMESH_OPT_MODE_TRUE@	$(am__DEPENDENCIES_9)
+am__example_prof_SOURCES_DIST = vector_fe_ex9.C hdg_problem.C \
+	hdg_problem.h exact_soln.h
+am__objects_5 = example_prof-vector_fe_ex9.$(OBJEXT) \
 	example_prof-hdg_problem.$(OBJEXT)
-am__objects_10 = $(am__objects_9)
-@LIBMESH_PROF_MODE_TRUE@am_example_prof_OBJECTS = $(am__objects_10)
+@LIBMESH_PROF_MODE_TRUE@am_example_prof_OBJECTS = $(am__objects_5)
 example_prof_OBJECTS = $(am_example_prof_OBJECTS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@am__DEPENDENCIES_10 = vector_fe_ex9_kokkos_prof.o
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@am__DEPENDENCIES_11 = $(am__DEPENDENCIES_10) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@	$(am__DEPENDENCIES_2)
 @LIBMESH_PROF_MODE_TRUE@example_prof_DEPENDENCIES =  \
-@LIBMESH_PROF_MODE_TRUE@	$(top_builddir)/libmesh_prof.la
-example_prof_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(example_prof_CXXFLAGS) \
-	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+@LIBMESH_PROF_MODE_TRUE@	$(top_builddir)/libmesh_prof.la \
+@LIBMESH_PROF_MODE_TRUE@	$(am__DEPENDENCIES_11)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -265,6 +265,10 @@ am__depfiles_remade = ./$(DEPDIR)/example_dbg-hdg_problem.Po \
 	./$(DEPDIR)/example_prof-hdg_problem.Po \
 	./$(DEPDIR)/example_prof-vector_fe_ex9.Po
 am__mv = mv -f
+AM_V_lt = $(am__v_lt_@AM_V@)
+am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
+am__v_lt_0 = --silent
+am__v_lt_1 = 
 CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
 LTCXXCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
@@ -727,8 +731,8 @@ vtkversion = @vtkversion@
 example_name = vector_fe_ex9
 check_SCRIPTS = run.sh
 install_dir = $(examples_install_path)/vector_fe/ex9
-data = vector_fe_ex9.C vector_fe_ex9.in hdg_problem.h hdg_problem.C exact_soln.h run.sh
-sources = $(data)
+data = vector_fe_ex9.C vector_fe_ex9.in vector_fe_ex9_kokkos.K hdg_problem.h hdg_problem.C exact_soln.h run.sh
+sources = vector_fe_ex9.C hdg_problem.C hdg_problem.h exact_soln.h
 
 ######################################################################
 #
@@ -763,23 +767,33 @@ data_DATA = $(data) $(top_builddir)/contrib/utils/Makefile
 @LIBMESH_DBG_MODE_TRUE@example_dbg_SOURCES = $(sources)
 @LIBMESH_DBG_MODE_TRUE@example_dbg_CPPFLAGS = $(CPPFLAGS_DBG) $(AM_CPPFLAGS)
 @LIBMESH_DBG_MODE_TRUE@example_dbg_CXXFLAGS = $(CXXFLAGS_DBG)
-@LIBMESH_DBG_MODE_TRUE@example_dbg_LDADD = $(top_builddir)/libmesh_dbg.la
+@LIBMESH_DBG_MODE_TRUE@example_dbg_LDADD =  \
+@LIBMESH_DBG_MODE_TRUE@	$(top_builddir)/libmesh_dbg.la \
+@LIBMESH_DBG_MODE_TRUE@	$(am__append_7)
 @LIBMESH_DEVEL_MODE_TRUE@example_devel_SOURCES = $(sources)
 @LIBMESH_DEVEL_MODE_TRUE@example_devel_CPPFLAGS = $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS)
 @LIBMESH_DEVEL_MODE_TRUE@example_devel_CXXFLAGS = $(CXXFLAGS_DEVEL)
-@LIBMESH_DEVEL_MODE_TRUE@example_devel_LDADD = $(top_builddir)/libmesh_devel.la
+@LIBMESH_DEVEL_MODE_TRUE@example_devel_LDADD =  \
+@LIBMESH_DEVEL_MODE_TRUE@	$(top_builddir)/libmesh_devel.la \
+@LIBMESH_DEVEL_MODE_TRUE@	$(am__append_8)
 @LIBMESH_OPT_MODE_TRUE@example_opt_SOURCES = $(sources)
 @LIBMESH_OPT_MODE_TRUE@example_opt_CPPFLAGS = $(CPPFLAGS_OPT) $(AM_CPPFLAGS)
 @LIBMESH_OPT_MODE_TRUE@example_opt_CXXFLAGS = $(CXXFLAGS_OPT)
-@LIBMESH_OPT_MODE_TRUE@example_opt_LDADD = $(top_builddir)/libmesh_opt.la
+@LIBMESH_OPT_MODE_TRUE@example_opt_LDADD =  \
+@LIBMESH_OPT_MODE_TRUE@	$(top_builddir)/libmesh_opt.la \
+@LIBMESH_OPT_MODE_TRUE@	$(am__append_9)
 @LIBMESH_PROF_MODE_TRUE@example_prof_SOURCES = $(sources)
 @LIBMESH_PROF_MODE_TRUE@example_prof_CPPFLAGS = $(CPPFLAGS_PROF) $(AM_CPPFLAGS)
 @LIBMESH_PROF_MODE_TRUE@example_prof_CXXFLAGS = $(CXXFLAGS_PROF)
-@LIBMESH_PROF_MODE_TRUE@example_prof_LDADD = $(top_builddir)/libmesh_prof.la
+@LIBMESH_PROF_MODE_TRUE@example_prof_LDADD =  \
+@LIBMESH_PROF_MODE_TRUE@	$(top_builddir)/libmesh_prof.la \
+@LIBMESH_PROF_MODE_TRUE@	$(am__append_10)
 @LIBMESH_OPROF_MODE_TRUE@example_oprof_SOURCES = $(sources)
 @LIBMESH_OPROF_MODE_TRUE@example_oprof_CPPFLAGS = $(CPPFLAGS_OPROF) $(AM_CPPFLAGS)
 @LIBMESH_OPROF_MODE_TRUE@example_oprof_CXXFLAGS = $(CXXFLAGS_OPROF)
-@LIBMESH_OPROF_MODE_TRUE@example_oprof_LDADD = $(top_builddir)/libmesh_oprof.la
+@LIBMESH_OPROF_MODE_TRUE@example_oprof_LDADD =  \
+@LIBMESH_OPROF_MODE_TRUE@	$(top_builddir)/libmesh_oprof.la \
+@LIBMESH_OPROF_MODE_TRUE@	$(am__append_11)
 @LIBMESH_DBG_MODE_TRUE@@LIBMESH_DEVEL_MODE_FALSE@@LIBMESH_OPROF_MODE_FALSE@@LIBMESH_OPT_MODE_FALSE@@LIBMESH_PROF_MODE_FALSE@DOC_PROGRAM = example-dbg
 @LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_OPROF_MODE_FALSE@@LIBMESH_OPT_MODE_FALSE@@LIBMESH_PROF_MODE_FALSE@DOC_PROGRAM = example-devel
 @LIBMESH_OPROF_MODE_FALSE@@LIBMESH_OPT_MODE_FALSE@@LIBMESH_PROF_MODE_TRUE@DOC_PROGRAM = example-prof
@@ -804,6 +818,58 @@ TESTS_ENVIRONMENT = LIBMESH_DIR=$(abs_top_srcdir); export LIBMESH_DIR; \
 	METHODS="$(METHODS)"; export METHODS; petscmajor=@petscmajor@ \
 	petscminor=@petscminor@ enableeigen=@enableeigen@
 TESTS = $(check_SCRIPTS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_VECTOR_FE_EX9_DBG_OBJECTS = vector_fe_ex9_kokkos_dbg.o
+
+##############################################
+# include common example environment
+@LIBMESH_ENABLE_COMPLEX_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_VECTOR_FE_EX9_DBG_OBJECTS = 
+@LIBMESH_ENABLE_KOKKOS_FALSE@KOKKOS_VECTOR_FE_EX9_DBG_OBJECTS = 
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_FALSE@KOKKOS_VECTOR_FE_EX9_DBG_OBJECTS = 
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_VECTOR_FE_EX9_DEVEL_OBJECTS = vector_fe_ex9_kokkos_devel.o
+@LIBMESH_ENABLE_COMPLEX_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_VECTOR_FE_EX9_DEVEL_OBJECTS = 
+@LIBMESH_ENABLE_KOKKOS_FALSE@KOKKOS_VECTOR_FE_EX9_DEVEL_OBJECTS = 
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_FALSE@KOKKOS_VECTOR_FE_EX9_DEVEL_OBJECTS = 
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_VECTOR_FE_EX9_OPT_OBJECTS = vector_fe_ex9_kokkos_opt.o
+@LIBMESH_ENABLE_COMPLEX_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_VECTOR_FE_EX9_OPT_OBJECTS = 
+@LIBMESH_ENABLE_KOKKOS_FALSE@KOKKOS_VECTOR_FE_EX9_OPT_OBJECTS = 
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_FALSE@KOKKOS_VECTOR_FE_EX9_OPT_OBJECTS = 
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_VECTOR_FE_EX9_PROF_OBJECTS = vector_fe_ex9_kokkos_prof.o
+@LIBMESH_ENABLE_COMPLEX_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_VECTOR_FE_EX9_PROF_OBJECTS = 
+@LIBMESH_ENABLE_KOKKOS_FALSE@KOKKOS_VECTOR_FE_EX9_PROF_OBJECTS = 
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_FALSE@KOKKOS_VECTOR_FE_EX9_PROF_OBJECTS = 
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_VECTOR_FE_EX9_OPROF_OBJECTS = vector_fe_ex9_kokkos_oprof.o
+@LIBMESH_ENABLE_COMPLEX_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_VECTOR_FE_EX9_OPROF_OBJECTS = 
+@LIBMESH_ENABLE_KOKKOS_FALSE@KOKKOS_VECTOR_FE_EX9_OPROF_OBJECTS = 
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_FALSE@KOKKOS_VECTOR_FE_EX9_OPROF_OBJECTS = 
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@KOKKOS_VECTOR_FE_EX9_DEPS = vector_fe_ex9_kokkos.K hdg_problem.h $(top_srcdir)/include/gpu/kokkos_hdg_assembly.h
+
+# The base example_<method>_LDADD definitions live in per-method
+# conditionals in Make.common, so these Kokkos additions must too.
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_dbg_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_dbg_LINK = \
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@	$(example_dbg_LDFLAGS) $(LDFLAGS) -o $@
+
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_devel_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@example_devel_LINK = \
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@	$(example_devel_LDFLAGS) $(LDFLAGS) -o $@
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@example_opt_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@example_opt_LINK = \
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@	$(example_opt_LDFLAGS) $(LDFLAGS) -o $@
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@example_prof_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@example_prof_LINK = \
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@	$(example_prof_LDFLAGS) $(LDFLAGS) -o $@
+
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@example_oprof_LDFLAGS = $(AM_LDFLAGS) $(KOKKOS_LDFLAGS)
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@example_oprof_LINK = \
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@	$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@	$(example_oprof_LDFLAGS) $(LDFLAGS) -o $@
+
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -846,23 +912,23 @@ clean-checkPROGRAMS:
 
 example-dbg$(EXEEXT): $(example_dbg_OBJECTS) $(example_dbg_DEPENDENCIES) $(EXTRA_example_dbg_DEPENDENCIES) 
 	@rm -f example-dbg$(EXEEXT)
-	$(AM_V_CXXLD)$(example_dbg_LINK) $(example_dbg_OBJECTS) $(example_dbg_LDADD) $(LIBS)
+	$(AM_V_GEN)$(example_dbg_LINK) $(example_dbg_OBJECTS) $(example_dbg_LDADD) $(LIBS)
 
 example-devel$(EXEEXT): $(example_devel_OBJECTS) $(example_devel_DEPENDENCIES) $(EXTRA_example_devel_DEPENDENCIES) 
 	@rm -f example-devel$(EXEEXT)
-	$(AM_V_CXXLD)$(example_devel_LINK) $(example_devel_OBJECTS) $(example_devel_LDADD) $(LIBS)
+	$(AM_V_GEN)$(example_devel_LINK) $(example_devel_OBJECTS) $(example_devel_LDADD) $(LIBS)
 
 example-oprof$(EXEEXT): $(example_oprof_OBJECTS) $(example_oprof_DEPENDENCIES) $(EXTRA_example_oprof_DEPENDENCIES) 
 	@rm -f example-oprof$(EXEEXT)
-	$(AM_V_CXXLD)$(example_oprof_LINK) $(example_oprof_OBJECTS) $(example_oprof_LDADD) $(LIBS)
+	$(AM_V_GEN)$(example_oprof_LINK) $(example_oprof_OBJECTS) $(example_oprof_LDADD) $(LIBS)
 
 example-opt$(EXEEXT): $(example_opt_OBJECTS) $(example_opt_DEPENDENCIES) $(EXTRA_example_opt_DEPENDENCIES) 
 	@rm -f example-opt$(EXEEXT)
-	$(AM_V_CXXLD)$(example_opt_LINK) $(example_opt_OBJECTS) $(example_opt_LDADD) $(LIBS)
+	$(AM_V_GEN)$(example_opt_LINK) $(example_opt_OBJECTS) $(example_opt_LDADD) $(LIBS)
 
 example-prof$(EXEEXT): $(example_prof_OBJECTS) $(example_prof_DEPENDENCIES) $(EXTRA_example_prof_DEPENDENCIES) 
 	@rm -f example-prof$(EXEEXT)
-	$(AM_V_CXXLD)$(example_prof_LINK) $(example_prof_OBJECTS) $(example_prof_LDADD) $(LIBS)
+	$(AM_V_GEN)$(example_prof_LINK) $(example_prof_OBJECTS) $(example_prof_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -1427,8 +1493,15 @@ $(example_name).html: $(DOC_PROGRAM) \
 # mode: makefile
 # End:
 
-##############################################
-# include common example environment
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@vector_fe_ex9_kokkos_dbg.o: KOKKOS_VECTOR_FE_EX9_METHOD_CPPFLAGS = $(CPPFLAGS_DBG)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@vector_fe_ex9_kokkos_devel.o: KOKKOS_VECTOR_FE_EX9_METHOD_CPPFLAGS = $(CPPFLAGS_DEVEL)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@vector_fe_ex9_kokkos_opt.o: KOKKOS_VECTOR_FE_EX9_METHOD_CPPFLAGS = $(CPPFLAGS_OPT)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@vector_fe_ex9_kokkos_prof.o: KOKKOS_VECTOR_FE_EX9_METHOD_CPPFLAGS = $(CPPFLAGS_PROF)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@vector_fe_ex9_kokkos_oprof.o: KOKKOS_VECTOR_FE_EX9_METHOD_CPPFLAGS = $(CPPFLAGS_OPROF)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@vector_fe_ex9_kokkos_%.o: $(KOKKOS_VECTOR_FE_EX9_DEPS)
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@	$(KOKKOS_CXX) $(KOKKOS_CXXFLAGS) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@	  $(KOKKOS_VECTOR_FE_EX9_METHOD_CPPFLAGS) $(AM_CPPFLAGS) -I$(top_srcdir)/include $(CPPFLAGS) $(KOKKOS_MPI_CPPFLAGS) $(KOKKOS_CPPFLAGS) \
+@LIBMESH_ENABLE_COMPLEX_FALSE@@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_ENABLE_PETSC_TRUE@	  -c -o $@ `test -f '$<' || echo '$(srcdir)/'`$<
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
