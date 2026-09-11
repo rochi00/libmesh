@@ -628,6 +628,9 @@ DISTCLEANFILES = libmesh_config.h
 # details which are not required for the public interface
 noinst_HEADERS = \
         base/libmesh_augment_std_namespace.h \
+        gpu/kokkos_hdg_assembly.h \
+        base/dof_map_kokkos.h \
+        mesh/mesh_base_kokkos.h \
         numerics/laspack_matrix.h \
         numerics/laspack_vector.h \
         solvers/laspack_linear_solver.h \
@@ -815,7 +818,10 @@ include_HEADERS = \
         gpu/kokkos_fe_monomial.h \
         gpu/kokkos_fe_shape_dispatch.h \
         gpu/kokkos_fe_types.h \
+        gpu/kokkos_hilbert_assembly.h \
+        gpu/kokkos_hilbert_system.h \
         gpu/kokkos_linalg_base.h \
+        gpu/kokkos_parsed_function.h \
         gpu/kokkos_quadrature.h \
         gpu/kokkos_storage.h \
         gpu/kokkos_storage_policy.h \
