@@ -805,7 +805,18 @@ include_HEADERS = \
         geom/sphere.h \
         geom/stored_range.h \
         geom/surface.h \
+        gpu/kokkos_fe_base.h \
+        gpu/kokkos_fe_evaluator.h \
+        gpu/kokkos_fe_face_map.h \
+        gpu/kokkos_fe_lagrange_1d.h \
+        gpu/kokkos_fe_lagrange_2d.h \
+        gpu/kokkos_fe_lagrange_3d.h \
+        gpu/kokkos_fe_map.h \
+        gpu/kokkos_fe_monomial.h \
+        gpu/kokkos_fe_shape_dispatch.h \
+        gpu/kokkos_fe_types.h \
         gpu/kokkos_linalg_base.h \
+        gpu/kokkos_quadrature.h \
         gpu/kokkos_storage.h \
         gpu/kokkos_storage_policy.h \
         gpu/kokkos_tensor_ops.h \
