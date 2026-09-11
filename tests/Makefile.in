@@ -274,7 +274,8 @@ am__unit_tests_dbg_SOURCES_DIST = driver.C libmesh_cppunit.h \
 	partitioning/morton_sfc_partitioner_test.C \
 	partitioning/parmetis_partitioner_test.C \
 	partitioning/sfc_partitioner_test.C \
-	quadrature/quadrature_test.C solvers/time_solver_test_common.h \
+	quadrature/quadrature_exactness.h quadrature/quadrature_test.C \
+	solvers/time_solver_test_common.h \
 	solvers/first_order_unsteady_solver_test.C \
 	solvers/second_order_unsteady_solver_test.C \
 	systems/constraint_operator_test.C \
@@ -485,7 +486,8 @@ am__unit_tests_devel_SOURCES_DIST = driver.C libmesh_cppunit.h \
 	partitioning/morton_sfc_partitioner_test.C \
 	partitioning/parmetis_partitioner_test.C \
 	partitioning/sfc_partitioner_test.C \
-	quadrature/quadrature_test.C solvers/time_solver_test_common.h \
+	quadrature/quadrature_exactness.h quadrature/quadrature_test.C \
+	solvers/time_solver_test_common.h \
 	solvers/first_order_unsteady_solver_test.C \
 	solvers/second_order_unsteady_solver_test.C \
 	systems/constraint_operator_test.C \
@@ -713,7 +715,8 @@ am__unit_tests_oprof_SOURCES_DIST = driver.C libmesh_cppunit.h \
 	partitioning/morton_sfc_partitioner_test.C \
 	partitioning/parmetis_partitioner_test.C \
 	partitioning/sfc_partitioner_test.C \
-	quadrature/quadrature_test.C solvers/time_solver_test_common.h \
+	quadrature/quadrature_exactness.h quadrature/quadrature_test.C \
+	solvers/time_solver_test_common.h \
 	solvers/first_order_unsteady_solver_test.C \
 	solvers/second_order_unsteady_solver_test.C \
 	systems/constraint_operator_test.C \
@@ -919,7 +922,8 @@ am__unit_tests_opt_SOURCES_DIST = driver.C libmesh_cppunit.h \
 	partitioning/morton_sfc_partitioner_test.C \
 	partitioning/parmetis_partitioner_test.C \
 	partitioning/sfc_partitioner_test.C \
-	quadrature/quadrature_test.C solvers/time_solver_test_common.h \
+	quadrature/quadrature_exactness.h quadrature/quadrature_test.C \
+	solvers/time_solver_test_common.h \
 	solvers/first_order_unsteady_solver_test.C \
 	solvers/second_order_unsteady_solver_test.C \
 	systems/constraint_operator_test.C \
@@ -1125,7 +1129,8 @@ am__unit_tests_prof_SOURCES_DIST = driver.C libmesh_cppunit.h \
 	partitioning/morton_sfc_partitioner_test.C \
 	partitioning/parmetis_partitioner_test.C \
 	partitioning/sfc_partitioner_test.C \
-	quadrature/quadrature_test.C solvers/time_solver_test_common.h \
+	quadrature/quadrature_exactness.h quadrature/quadrature_test.C \
+	solvers/time_solver_test_common.h \
 	solvers/first_order_unsteady_solver_test.C \
 	solvers/second_order_unsteady_solver_test.C \
 	systems/constraint_operator_test.C \
@@ -2460,7 +2465,8 @@ unit_tests_sources = driver.C libmesh_cppunit.h stream_redirector.h \
 	partitioning/morton_sfc_partitioner_test.C \
 	partitioning/parmetis_partitioner_test.C \
 	partitioning/sfc_partitioner_test.C \
-	quadrature/quadrature_test.C solvers/time_solver_test_common.h \
+	quadrature/quadrature_exactness.h quadrature/quadrature_test.C \
+	solvers/time_solver_test_common.h \
 	solvers/first_order_unsteady_solver_test.C \
 	solvers/second_order_unsteady_solver_test.C \
 	systems/constraint_operator_test.C \
@@ -2545,6 +2551,7 @@ data = matrices/geom_1_extraction_op.h5 \
        meshes/Cluster_34.stl \
        meshes/engraving.stl \
        meshes/quad4_tri3_smoothed.xda.gz \
+       meshes/quad4_tri3_hourglass.xda.gz \
        meshes/hex8_prism6_smoothed.xda.gz \
        solutions/lagrange_vec_solution_mesh.xda \
        solutions/lagrange_vec_solution.xda \

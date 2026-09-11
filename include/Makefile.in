@@ -980,6 +980,7 @@ include_HEADERS = \
         quadrature/quadrature_composite.h \
         quadrature/quadrature_conical.h \
         quadrature/quadrature_gauss.h \
+        quadrature/quadrature_gauss_rules.h \
         quadrature/quadrature_gauss_lobatto.h \
         quadrature/quadrature_gm.h \
         quadrature/quadrature_grid.h \
