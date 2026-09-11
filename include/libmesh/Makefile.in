@@ -633,13 +633,14 @@ BUILT_SOURCES = dirichlet_boundaries.h dof_map.h dof_map_base.h \
 	function_base.h laspack_matrix.h laspack_vector.h \
 	lumped_mass_matrix.h numeric_vector.h parsed_fem_function.h \
 	parsed_fem_function_parameter.h parsed_function.h \
-	parsed_function_parameter.h petsc_macro.h petsc_matrix.h \
-	petsc_matrix_base.h petsc_matrix_shell_matrix.h \
-	petsc_mffd_matrix.h petsc_preconditioner.h \
-	petsc_shell_matrix.h petsc_solver_exception.h petsc_vector.h \
-	preconditioner.h raw_accessor.h refinement_selector.h \
-	shell_matrix.h sparse_matrix.h sparse_shell_matrix.h \
-	static_condensation.h static_condensation_dof_map.h \
+	parsed_function_parameter.h parsed_function_program.h \
+	petsc_macro.h petsc_matrix.h petsc_matrix_base.h \
+	petsc_matrix_shell_matrix.h petsc_mffd_matrix.h \
+	petsc_preconditioner.h petsc_shell_matrix.h \
+	petsc_solver_exception.h petsc_vector.h preconditioner.h \
+	raw_accessor.h refinement_selector.h shell_matrix.h \
+	sparse_matrix.h sparse_shell_matrix.h static_condensation.h \
+	static_condensation_dof_map.h \
 	static_condensation_preconditioner.h sum_shell_matrix.h \
 	tensor_shell_matrix.h tensor_tools.h tensor_value.h \
 	trilinos_epetra_matrix.h trilinos_epetra_vector.h \
@@ -1783,6 +1784,9 @@ parsed_function.h: $(top_srcdir)/include/numerics/parsed_function.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 parsed_function_parameter.h: $(top_srcdir)/include/numerics/parsed_function_parameter.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+parsed_function_program.h: $(top_srcdir)/include/numerics/parsed_function_program.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 petsc_macro.h: $(top_srcdir)/include/numerics/petsc_macro.h
