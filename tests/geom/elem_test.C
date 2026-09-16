@@ -8,6 +8,7 @@
 #include <libmesh/parallel_implementation.h>
 #include <libmesh/enum_to_string.h>
 #include <libmesh/elem_quality.h>
+#include <libmesh/fe_reference_element_traits.h>
 
 using namespace libMesh;
 
@@ -71,6 +72,76 @@ public:
             LIBMESH_ASSERT_REALVEC_EQUAL(elem->master_point(i),
                                          ref_elem.point(i),
                                          TOLERANCE*TOLERANCE);
+          }
+      }
+  }
+
+  void test_reference_element_traits()
+  {
+    LOG_UNIT_TEST;
+
+    for (const auto & elem : this->_mesh->active_local_element_ptr_range())
+      {
+        const ElemType type = elem->type();
+
+        // The shared tables either cover an element type completely
+        // or not at all; a partial answer would mean silently untested
+        // nodes, so we check for that first.
+        unsigned int n_ref_nodes = 0;
+        for (auto i : elem->node_index_range())
+          {
+            Point pt;
+            if (!try_reference_node(type, i, pt))
+              continue;
+
+            ++n_ref_nodes;
+            LIBMESH_ASSERT_REALVEC_EQUAL(pt, elem->master_point(i),
+                                         TOLERANCE*TOLERANCE);
+          }
+        CPPUNIT_ASSERT(n_ref_nodes == 0 ||
+                       n_ref_nodes == elem->n_nodes());
+        if (n_ref_nodes)
+          CPPUNIT_ASSERT_EQUAL(reference_vertex_count(type),
+                               elem->n_vertices());
+
+        // The Elem classes now build their static maps from the same
+        // tables, so this is mostly a check that the two lookup paths
+        // still agree on counts as well as on entries.
+        for (const auto s : elem->side_index_range())
+          {
+            const unsigned int count = side_node_count_or_zero(type, s);
+            if (!count)
+              continue;
+
+            const auto nodes = elem->nodes_on_side(s);
+            CPPUNIT_ASSERT_EQUAL(std::size_t(count), nodes.size());
+            for (unsigned int i = 0; i != count; ++i)
+              {
+                unsigned int n = invalid_uint;
+                CPPUNIT_ASSERT(try_local_side_node(type, s, i, n));
+                CPPUNIT_ASSERT_EQUAL(elem->local_side_node(s, i), n);
+                CPPUNIT_ASSERT_EQUAL(nodes[i], n);
+              }
+          }
+
+        if (elem->dim() < 3)
+          continue;
+
+        for (const auto e : elem->edge_index_range())
+          {
+            const unsigned int count = edge_node_count_or_zero(type, e);
+            if (!count)
+              continue;
+
+            const auto nodes = elem->nodes_on_edge(e);
+            CPPUNIT_ASSERT_EQUAL(std::size_t(count), nodes.size());
+            for (unsigned int i = 0; i != count; ++i)
+              {
+                unsigned int n = invalid_uint;
+                CPPUNIT_ASSERT(try_local_edge_node(type, e, i, n));
+                CPPUNIT_ASSERT_EQUAL(elem->local_edge_node(e, i), n);
+                CPPUNIT_ASSERT_EQUAL(nodes[i], n);
+              }
           }
       }
   }
@@ -970,6 +1041,7 @@ public:
 #define ELEMTEST                                \
   CPPUNIT_TEST( test_bounding_box );            \
   CPPUNIT_TEST( test_ref_elem );                \
+  CPPUNIT_TEST( test_reference_element_traits ); \
   CPPUNIT_TEST( test_quality );                 \
   CPPUNIT_TEST( test_node_edge_map_consistency ); \
   CPPUNIT_TEST( test_maps );                    \
