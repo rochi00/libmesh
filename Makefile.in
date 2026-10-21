@@ -444,8 +444,9 @@ am__libmesh_dbg_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/numerics/eigen_sparse_vector.C \
 	src/numerics/laspack_matrix.C src/numerics/laspack_vector.C \
 	src/numerics/lumped_mass_matrix.C \
-	src/numerics/numeric_vector.C src/numerics/petsc_matrix.C \
-	src/numerics/petsc_matrix_base.C \
+	src/numerics/numeric_vector.C \
+	src/numerics/parsed_function_program.C \
+	src/numerics/petsc_matrix.C src/numerics/petsc_matrix_base.C \
 	src/numerics/petsc_matrix_shell_matrix.C \
 	src/numerics/petsc_preconditioner.C \
 	src/numerics/petsc_shell_matrix.C src/numerics/petsc_vector.C \
@@ -893,6 +894,7 @@ am__objects_1 = src/base/libmesh_dbg_la-dirichlet_boundary.lo \
 	src/numerics/libmesh_dbg_la-laspack_vector.lo \
 	src/numerics/libmesh_dbg_la-lumped_mass_matrix.lo \
 	src/numerics/libmesh_dbg_la-numeric_vector.lo \
+	src/numerics/libmesh_dbg_la-parsed_function_program.lo \
 	src/numerics/libmesh_dbg_la-petsc_matrix.lo \
 	src/numerics/libmesh_dbg_la-petsc_matrix_base.lo \
 	src/numerics/libmesh_dbg_la-petsc_matrix_shell_matrix.lo \
@@ -1269,8 +1271,9 @@ am__libmesh_devel_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/numerics/eigen_sparse_vector.C \
 	src/numerics/laspack_matrix.C src/numerics/laspack_vector.C \
 	src/numerics/lumped_mass_matrix.C \
-	src/numerics/numeric_vector.C src/numerics/petsc_matrix.C \
-	src/numerics/petsc_matrix_base.C \
+	src/numerics/numeric_vector.C \
+	src/numerics/parsed_function_program.C \
+	src/numerics/petsc_matrix.C src/numerics/petsc_matrix_base.C \
 	src/numerics/petsc_matrix_shell_matrix.C \
 	src/numerics/petsc_preconditioner.C \
 	src/numerics/petsc_shell_matrix.C src/numerics/petsc_vector.C \
@@ -1717,6 +1720,7 @@ am__objects_2 = src/base/libmesh_devel_la-dirichlet_boundary.lo \
 	src/numerics/libmesh_devel_la-laspack_vector.lo \
 	src/numerics/libmesh_devel_la-lumped_mass_matrix.lo \
 	src/numerics/libmesh_devel_la-numeric_vector.lo \
+	src/numerics/libmesh_devel_la-parsed_function_program.lo \
 	src/numerics/libmesh_devel_la-petsc_matrix.lo \
 	src/numerics/libmesh_devel_la-petsc_matrix_base.lo \
 	src/numerics/libmesh_devel_la-petsc_matrix_shell_matrix.lo \
@@ -2090,8 +2094,9 @@ am__libmesh_oprof_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/numerics/eigen_sparse_vector.C \
 	src/numerics/laspack_matrix.C src/numerics/laspack_vector.C \
 	src/numerics/lumped_mass_matrix.C \
-	src/numerics/numeric_vector.C src/numerics/petsc_matrix.C \
-	src/numerics/petsc_matrix_base.C \
+	src/numerics/numeric_vector.C \
+	src/numerics/parsed_function_program.C \
+	src/numerics/petsc_matrix.C src/numerics/petsc_matrix_base.C \
 	src/numerics/petsc_matrix_shell_matrix.C \
 	src/numerics/petsc_preconditioner.C \
 	src/numerics/petsc_shell_matrix.C src/numerics/petsc_vector.C \
@@ -2538,6 +2543,7 @@ am__objects_3 = src/base/libmesh_oprof_la-dirichlet_boundary.lo \
 	src/numerics/libmesh_oprof_la-laspack_vector.lo \
 	src/numerics/libmesh_oprof_la-lumped_mass_matrix.lo \
 	src/numerics/libmesh_oprof_la-numeric_vector.lo \
+	src/numerics/libmesh_oprof_la-parsed_function_program.lo \
 	src/numerics/libmesh_oprof_la-petsc_matrix.lo \
 	src/numerics/libmesh_oprof_la-petsc_matrix_base.lo \
 	src/numerics/libmesh_oprof_la-petsc_matrix_shell_matrix.lo \
@@ -2911,8 +2917,9 @@ am__libmesh_opt_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/numerics/eigen_sparse_vector.C \
 	src/numerics/laspack_matrix.C src/numerics/laspack_vector.C \
 	src/numerics/lumped_mass_matrix.C \
-	src/numerics/numeric_vector.C src/numerics/petsc_matrix.C \
-	src/numerics/petsc_matrix_base.C \
+	src/numerics/numeric_vector.C \
+	src/numerics/parsed_function_program.C \
+	src/numerics/petsc_matrix.C src/numerics/petsc_matrix_base.C \
 	src/numerics/petsc_matrix_shell_matrix.C \
 	src/numerics/petsc_preconditioner.C \
 	src/numerics/petsc_shell_matrix.C src/numerics/petsc_vector.C \
@@ -3359,6 +3366,7 @@ am__objects_4 = src/base/libmesh_opt_la-dirichlet_boundary.lo \
 	src/numerics/libmesh_opt_la-laspack_vector.lo \
 	src/numerics/libmesh_opt_la-lumped_mass_matrix.lo \
 	src/numerics/libmesh_opt_la-numeric_vector.lo \
+	src/numerics/libmesh_opt_la-parsed_function_program.lo \
 	src/numerics/libmesh_opt_la-petsc_matrix.lo \
 	src/numerics/libmesh_opt_la-petsc_matrix_base.lo \
 	src/numerics/libmesh_opt_la-petsc_matrix_shell_matrix.lo \
@@ -3731,8 +3739,9 @@ am__libmesh_prof_la_SOURCES_DIST = src/base/dirichlet_boundary.C \
 	src/numerics/eigen_sparse_vector.C \
 	src/numerics/laspack_matrix.C src/numerics/laspack_vector.C \
 	src/numerics/lumped_mass_matrix.C \
-	src/numerics/numeric_vector.C src/numerics/petsc_matrix.C \
-	src/numerics/petsc_matrix_base.C \
+	src/numerics/numeric_vector.C \
+	src/numerics/parsed_function_program.C \
+	src/numerics/petsc_matrix.C src/numerics/petsc_matrix_base.C \
 	src/numerics/petsc_matrix_shell_matrix.C \
 	src/numerics/petsc_preconditioner.C \
 	src/numerics/petsc_shell_matrix.C src/numerics/petsc_vector.C \
@@ -4179,6 +4188,7 @@ am__objects_5 = src/base/libmesh_prof_la-dirichlet_boundary.lo \
 	src/numerics/libmesh_prof_la-laspack_vector.lo \
 	src/numerics/libmesh_prof_la-lumped_mass_matrix.lo \
 	src/numerics/libmesh_prof_la-numeric_vector.lo \
+	src/numerics/libmesh_prof_la-parsed_function_program.lo \
 	src/numerics/libmesh_prof_la-petsc_matrix.lo \
 	src/numerics/libmesh_prof_la-petsc_matrix_base.lo \
 	src/numerics/libmesh_prof_la-petsc_matrix_shell_matrix.lo \
@@ -6371,6 +6381,7 @@ am__depfiles_remade = src/apps/$(DEPDIR)/amr_dbg-amr.Po \
 	src/numerics/$(DEPDIR)/libmesh_dbg_la-laspack_vector.Plo \
 	src/numerics/$(DEPDIR)/libmesh_dbg_la-lumped_mass_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_dbg_la-numeric_vector.Plo \
+	src/numerics/$(DEPDIR)/libmesh_dbg_la-parsed_function_program.Plo \
 	src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix_base.Plo \
 	src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix_shell_matrix.Plo \
@@ -6409,6 +6420,7 @@ am__depfiles_remade = src/apps/$(DEPDIR)/amr_dbg-amr.Po \
 	src/numerics/$(DEPDIR)/libmesh_devel_la-laspack_vector.Plo \
 	src/numerics/$(DEPDIR)/libmesh_devel_la-lumped_mass_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_devel_la-numeric_vector.Plo \
+	src/numerics/$(DEPDIR)/libmesh_devel_la-parsed_function_program.Plo \
 	src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix_base.Plo \
 	src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix_shell_matrix.Plo \
@@ -6447,6 +6459,7 @@ am__depfiles_remade = src/apps/$(DEPDIR)/amr_dbg-amr.Po \
 	src/numerics/$(DEPDIR)/libmesh_oprof_la-laspack_vector.Plo \
 	src/numerics/$(DEPDIR)/libmesh_oprof_la-lumped_mass_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_oprof_la-numeric_vector.Plo \
+	src/numerics/$(DEPDIR)/libmesh_oprof_la-parsed_function_program.Plo \
 	src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix_base.Plo \
 	src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix_shell_matrix.Plo \
@@ -6485,6 +6498,7 @@ am__depfiles_remade = src/apps/$(DEPDIR)/amr_dbg-amr.Po \
 	src/numerics/$(DEPDIR)/libmesh_opt_la-laspack_vector.Plo \
 	src/numerics/$(DEPDIR)/libmesh_opt_la-lumped_mass_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_opt_la-numeric_vector.Plo \
+	src/numerics/$(DEPDIR)/libmesh_opt_la-parsed_function_program.Plo \
 	src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix_base.Plo \
 	src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix_shell_matrix.Plo \
@@ -6523,6 +6537,7 @@ am__depfiles_remade = src/apps/$(DEPDIR)/amr_dbg-amr.Po \
 	src/numerics/$(DEPDIR)/libmesh_prof_la-laspack_vector.Plo \
 	src/numerics/$(DEPDIR)/libmesh_prof_la-lumped_mass_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_prof_la-numeric_vector.Plo \
+	src/numerics/$(DEPDIR)/libmesh_prof_la-parsed_function_program.Plo \
 	src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix.Plo \
 	src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix_base.Plo \
 	src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix_shell_matrix.Plo \
@@ -8447,6 +8462,7 @@ libmesh_SOURCES = \
         src/numerics/laspack_vector.C \
         src/numerics/lumped_mass_matrix.C \
         src/numerics/numeric_vector.C \
+        src/numerics/parsed_function_program.C \
         src/numerics/petsc_matrix.C \
         src/numerics/petsc_matrix_base.C \
         src/numerics/petsc_matrix_shell_matrix.C \
@@ -9838,6 +9854,9 @@ src/numerics/libmesh_dbg_la-lumped_mass_matrix.lo:  \
 src/numerics/libmesh_dbg_la-numeric_vector.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
+src/numerics/libmesh_dbg_la-parsed_function_program.lo:  \
+	src/numerics/$(am__dirstamp) \
+	src/numerics/$(DEPDIR)/$(am__dirstamp)
 src/numerics/libmesh_dbg_la-petsc_matrix.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
@@ -11075,6 +11094,9 @@ src/numerics/libmesh_devel_la-lumped_mass_matrix.lo:  \
 src/numerics/libmesh_devel_la-numeric_vector.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
+src/numerics/libmesh_devel_la-parsed_function_program.lo:  \
+	src/numerics/$(am__dirstamp) \
+	src/numerics/$(DEPDIR)/$(am__dirstamp)
 src/numerics/libmesh_devel_la-petsc_matrix.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
@@ -12259,6 +12281,9 @@ src/numerics/libmesh_oprof_la-lumped_mass_matrix.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
 src/numerics/libmesh_oprof_la-numeric_vector.lo:  \
+	src/numerics/$(am__dirstamp) \
+	src/numerics/$(DEPDIR)/$(am__dirstamp)
+src/numerics/libmesh_oprof_la-parsed_function_program.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
 src/numerics/libmesh_oprof_la-petsc_matrix.lo:  \
@@ -13447,6 +13472,9 @@ src/numerics/libmesh_opt_la-lumped_mass_matrix.lo:  \
 src/numerics/libmesh_opt_la-numeric_vector.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
+src/numerics/libmesh_opt_la-parsed_function_program.lo:  \
+	src/numerics/$(am__dirstamp) \
+	src/numerics/$(DEPDIR)/$(am__dirstamp)
 src/numerics/libmesh_opt_la-petsc_matrix.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
@@ -14628,6 +14656,9 @@ src/numerics/libmesh_prof_la-lumped_mass_matrix.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
 src/numerics/libmesh_prof_la-numeric_vector.lo:  \
+	src/numerics/$(am__dirstamp) \
+	src/numerics/$(DEPDIR)/$(am__dirstamp)
+src/numerics/libmesh_prof_la-parsed_function_program.lo:  \
 	src/numerics/$(am__dirstamp) \
 	src/numerics/$(DEPDIR)/$(am__dirstamp)
 src/numerics/libmesh_prof_la-petsc_matrix.lo:  \
@@ -17239,6 +17270,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_dbg_la-laspack_vector.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_dbg_la-lumped_mass_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_dbg_la-numeric_vector.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_dbg_la-parsed_function_program.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix_base.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix_shell_matrix.Plo@am__quote@ # am--include-marker
@@ -17277,6 +17309,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_devel_la-laspack_vector.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_devel_la-lumped_mass_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_devel_la-numeric_vector.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_devel_la-parsed_function_program.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix_base.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix_shell_matrix.Plo@am__quote@ # am--include-marker
@@ -17315,6 +17348,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_oprof_la-laspack_vector.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_oprof_la-lumped_mass_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_oprof_la-numeric_vector.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_oprof_la-parsed_function_program.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix_base.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix_shell_matrix.Plo@am__quote@ # am--include-marker
@@ -17353,6 +17387,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_opt_la-laspack_vector.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_opt_la-lumped_mass_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_opt_la-numeric_vector.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_opt_la-parsed_function_program.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix_base.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix_shell_matrix.Plo@am__quote@ # am--include-marker
@@ -17391,6 +17426,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_prof_la-laspack_vector.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_prof_la-lumped_mass_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_prof_la-numeric_vector.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_prof_la-parsed_function_program.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix_base.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix_shell_matrix.Plo@am__quote@ # am--include-marker
@@ -20305,6 +20341,13 @@ src/numerics/libmesh_dbg_la-numeric_vector.lo: src/numerics/numeric_vector.C
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/numerics/numeric_vector.C' object='src/numerics/libmesh_dbg_la-numeric_vector.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_dbg_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_dbg_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_dbg_la-numeric_vector.lo `test -f 'src/numerics/numeric_vector.C' || echo '$(srcdir)/'`src/numerics/numeric_vector.C
+
+src/numerics/libmesh_dbg_la-parsed_function_program.lo: src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_dbg_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_dbg_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_dbg_la-parsed_function_program.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_dbg_la-parsed_function_program.Tpo -c -o src/numerics/libmesh_dbg_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/numerics/$(DEPDIR)/libmesh_dbg_la-parsed_function_program.Tpo src/numerics/$(DEPDIR)/libmesh_dbg_la-parsed_function_program.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/numerics/parsed_function_program.C' object='src/numerics/libmesh_dbg_la-parsed_function_program.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_dbg_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_dbg_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_dbg_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
 
 src/numerics/libmesh_dbg_la-petsc_matrix.lo: src/numerics/petsc_matrix.C
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_dbg_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_dbg_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_dbg_la-petsc_matrix.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix.Tpo -c -o src/numerics/libmesh_dbg_la-petsc_matrix.lo `test -f 'src/numerics/petsc_matrix.C' || echo '$(srcdir)/'`src/numerics/petsc_matrix.C
@@ -23680,6 +23723,13 @@ src/numerics/libmesh_devel_la-numeric_vector.lo: src/numerics/numeric_vector.C
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_devel_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_devel_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_devel_la-numeric_vector.lo `test -f 'src/numerics/numeric_vector.C' || echo '$(srcdir)/'`src/numerics/numeric_vector.C
 
+src/numerics/libmesh_devel_la-parsed_function_program.lo: src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_devel_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_devel_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_devel_la-parsed_function_program.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_devel_la-parsed_function_program.Tpo -c -o src/numerics/libmesh_devel_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/numerics/$(DEPDIR)/libmesh_devel_la-parsed_function_program.Tpo src/numerics/$(DEPDIR)/libmesh_devel_la-parsed_function_program.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/numerics/parsed_function_program.C' object='src/numerics/libmesh_devel_la-parsed_function_program.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_devel_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_devel_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_devel_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
+
 src/numerics/libmesh_devel_la-petsc_matrix.lo: src/numerics/petsc_matrix.C
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_devel_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_devel_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_devel_la-petsc_matrix.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix.Tpo -c -o src/numerics/libmesh_devel_la-petsc_matrix.lo `test -f 'src/numerics/petsc_matrix.C' || echo '$(srcdir)/'`src/numerics/petsc_matrix.C
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix.Tpo src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix.Plo
@@ -27053,6 +27103,13 @@ src/numerics/libmesh_oprof_la-numeric_vector.lo: src/numerics/numeric_vector.C
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/numerics/numeric_vector.C' object='src/numerics/libmesh_oprof_la-numeric_vector.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_oprof_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_oprof_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_oprof_la-numeric_vector.lo `test -f 'src/numerics/numeric_vector.C' || echo '$(srcdir)/'`src/numerics/numeric_vector.C
+
+src/numerics/libmesh_oprof_la-parsed_function_program.lo: src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_oprof_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_oprof_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_oprof_la-parsed_function_program.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_oprof_la-parsed_function_program.Tpo -c -o src/numerics/libmesh_oprof_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/numerics/$(DEPDIR)/libmesh_oprof_la-parsed_function_program.Tpo src/numerics/$(DEPDIR)/libmesh_oprof_la-parsed_function_program.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/numerics/parsed_function_program.C' object='src/numerics/libmesh_oprof_la-parsed_function_program.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_oprof_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_oprof_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_oprof_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
 
 src/numerics/libmesh_oprof_la-petsc_matrix.lo: src/numerics/petsc_matrix.C
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_oprof_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_oprof_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_oprof_la-petsc_matrix.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix.Tpo -c -o src/numerics/libmesh_oprof_la-petsc_matrix.lo `test -f 'src/numerics/petsc_matrix.C' || echo '$(srcdir)/'`src/numerics/petsc_matrix.C
@@ -30428,6 +30485,13 @@ src/numerics/libmesh_opt_la-numeric_vector.lo: src/numerics/numeric_vector.C
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_opt_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_opt_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_opt_la-numeric_vector.lo `test -f 'src/numerics/numeric_vector.C' || echo '$(srcdir)/'`src/numerics/numeric_vector.C
 
+src/numerics/libmesh_opt_la-parsed_function_program.lo: src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_opt_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_opt_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_opt_la-parsed_function_program.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_opt_la-parsed_function_program.Tpo -c -o src/numerics/libmesh_opt_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/numerics/$(DEPDIR)/libmesh_opt_la-parsed_function_program.Tpo src/numerics/$(DEPDIR)/libmesh_opt_la-parsed_function_program.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/numerics/parsed_function_program.C' object='src/numerics/libmesh_opt_la-parsed_function_program.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_opt_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_opt_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_opt_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
+
 src/numerics/libmesh_opt_la-petsc_matrix.lo: src/numerics/petsc_matrix.C
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_opt_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_opt_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_opt_la-petsc_matrix.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix.Tpo -c -o src/numerics/libmesh_opt_la-petsc_matrix.lo `test -f 'src/numerics/petsc_matrix.C' || echo '$(srcdir)/'`src/numerics/petsc_matrix.C
 @am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix.Tpo src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix.Plo
@@ -33801,6 +33865,13 @@ src/numerics/libmesh_prof_la-numeric_vector.lo: src/numerics/numeric_vector.C
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/numerics/numeric_vector.C' object='src/numerics/libmesh_prof_la-numeric_vector.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_prof_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_prof_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_prof_la-numeric_vector.lo `test -f 'src/numerics/numeric_vector.C' || echo '$(srcdir)/'`src/numerics/numeric_vector.C
+
+src/numerics/libmesh_prof_la-parsed_function_program.lo: src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_prof_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_prof_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_prof_la-parsed_function_program.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_prof_la-parsed_function_program.Tpo -c -o src/numerics/libmesh_prof_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
+@am__fastdepCXX_TRUE@	$(AM_V_at)$(am__mv) src/numerics/$(DEPDIR)/libmesh_prof_la-parsed_function_program.Tpo src/numerics/$(DEPDIR)/libmesh_prof_la-parsed_function_program.Plo
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='src/numerics/parsed_function_program.C' object='src/numerics/libmesh_prof_la-parsed_function_program.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_prof_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_prof_la_CXXFLAGS) $(CXXFLAGS) -c -o src/numerics/libmesh_prof_la-parsed_function_program.lo `test -f 'src/numerics/parsed_function_program.C' || echo '$(srcdir)/'`src/numerics/parsed_function_program.C
 
 src/numerics/libmesh_prof_la-petsc_matrix.lo: src/numerics/petsc_matrix.C
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)$(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(libmesh_prof_la_CPPFLAGS) $(CPPFLAGS) $(libmesh_prof_la_CXXFLAGS) $(CXXFLAGS) -MT src/numerics/libmesh_prof_la-petsc_matrix.lo -MD -MP -MF src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix.Tpo -c -o src/numerics/libmesh_prof_la-petsc_matrix.lo `test -f 'src/numerics/petsc_matrix.C' || echo '$(srcdir)/'`src/numerics/petsc_matrix.C
@@ -38234,6 +38305,7 @@ distclean: distclean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix_shell_matrix.Plo
@@ -38272,6 +38344,7 @@ distclean: distclean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix_shell_matrix.Plo
@@ -38310,6 +38383,7 @@ distclean: distclean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix_shell_matrix.Plo
@@ -38348,6 +38422,7 @@ distclean: distclean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix_shell_matrix.Plo
@@ -38386,6 +38461,7 @@ distclean: distclean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix_shell_matrix.Plo
@@ -40775,6 +40851,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_dbg_la-petsc_matrix_shell_matrix.Plo
@@ -40813,6 +40890,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_devel_la-petsc_matrix_shell_matrix.Plo
@@ -40851,6 +40929,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_oprof_la-petsc_matrix_shell_matrix.Plo
@@ -40889,6 +40968,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_opt_la-petsc_matrix_shell_matrix.Plo
@@ -40927,6 +41007,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-laspack_vector.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-lumped_mass_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-numeric_vector.Plo
+	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-parsed_function_program.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix_base.Plo
 	-rm -f src/numerics/$(DEPDIR)/libmesh_prof_la-petsc_matrix_shell_matrix.Plo
