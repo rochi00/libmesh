@@ -97,6 +97,66 @@ public:
                 Point * points,
                 Real * weights);
 
+  /**
+   * \returns The number of points in the triangle rule of order \p
+   * o, or \p invalid_uint above \p FORTYTHIRD.  Orders without a
+   * tabulated rule, 21 and those above 30, use the conical product
+   * rule, which has n_points_1D(o)^2 points.
+   */
+  static LIBMESH_DEVICE_INLINE constexpr
+  unsigned int n_points_tri (const Order o)
+  {
+    switch (o)
+      {
+      case CONSTANT:
+      case FIRST:        return 1;
+      case SECOND:       return 3;
+      case THIRD:        return 4;
+      case FOURTH:       return 6;
+      case FIFTH:        return 7;
+      case SIXTH:
+      case SEVENTH:      return 12;
+      case EIGHTH:       return 16;
+      case NINTH:        return 19;
+      case TENTH:        return 25;
+      case ELEVENTH:     return 30;
+      case TWELFTH:      return 33;
+      case THIRTEENTH:   return 37;
+      case FOURTEENTH:   return 42;
+      case FIFTEENTH:    return 49;
+      case SIXTEENTH:    return 55;
+      case SEVENTEENTH:  return 63;
+      case EIGHTEENTH:
+      case NINETEENTH:   return 73;
+      case TWENTIETH:    return 85;
+      case TWENTYSECOND:
+      case TWENTYTHIRD:
+      case TWENTYFOURTH:
+      case TWENTYFIFTH:  return 126;
+      case TWENTYSIXTH:
+      case TWENTYSEVENTH:
+      case TWENTYEIGHTH:
+      case TWENTYNINTH:
+      case THIRTIETH:    return 175;
+      default:
+        return n_points_1D(o) == invalid_uint ?
+          invalid_uint : n_points_1D(o) * n_points_1D(o);
+      }
+  }
+
+  /**
+   * Writes the points and weights of the triangle rule of order \p o
+   * to \p points and \p weights, which must have room for
+   * n_points_tri(o) entries, with the third coordinate of each point
+   * zero.  This is the rule init_2D() fills in for every Tri type; it
+   * is static, and defined in quadrature_gauss_2D.h, so that device
+   * code, which cannot construct a QGauss, evaluates the same rule.
+   */
+  static LIBMESH_DEVICE_INLINE
+  void rule_tri (const Order o,
+                 Point * points,
+                 Real * weights);
+
 private:
 
   virtual void init_1D () override;
