@@ -22,6 +22,7 @@
 
 // Local includes
 #include "libmesh/quadrature.h"
+#include "libmesh/quadrature_gm.h" // QGrundmann_Moller::n_points_gm()
 
 namespace libMesh
 {
@@ -154,6 +155,54 @@ public:
    */
   static LIBMESH_DEVICE_INLINE
   void rule_tri (const Order o,
+                 Point * points,
+                 Real * weights);
+
+  /**
+   * \returns The number of points in the tet rule of order \p o, or
+   * \p invalid_uint above \p FORTYTHIRD.  With \p
+   * allow_negative_weights, orders 3, 4, 7 and 8 have rules with a
+   * negative weight, and orders 9 through 33 use the Grundmann-Moller
+   * rule of index o/2; otherwise those orders, and every order above
+   * 33, use the conical product rule, which has n_points_1D(o)^3
+   * points.
+   */
+  static LIBMESH_DEVICE_INLINE constexpr
+  unsigned int n_points_tet (const Order o,
+                             const bool allow_negative_weights)
+  {
+    const unsigned int n_conical = n_points_1D(o) == invalid_uint ?
+      invalid_uint : n_points_1D(o) * n_points_1D(o) * n_points_1D(o);
+
+    switch (o)
+      {
+      case CONSTANT:
+      case FIRST:   return 1;
+      case SECOND:  return 4;
+      case THIRD:   return allow_negative_weights ? 5 : n_conical;
+      case FOURTH:  return allow_negative_weights ? 11 : 14;
+      case FIFTH:   return 14;
+      case SIXTH:   return 24;
+      case SEVENTH:
+      case EIGHTH:  return allow_negative_weights ? 45 : n_conical;
+      default:
+        return (allow_negative_weights && o < 34) ?
+          QGrundmann_Moller::n_points_gm(o/2, 3) : n_conical;
+      }
+  }
+
+  /**
+   * Writes the points and weights of the tet rule of order \p o to \p
+   * points and \p weights, which must have room for n_points_tet(o,
+   * allow_negative_weights) entries.  This is the rule init_3D()
+   * fills in for every Tet type, given \p allow_negative_weights as
+   * allow_rules_with_negative_weights; it is static, and defined in
+   * quadrature_gauss_3D.h, so that device code, which cannot
+   * construct a QGauss, evaluates the same rule.
+   */
+  static LIBMESH_DEVICE_INLINE
+  void rule_tet (const Order o,
+                 const bool allow_negative_weights,
                  Point * points,
                  Real * weights);
 
