@@ -80,7 +80,7 @@ public:
    * order tabulated.  An n-point Gauss rule integrates degree 2n-1
    * exactly, so orders 2n-2 and 2n-1 share it.
    */
-  static LIBMESH_DEVICE_INLINE
+  static LIBMESH_DEVICE_INLINE constexpr
   unsigned int n_points_1D (const Order o)
   { return o <= FORTYTHIRD ? o/2 + 1 : invalid_uint; }
 
