@@ -461,9 +461,12 @@ struct casting_compare {
 // The libmesh_terminate() macro prints a message and throws a
 // TerminationException exception
 #if LIBMESH_IN_DEVICE_CODE
+// Device code cannot stream, so print the message expression's source
+// text instead: a message like "Invalid i = " << i then compiles, and
+// shared host/device code keeps its full host messages.
 #define libmesh_error_msg(msg)                                          \
   do {                                                                  \
-    LIBMESH_DEVICE_ERROR_MSG(msg);                                      \
+    LIBMESH_DEVICE_ERROR_MSG(#msg);                                     \
   } while (0)
 #else
 #define libmesh_error_msg(msg)                                          \
