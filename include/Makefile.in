@@ -906,6 +906,7 @@ include_HEADERS = \
         numerics/parsed_fem_function.h \
         numerics/parsed_fem_function_parameter.h \
         numerics/parsed_function.h \
+        numerics/parsed_function_program.h \
         numerics/parsed_function_parameter.h \
         numerics/petsc_macro.h \
         numerics/petsc_matrix.h \
@@ -980,10 +981,12 @@ include_HEADERS = \
         quadrature/quadrature_composite.h \
         quadrature/quadrature_conical.h \
         quadrature/quadrature_gauss.h \
+        quadrature/quadrature_gauss_1D.h \
         quadrature/quadrature_gauss_lobatto.h \
         quadrature/quadrature_gm.h \
         quadrature/quadrature_grid.h \
         quadrature/quadrature_jacobi.h \
+        quadrature/quadrature_jacobi_1D.h \
         quadrature/quadrature_monomial.h \
         quadrature/quadrature_nodal.h \
         quadrature/quadrature_simpson.h \
