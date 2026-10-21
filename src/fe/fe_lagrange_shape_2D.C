@@ -19,18 +19,19 @@
 // Local includes
 #include "libmesh/fe.h"
 #include "libmesh/elem.h"
-#include "libmesh/fe_lagrange_shape_1D.h"
-#include "libmesh/fe_simplex_lagrange.h"
-#include "libmesh/fe_tensor_product_lagrange.h"
+#include "libmesh/fe_lagrange_shape_2D.h"
 #include "libmesh/enum_to_string.h"
 #include "libmesh/face_c0polygon.h"
 
 // Anonymous namespace for functions shared by LAGRANGE and
-// L2_LAGRANGE implementations. Implementations appear at the bottom
-// of this file.
+// L2_LAGRANGE implementations: these handle C0Polygon, whose shapes
+// need the polygon itself, and pass every other type to the shared
+// functions in fe_lagrange_shape_2D.h, which they overload.
+// Implementations appear at the bottom of this file.
+namespace libMesh
+{
 namespace
 {
-using namespace libMesh;
 
 template <FEFamily T>
 Real fe_lagrange_2D_shape(const ElemType,
@@ -47,24 +48,9 @@ Real fe_lagrange_2D_shape_deriv(const ElemType type,
                                 const unsigned int j,
                                 const Point & p);
 
-#ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
-
-template <FEFamily T>
-Real fe_lagrange_2D_shape_second_deriv(const ElemType type,
-                                       const Elem * elem,
-                                       const Order order,
-                                       const unsigned int i,
-                                       const unsigned int j,
-                                       const Point & p);
-
-#endif // LIBMESH_ENABLE_SECOND_DERIVATIVES
-
 } // anonymous namespace
 
 
-
-namespace libMesh
-{
 
 
 LIBMESH_DEFAULT_VECTORIZED_FE(2,LAGRANGE)
@@ -238,7 +224,7 @@ Real FE<2,LAGRANGE>::shape_second_deriv(const ElemType type,
                                         const unsigned int j,
                                         const Point & p)
 {
-  return fe_lagrange_2D_shape_second_deriv<LAGRANGE>(type, nullptr, order, i, j, p);
+  return fe_lagrange_2D_shape_second_deriv<LAGRANGE>(type, order, i, j, p);
 }
 
 
@@ -250,7 +236,7 @@ Real FE<2,L2_LAGRANGE>::shape_second_deriv(const ElemType type,
                                            const unsigned int j,
                                            const Point & p)
 {
-  return fe_lagrange_2D_shape_second_deriv<L2_LAGRANGE>(type, nullptr, order, i, j, p);
+  return fe_lagrange_2D_shape_second_deriv<L2_LAGRANGE>(type, order, i, j, p);
 }
 
 
@@ -266,7 +252,7 @@ Real FE<2,LAGRANGE>::shape_second_deriv(const Elem * elem,
   libmesh_assert(elem);
 
   // call the orientation-independent shape functions
-  return fe_lagrange_2D_shape_second_deriv<LAGRANGE>(elem->type(), elem, order + add_p_level*elem->p_level(), i, j, p);
+  return fe_lagrange_2D_shape_second_deriv<LAGRANGE>(elem->type(), order + add_p_level*elem->p_level(), i, j, p);
 }
 
 
@@ -282,7 +268,7 @@ Real FE<2,L2_LAGRANGE>::shape_second_deriv(const Elem * elem,
   libmesh_assert(elem);
 
   // call the orientation-independent shape functions
-  return fe_lagrange_2D_shape_second_deriv<L2_LAGRANGE>(elem->type(), elem, order + add_p_level*elem->p_level(), i, j, p);
+  return fe_lagrange_2D_shape_second_deriv<L2_LAGRANGE>(elem->type(), order + add_p_level*elem->p_level(), i, j, p);
 }
 
 
@@ -295,7 +281,7 @@ Real FE<2,LAGRANGE>::shape_second_deriv(const FEType fet,
                                         const bool add_p_level)
 {
   libmesh_assert(elem);
-  return fe_lagrange_2D_shape_second_deriv<LAGRANGE>(elem->type(), elem, fet.order + add_p_level*elem->p_level(), i, j, p);
+  return fe_lagrange_2D_shape_second_deriv<LAGRANGE>(elem->type(), fet.order + add_p_level*elem->p_level(), i, j, p);
 }
 
 
@@ -309,20 +295,14 @@ Real FE<2,L2_LAGRANGE>::shape_second_deriv(const FEType fet,
                                            const bool add_p_level)
 {
   libmesh_assert(elem);
-  return fe_lagrange_2D_shape_second_deriv<L2_LAGRANGE>(elem->type(), elem, fet.order + add_p_level*elem->p_level(), i, j, p);
+  return fe_lagrange_2D_shape_second_deriv<L2_LAGRANGE>(elem->type(), fet.order + add_p_level*elem->p_level(), i, j, p);
 }
 
 #endif // LIBMESH_ENABLE_SECOND_DERIVATIVES
 
-} // namespace libMesh
-
-
-
-
 // Anonymous namespace function definitions
 namespace
 {
-using namespace libMesh;
 
 template <FEFamily T>
 Real fe_lagrange_2D_shape(const ElemType type,
@@ -340,27 +320,6 @@ Real fe_lagrange_2D_shape(const ElemType type,
       {
         switch (type)
           {
-          case QUAD4:
-          case QUADSHELL4:
-          case QUAD8:
-          case QUADSHELL8:
-          case QUAD9:
-          case QUADSHELL9:
-            {
-              // Compute quad shape functions as a tensor-product
-              libmesh_assert_less (i, 4);
-              return libMesh::detail::fe_lagrange_quad4_shape(i, p(0), p(1));
-            }
-
-          case TRI3:
-          case TRISHELL3:
-          case TRI6:
-          case TRI7:
-            {
-              libmesh_assert_less (i, 3);
-              return libMesh::detail::fe_lagrange_tri3_shape(i, p(0), p(1));
-            }
-
           case C0POLYGON:
             {
               // C0Polygon requires using newer FE APIs
@@ -396,74 +355,16 @@ Real fe_lagrange_2D_shape(const ElemType type,
             }
 
           default:
-            libmesh_error_msg("ERROR: Unsupported 2D element type: " << Utility::enum_to_string(type));
+            break;
           }
+        break;
       }
 
-
-      // quadratic Lagrange shape functions
-    case SECOND:
-      {
-        switch (type)
-          {
-          case QUAD8:
-          case QUADSHELL8:
-            {
-              libmesh_assert_less (i, 8);
-              return libMesh::detail::fe_lagrange_quad8_shape(i, p(0), p(1));
-            }
-
-          case QUAD4:
-            libmesh_assert_msg(T == L2_LAGRANGE,
-                               "High order on first order elements only supported for L2 families");
-            libmesh_fallthrough();
-          case QUAD9:
-          case QUADSHELL9:
-            {
-              libmesh_assert_less (i, 9);
-              return libMesh::detail::fe_lagrange_quad9_shape(i, p(0), p(1));
-            }
-
-          case TRI3:
-            libmesh_assert_msg(T == L2_LAGRANGE,
-                               "High order on first order elements only supported for L2 families");
-            libmesh_fallthrough();
-          case TRI6:
-          case TRI7:
-            {
-              libmesh_assert_less (i, 6);
-              return libMesh::detail::fe_lagrange_tri6_shape(i, p(0), p(1));
-            }
-
-          default:
-            libmesh_error_msg("ERROR: Unsupported 2D element type: " << Utility::enum_to_string(type));
-          }
-      }
-
-
-
-      // "cubic" (one cubic bubble) Lagrange shape functions on TRI7
-    case THIRD:
-      {
-        switch (type)
-          {
-          case TRI7:
-            {
-              libmesh_assert_less (i, 7);
-              return libMesh::detail::fe_lagrange_tri7_shape(i, p(0), p(1));
-            }
-
-          default:
-            libmesh_error_msg("ERROR: Unsupported 2D element type: " << Utility::enum_to_string(type));
-          }
-      } // end case THIRD
-
-
-
-      // unsupported order
     default:
-      libmesh_error_msg("ERROR: Unsupported 2D FE order: " << order);
+      break;
     }
+
+  return libMesh::fe_lagrange_2D_shape<T>(type, order, i, p);
 #else // LIBMESH_DIM > 1
   libmesh_ignore(type, order, i, p);
   libmesh_not_implemented();
@@ -491,26 +392,6 @@ Real fe_lagrange_2D_shape_deriv(const ElemType type,
       {
         switch (type)
           {
-          case QUAD4:
-          case QUADSHELL4:
-          case QUAD8:
-          case QUADSHELL8:
-          case QUAD9:
-          case QUADSHELL9:
-            {
-              libmesh_assert_less (i, 4);
-              return libMesh::detail::fe_lagrange_quad4_shape_deriv(i, j, p(0), p(1));
-            }
-
-          case TRI3:
-          case TRISHELL3:
-          case TRI6:
-          case TRI7:
-            {
-              libmesh_assert_less (i, 3);
-              return libMesh::detail::fe_lagrange_tri3_shape_deriv(i, j);
-            }
-
           case C0POLYGON:
             {
               // C0Polygon requires using newer FE APIs
@@ -584,212 +465,22 @@ Real fe_lagrange_2D_shape_deriv(const ElemType type,
             }
 
           default:
-            libmesh_error_msg("ERROR: Unsupported 2D element type: " << Utility::enum_to_string(type));
+            break;
           }
+        break;
       }
 
-
-      // quadratic Lagrange shape functions
-    case SECOND:
-      {
-        switch (type)
-          {
-          case QUAD8:
-          case QUADSHELL8:
-            {
-              libmesh_assert_less (i, 8);
-              return libMesh::detail::fe_lagrange_quad8_shape_deriv(i, j, p(0), p(1));
-            }
-
-          case QUAD4:
-            libmesh_assert_msg(T == L2_LAGRANGE,
-                               "High order on first order elements only supported for L2 families");
-            libmesh_fallthrough();
-          case QUAD9:
-          case QUADSHELL9:
-            {
-              libmesh_assert_less (i, 9);
-              return libMesh::detail::fe_lagrange_quad9_shape_deriv(i, j, p(0), p(1));
-            }
-
-          case TRI3:
-            libmesh_assert_msg(T == L2_LAGRANGE,
-                               "High order on first order elements only supported for L2 families");
-            libmesh_fallthrough();
-          case TRI6:
-          case TRI7:
-            {
-              libmesh_assert_less (i, 6);
-              return libMesh::detail::fe_lagrange_tri6_shape_deriv(i, j, p(0), p(1));
-            }
-
-          default:
-            libmesh_error_msg("ERROR: Unsupported 2D element type: " << Utility::enum_to_string(type));
-          }
-      }
-
-
-
-      // "cubic" (one cubic bubble) Lagrange shape functions on TRI7
-    case THIRD:
-      {
-        switch (type)
-          {
-          case TRI7:
-            {
-              libmesh_assert_less (i, 7);
-              return libMesh::detail::fe_lagrange_tri7_shape_deriv(i, j, p(0), p(1));
-            }
-
-          default:
-            libmesh_error_msg("ERROR: Unsupported 2D element type: " << Utility::enum_to_string(type));
-          }
-      } // end case THIRD
-
-
-
-      // unsupported order
     default:
-      libmesh_error_msg("ERROR: Unsupported 2D FE order: " << order);
+      break;
     }
+
+  return libMesh::fe_lagrange_2D_shape_deriv<T>(type, order, i, j, p);
 #else // LIBMESH_DIM > 1
   libmesh_ignore(type, order, i, j, p);
   libmesh_not_implemented();
 #endif
 }
-
-
-
-#ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
-
-template <FEFamily T>
-Real fe_lagrange_2D_shape_second_deriv(const ElemType type,
-                                       const Elem *,
-                                       const Order order,
-                                       const unsigned int i,
-                                       const unsigned int j,
-                                       const Point & p)
-{
-#if LIBMESH_DIM > 1
-
-  // j = 0 ==> d^2 phi / dxi^2
-  // j = 1 ==> d^2 phi / dxi deta
-  // j = 2 ==> d^2 phi / deta^2
-  libmesh_assert_less (j, 3);
-
-  switch (order)
-    {
-      // linear Lagrange shape functions
-    case FIRST:
-      {
-        switch (type)
-          {
-          case QUAD4:
-          case QUADSHELL4:
-          case QUAD8:
-          case QUADSHELL8:
-          case QUAD9:
-          case QUADSHELL9:
-            {
-              libmesh_assert_less (i, 4);
-              return libMesh::detail::fe_lagrange_quad4_shape_second_deriv(i, j, p(0), p(1));
-            }
-
-          // All second derivatives for linear triangles are zero.
-          case TRI3:
-          case TRISHELL3:
-          case TRI6:
-          case TRI7:
-
-          // All second derivatives for piecewise-linear polygons are
-          // zero or dirac-type distributions, but we can't put the
-          // latter in a Real, so beware when integrating...
-          case C0POLYGON:
-            {
-              return 0.;
-            }
-
-          default:
-            libmesh_error_msg("ERROR: Unsupported 2D element type: " << Utility::enum_to_string(type));
-
-          } // end switch (type)
-      } // end case FIRST
-
-
-      // quadratic Lagrange shape functions
-    case SECOND:
-      {
-        switch (type)
-          {
-          case QUAD8:
-          case QUADSHELL8:
-            {
-              libmesh_assert_less (j, 3);
-              return libMesh::detail::fe_lagrange_quad8_shape_second_deriv(i, j, p(0), p(1));
-            } // end case QUAD8
-
-          case QUAD4:
-            libmesh_assert_msg(T == L2_LAGRANGE,
-                               "High order on first order elements only supported for L2 families");
-            libmesh_fallthrough();
-          case QUAD9:
-          case QUADSHELL9:
-            {
-              libmesh_assert_less (i, 9);
-              return libMesh::detail::fe_lagrange_quad9_shape_second_deriv(i, j, p(0), p(1));
-            } // end case QUAD9
-
-          case TRI3:
-            libmesh_assert_msg(T == L2_LAGRANGE,
-                               "High order on first order elements only supported for L2 families");
-            libmesh_fallthrough();
-          case TRI6:
-          case TRI7:
-            {
-              libmesh_assert_less (j, 3);
-              return libMesh::detail::fe_lagrange_tri6_shape_second_deriv(i, j);
-            }  // end case TRI6+TRI7
-
-          default:
-            libmesh_error_msg("ERROR: Unsupported 2D element type: " << Utility::enum_to_string(type));
-          }
-      } // end case SECOND
-
-
-
-      // "cubic" (one cubic bubble) Lagrange shape functions on TRI7
-    case THIRD:
-      {
-        switch (type)
-          {
-          case TRI3:
-            libmesh_assert_msg(T == L2_LAGRANGE,
-                               "High order on first order elements only supported for L2 families");
-            libmesh_fallthrough();
-          case TRI6:
-          case TRI7:
-            {
-              libmesh_assert_less (j, 3);
-              return libMesh::detail::fe_lagrange_tri7_shape_second_deriv(i, j, p(0), p(1));
-            }  // end case TRI6+TRI7
-
-          default:
-            libmesh_error_msg("ERROR: Unsupported 2D element type: " << Utility::enum_to_string(type));
-          }
-      } // end case THIRD
-
-      // unsupported order
-    default:
-      libmesh_error_msg("ERROR: Unsupported 2D FE order: " << order);
-
-    } // end switch (order)
-
-#else // LIBMESH_DIM > 1
-  libmesh_ignore(type, order, i, j, p);
-  libmesh_not_implemented();
-#endif
-}
-
-#endif // LIBMESH_ENABLE_SECOND_DERIVATIVES
 
 } // anonymous namespace
+
+} // namespace libMesh
