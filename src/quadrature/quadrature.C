@@ -225,29 +225,8 @@ void QBase::scale(std::pair<Real, Real> old_range,
   // Make sure we are in 1D
   libmesh_assert_equal_to (_dim, 1);
 
-  Real
-    h_new = new_range.second - new_range.first,
-    h_old = old_range.second - old_range.first;
-
-  // Make sure that we have sane ranges
-  libmesh_assert_greater (h_new, 0.);
-  libmesh_assert_greater (h_old, 0.);
-
-  // Make sure there are some points
-  libmesh_assert_greater (_points.size(), 0);
-
-  // Compute the scale factor
-  Real scfact = h_new/h_old;
-
-  // We're mapping from old_range -> new_range
-  for (auto i : index_range(_points))
-    {
-      _points[i](0) = new_range.first +
-        (_points[i](0) - old_range.first) * scfact;
-
-      // Scale the weights
-      _weights[i] *= scfact;
-    }
+  scale(old_range, new_range, cast_int<unsigned int>(_points.size()),
+        _points.data(), _weights.data());
 }
 
 

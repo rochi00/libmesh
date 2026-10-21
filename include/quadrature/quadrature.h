@@ -22,6 +22,7 @@
 
 // Local includes
 #include "libmesh/libmesh_common.h"
+#include "libmesh/libmesh_device.h"
 #include "libmesh/reference_counted_object.h"
 #include "libmesh/point.h"
 #include "libmesh/enum_elem_type.h" // INVALID_ELEM
@@ -277,6 +278,20 @@ public:
   friend std::ostream & operator << (std::ostream & os, const QBase & q);
 
   /**
+   * Maps the \p n points and weights of a 1D rule in \p points and
+   * \p weights, in place, as the member scale() does; that function
+   * calls this one.  It is static so that device code, which cannot
+   * construct a QBase, can build the same rules.
+   */
+  static LIBMESH_DEVICE_INLINE
+  void scale(std::pair<Real, Real> old_range,
+             std::pair<Real, Real> new_range,
+             const unsigned int n,
+             Point * points,
+             Real * weights);
+
+
+  /**
    * \returns \p true if the shape functions need to be recalculated,
    * \p false otherwise.
    *
@@ -414,6 +429,41 @@ protected:
    */
   std::vector<Real> _weights;
 };
+
+
+
+LIBMESH_DEVICE_INLINE
+void QBase::scale(std::pair<Real, Real> old_range,
+                  std::pair<Real, Real> new_range,
+                  const unsigned int n,
+                  Point * points,
+                  Real * weights)
+{
+  Real
+    h_new = new_range.second - new_range.first,
+    h_old = old_range.second - old_range.first;
+
+  // Make sure that we have sane ranges
+  libmesh_assert_greater (h_new, 0.);
+  libmesh_assert_greater (h_old, 0.);
+
+  // Make sure there are some points
+  libmesh_assert_greater (n, 0);
+
+  // Compute the scale factor
+  Real scfact = h_new/h_old;
+
+  // We're mapping from old_range -> new_range
+  for (unsigned int i=0; i<n; ++i)
+    {
+      points[i](0) = new_range.first +
+        (points[i](0) - old_range.first) * scfact;
+
+      // Scale the weights
+      weights[i] *= scfact;
+    }
+}
+
 
 } // namespace libMesh
 
