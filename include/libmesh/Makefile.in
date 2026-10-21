@@ -662,11 +662,11 @@ BUILT_SOURCES = dirichlet_boundaries.h dof_map.h dof_map_base.h \
 	sfc_partitioner.h subdomain_partitioner.h diff_physics.h \
 	diff_qoi.h fem_physics.h quadrature.h quadrature_clough.h \
 	quadrature_composite.h quadrature_conical.h quadrature_gauss.h \
-	quadrature_gauss_1D.h quadrature_gauss_lobatto.h \
-	quadrature_gm.h quadrature_grid.h quadrature_jacobi.h \
-	quadrature_jacobi_1D.h quadrature_monomial.h \
-	quadrature_nodal.h quadrature_simpson.h quadrature_trap.h \
-	rb_assembly_expansion.h rb_construction.h \
+	quadrature_gauss_1D.h quadrature_gauss_2D.h \
+	quadrature_gauss_lobatto.h quadrature_gm.h quadrature_grid.h \
+	quadrature_jacobi.h quadrature_jacobi_1D.h \
+	quadrature_monomial.h quadrature_nodal.h quadrature_simpson.h \
+	quadrature_trap.h rb_assembly_expansion.h rb_construction.h \
 	rb_construction_base.h rb_data_deserialization.h \
 	rb_data_serialization.h rb_eim_assembly.h \
 	rb_eim_construction.h rb_eim_evaluation.h rb_eim_theta.h \
@@ -2020,6 +2020,9 @@ quadrature_gauss.h: $(top_srcdir)/include/quadrature/quadrature_gauss.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 quadrature_gauss_1D.h: $(top_srcdir)/include/quadrature/quadrature_gauss_1D.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+quadrature_gauss_2D.h: $(top_srcdir)/include/quadrature/quadrature_gauss_2D.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 quadrature_gauss_lobatto.h: $(top_srcdir)/include/quadrature/quadrature_gauss_lobatto.h
