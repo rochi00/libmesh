@@ -290,6 +290,48 @@ public:
              Point * points,
              Real * weights);
 
+  /**
+   * Writes the tensor product of the \p n1D point 1D rule in \p
+   * points1D and \p weights1D with itself to \p points and \p
+   * weights, which must have room for n1D^2 entries, as the member
+   * tensor_product_quad() does; that function calls this one.  It is
+   * static so that device code, which cannot construct a QBase, can
+   * build the same rules.
+   */
+  static LIBMESH_DEVICE_INLINE
+  void tensor_product_quad (const unsigned int n1D,
+                            const Point * points1D,
+                            const Real * weights1D,
+                            Point * points,
+                            Real * weights);
+
+  /**
+   * As the static tensor_product_quad(), but [q1D x q1D x q1D], with
+   * room for n1D^3 entries; the member tensor_product_hex() calls
+   * this.
+   */
+  static LIBMESH_DEVICE_INLINE
+  void tensor_product_hex (const unsigned int n1D,
+                           const Point * points1D,
+                           const Real * weights1D,
+                           Point * points,
+                           Real * weights);
+
+  /**
+   * As the static tensor_product_quad(), but the product of the \p
+   * n1D point 1D rule with the \p n2D point 2D rule in \p points2D
+   * and \p weights2D, with room for n1D*n2D entries; the member
+   * tensor_product_prism() calls this.
+   */
+  static LIBMESH_DEVICE_INLINE
+  void tensor_product_prism (const unsigned int n1D,
+                             const Point * points1D,
+                             const Real * weights1D,
+                             const unsigned int n2D,
+                             const Point * points2D,
+                             const Real * weights2D,
+                             Point * points,
+                             Real * weights);
 
   /**
    * \returns \p true if the shape functions need to be recalculated,
@@ -464,6 +506,80 @@ void QBase::scale(std::pair<Real, Real> old_range,
     }
 }
 
+
+
+LIBMESH_DEVICE_INLINE
+void QBase::tensor_product_quad(const unsigned int n1D,
+                                const Point * points1D,
+                                const Real * weights1D,
+                                Point * points,
+                                Real * weights)
+{
+  unsigned int q=0;
+
+  for (unsigned int j=0; j<n1D; j++)
+    for (unsigned int i=0; i<n1D; i++)
+      {
+        points[q](0) = points1D[i](0);
+        points[q](1) = points1D[j](0);
+
+        weights[q] = weights1D[i]*weights1D[j];
+
+        q++;
+      }
+}
+
+
+
+LIBMESH_DEVICE_INLINE
+void QBase::tensor_product_hex(const unsigned int n1D,
+                               const Point * points1D,
+                               const Real * weights1D,
+                               Point * points,
+                               Real * weights)
+{
+  unsigned int q=0;
+
+  for (unsigned int k=0; k<n1D; k++)
+    for (unsigned int j=0; j<n1D; j++)
+      for (unsigned int i=0; i<n1D; i++)
+        {
+          points[q](0) = points1D[i](0);
+          points[q](1) = points1D[j](0);
+          points[q](2) = points1D[k](0);
+
+          weights[q] = weights1D[i] * weights1D[j] * weights1D[k];
+
+          q++;
+        }
+}
+
+
+
+LIBMESH_DEVICE_INLINE
+void QBase::tensor_product_prism(const unsigned int n1D,
+                                 const Point * points1D,
+                                 const Real * weights1D,
+                                 const unsigned int n2D,
+                                 const Point * points2D,
+                                 const Real * weights2D,
+                                 Point * points,
+                                 Real * weights)
+{
+  unsigned int q=0;
+
+  for (unsigned int j=0; j<n1D; j++)
+    for (unsigned int i=0; i<n2D; i++)
+      {
+        points[q](0) = points2D[i](0);
+        points[q](1) = points2D[i](1);
+        points[q](2) = points1D[j](0);
+
+        weights[q] = weights2D[i] * weights1D[j];
+
+        q++;
+      }
+}
 
 } // namespace libMesh
 
