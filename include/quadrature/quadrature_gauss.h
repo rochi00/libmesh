@@ -74,6 +74,29 @@ public:
 
   virtual std::unique_ptr<QBase> clone() const override;
 
+  /**
+   * \returns The number of points in the one-dimensional rule of
+   * order \p o, or \p invalid_uint above \p FORTYTHIRD, the highest
+   * order tabulated.  An n-point Gauss rule integrates degree 2n-1
+   * exactly, so orders 2n-2 and 2n-1 share it.
+   */
+  static LIBMESH_DEVICE_INLINE
+  unsigned int n_points_1D (const Order o)
+  { return o <= FORTYTHIRD ? o/2 + 1 : invalid_uint; }
+
+  /**
+   * Writes the points and weights of the one-dimensional rule of
+   * order \p o to \p points and \p weights, which must have room for
+   * n_points_1D(o) entries, with all but the first coordinate of each
+   * point zero.  This is the rule init_1D() fills in; it is static,
+   * and defined in quadrature_gauss_1D.h, so that device code, which
+   * cannot construct a QGauss, evaluates the same rule.
+   */
+  static LIBMESH_DEVICE_INLINE
+  void rule_1D (const Order o,
+                Point * points,
+                Real * weights);
+
 private:
 
   virtual void init_1D () override;
