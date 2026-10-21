@@ -20,6 +20,7 @@
 // Local includes
 #include "libmesh/elem.h"
 #include "libmesh/fe.h"
+#include "libmesh/fe_fdm.h"
 #include "libmesh/fe_interface.h"
 #include "libmesh/fe_macro.h"
 #include "libmesh/libmesh_logging.h"
@@ -787,124 +788,9 @@ void FE<Dim,T>::init_base_shape_functions(const std::vector<Point> & qp,
 #endif // LIBMESH_ENABLE_INFINITE_ELEMENTS
 
 
-// Helper for FDM methods
-namespace {
-using namespace libMesh;
-
-std::tuple<Point, Point, Real>
-fdm_points(const unsigned int j, const Point & p)
-{
-  libmesh_assert_less (j, LIBMESH_DIM);
-
-  // cheat by using finite difference approximations:
-  const Real eps = 1.e-6;
-  Point pp = p, pm = p;
-
-  switch (j)
-    {
-      // d()/dxi
-    case 0:
-      {
-        pp(0) += eps;
-        pm(0) -= eps;
-        break;
-      }
-
-      // d()/deta
-    case 1:
-      {
-        pp(1) += eps;
-        pm(1) -= eps;
-        break;
-      }
-
-      // d()/dzeta
-    case 2:
-      {
-        pp(2) += eps;
-        pm(2) -= eps;
-        break;
-      }
-
-    default:
-      libmesh_error_msg("Invalid derivative index j = " << j);
-    }
-
-  return std::make_tuple(pp, pm, eps);
-}
-
-std::tuple<Point, Point, Real, unsigned int>
-fdm_second_points(const unsigned int j, const Point & p)
-{
-  // cheat by using finite difference approximations:
-  const Real eps = 1.e-5;
-  Point pp = p, pm = p;
-  unsigned int deriv_j = 0;
-
-  switch (j)
-    {
-      //  d^2() / dxi^2
-    case 0:
-      {
-        pp(0) += eps;
-        pm(0) -= eps;
-        deriv_j = 0;
-        break;
-      }
-
-      // d^2() / dxi deta
-    case 1:
-      {
-        pp(1) += eps;
-        pm(1) -= eps;
-        deriv_j = 0;
-        break;
-      }
-
-      // d^2() / deta^2
-    case 2:
-      {
-        pp(1) += eps;
-        pm(1) -= eps;
-        deriv_j = 1;
-        break;
-      }
-
-      // d^2()/dxidzeta
-    case 3:
-      {
-        pp(2) += eps;
-        pm(2) -= eps;
-        deriv_j = 0;
-        break;
-      }                  // d^2()/deta^2
-
-      // d^2()/detadzeta
-    case 4:
-      {
-        pp(2) += eps;
-        pm(2) -= eps;
-        deriv_j = 1;
-        break;
-      }
-
-      // d^2()/dzeta^2
-    case 5:
-      {
-        pp(2) += eps;
-        pm(2) -= eps;
-        deriv_j = 2;
-        break;
-      }
-
-    default:
-      libmesh_error_msg("Invalid shape function derivative j = " << j);
-    }
-
-  return std::make_tuple(pp, pm, eps, deriv_j);
-}
-
-}
+// Helpers for FDM methods, shared with device code in fe_fdm.h
+using detail::fdm_points;
+using detail::fdm_second_points;
 
 
 template <typename OutputShape>
@@ -938,10 +824,7 @@ OutputShape fe_fdm_deriv(const ElemType type,
                            (const ElemType, const Order,
                             const unsigned int, const Point &))
 {
-  auto [pp, pm, eps] = fdm_points(j, p);
-
-  return (shape_func(type, order, i, pp) -
-          shape_func(type, order, i, pm))/2./eps;
+  return detail::fe_fdm_deriv(type, order, i, j, p, shape_func);
 }
 
 
@@ -996,10 +879,7 @@ fe_fdm_second_deriv(const ElemType type,
                        const unsigned int, const unsigned int,
                        const Point &))
 {
-  auto [pp, pm, eps, deriv_j] = fdm_second_points(j, p);
-
-  return (deriv_func(type, order, i, deriv_j, pp) -
-          deriv_func(type, order, i, deriv_j, pm))/2./eps;
+  return detail::fe_fdm_second_deriv(type, order, i, j, p, deriv_func);
 }
 
 

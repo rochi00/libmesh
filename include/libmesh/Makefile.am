@@ -76,6 +76,7 @@ BUILT_SOURCES = \
         fe_abstract.h \
         fe_base.h \
         fe_compute_data.h \
+        fe_fdm.h \
         fe_interface.h \
         fe_interface_macros.h \
         fe_lagrange_gll_shape.h \
@@ -848,6 +849,9 @@ fe_base.h: $(top_srcdir)/include/fe/fe_base.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 fe_compute_data.h: $(top_srcdir)/include/fe/fe_compute_data.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+fe_fdm.h: $(top_srcdir)/include/fe/fe_fdm.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 fe_interface.h: $(top_srcdir)/include/fe/fe_interface.h
