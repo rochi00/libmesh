@@ -49,6 +49,21 @@ namespace libMesh
 {
 
 /**
+ * Adds the constants every ParsedFunction and ParsedFEMFunction
+ * expression may use -- NaN, pi and e, to Real precision -- to \p fp.
+ * A partial reparse adds them again, so that the modified expression
+ * evaluates with the same values as the original.
+ */
+template <typename Output>
+inline
+void add_parsed_constants(FunctionParserBase<Output> & fp)
+{
+  fp.AddConstant("NaN", std::numeric_limits<Real>::quiet_NaN());
+  fp.AddConstant("pi", std::acos(Real(-1)));
+  fp.AddConstant("e", std::exp(Real(1)));
+}
+
+/**
  * A Function generated (via FParser) by parsing a mathematical
  * expression. All overridden virtual functions are documented in
  * function_base.h.
@@ -457,9 +472,7 @@ ParsedFunction<Output,OutputGradient>::get_inline_value (std::string_view inline
       // Parse and evaluate the new subexpression.
       // Add the same constants as we used originally.
       FunctionParserADBase<Output> fp;
-      fp.AddConstant("NaN", std::numeric_limits<Real>::quiet_NaN());
-      fp.AddConstant("pi", std::acos(Real(-1)));
-      fp.AddConstant("e", std::exp(Real(1)));
+      add_parsed_constants(fp);
       libmesh_error_msg_if
         (fp.Parse(new_subexpression, variables) != -1, // -1 for success
          "ERROR: FunctionParser is unable to parse modified expression: "
@@ -596,9 +609,7 @@ ParsedFunction<Output,OutputGradient>::partial_reparse (std::string expression)
       // Parse (and optimize if possible) the subexpression.
       // Add some basic constants, to Real precision.
       auto fp = std::make_unique<FunctionParserADBase<Output>>();
-      fp->AddConstant("NaN", std::numeric_limits<Real>::quiet_NaN());
-      fp->AddConstant("pi", std::acos(Real(-1)));
-      fp->AddConstant("e", std::exp(Real(1)));
+      add_parsed_constants(*fp);
       libmesh_error_msg_if
         (fp->Parse(_subexpressions.back(), variables) != -1, // -1 for success
          "ERROR: FunctionParser is unable to parse expression: "
