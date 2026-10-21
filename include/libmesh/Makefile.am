@@ -353,6 +353,7 @@ BUILT_SOURCES = \
         quadrature_conical.h \
         quadrature_gauss.h \
         quadrature_gauss_1D.h \
+        quadrature_gauss_2D.h \
         quadrature_gauss_lobatto.h \
         quadrature_gm.h \
         quadrature_grid.h \
@@ -1674,6 +1675,9 @@ quadrature_gauss.h: $(top_srcdir)/include/quadrature/quadrature_gauss.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 quadrature_gauss_1D.h: $(top_srcdir)/include/quadrature/quadrature_gauss_1D.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+quadrature_gauss_2D.h: $(top_srcdir)/include/quadrature/quadrature_gauss_2D.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 quadrature_gauss_lobatto.h: $(top_srcdir)/include/quadrature/quadrature_gauss_lobatto.h
