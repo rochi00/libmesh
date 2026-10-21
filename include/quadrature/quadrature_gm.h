@@ -23,6 +23,9 @@
 // Local includes
 #include "libmesh/quadrature.h"
 
+// C++ includes
+#include <algorithm> // std::max
+
 namespace libMesh
 {
 
@@ -125,6 +128,30 @@ public:
 
   virtual std::unique_ptr<QBase> clone() const override;
 
+  /**
+   * \returns The number of points in the rule of index \p s in
+   * dimension \p dim, which is (dim+1+s)! / (dim+1)! / s!.  In 3D,
+   * this is 1/24 * Pi_{i=1}^4 (s+i); in 2D, 1/6 * Pi_{i=1}^3 (s+i).
+   */
+  static LIBMESH_DEVICE_INLINE constexpr
+  unsigned int n_points_gm (const unsigned int s,
+                            const unsigned int dim)
+  { return dim==2 ? (s+3)*(s+2)*(s+1) / 6 : (s+4)*(s+3)*(s+2)*(s+1) / 24; }
+
+  /**
+   * Writes the points and weights of the rule of index \p s in
+   * dimension \p dim, which integrates polynomials of degree 2*s+1
+   * exactly, to \p points and \p weights, which must have room for
+   * n_points_gm(s, dim) entries.  This is the rule the member
+   * gm_rule() fills in; it is static so that device code, which
+   * cannot construct a QGrundmann_Moller, evaluates the same rule.
+   */
+  static LIBMESH_DEVICE_INLINE
+  void gm_rule (const unsigned int s,
+                const unsigned int dim,
+                Point * points,
+                Real * weights);
+
 private:
 
   /**
@@ -142,16 +169,131 @@ private:
    * and dimension, dim.
    */
   void gm_rule(unsigned int s, unsigned int dim);
-
-  /**
-   * Routine which generates p-compositions of a given order, s,
-   * as well as permutations thereof.  This routine is called internally by
-   * the gm_rule() routine, you should not call this yourself!
-   */
-  void compose_all(unsigned int s, // number to be compositioned
-                   unsigned int p, // # of partitions
-                   std::vector<std::vector<unsigned int>> & result);
 };
+
+
+
+LIBMESH_DEVICE_INLINE
+void QGrundmann_Moller::gm_rule(const unsigned int s,
+                                const unsigned int dim,
+                                Point * points,
+                                Real * weights)
+{
+  // Only dim==2 or dim==3 is allowed
+  libmesh_assert(dim==2 || dim==3);
+
+  // A GM rule of index s can integrate polynomials of degree 2*s+1 exactly
+  const unsigned int degree = 2*s+1;
+
+  // (-1)^i -> This one flips sign at each iteration of the i-loop below.
+  int one_pm=1;
+
+  // Index into the arrays where we should start adding the next round of points/weights
+  unsigned int offset=0;
+
+  // Implement the GM formula 4.1 on page 286 of the paper
+  for (unsigned int i=0; i<=s; ++i)
+    {
+      // Compute the weight for this i, being careful to avoid overflow.
+      // This technique is borrowed from Burkardt's code as well.
+      // Use once for each of the points obtained from the compositions below.
+      Real weight = one_pm;
+
+      // This for loop needs to run for dim, degree, or dim+degree-i iterations,
+      // whichever is largest.
+      const unsigned int weight_loop_index =
+        std::max(dim, std::max(degree, degree+dim-i))+1;
+
+      for (unsigned int j=1; j<weight_loop_index; ++j)
+        {
+          if (j <= degree) // Accumulate (d+n-2i)^d term
+            weight *= static_cast<Real>(degree+dim-2*i);
+
+          if (j <= 2*s) // Accumulate 2^{-2s}
+            weight *= 0.5;
+
+          if (j <= i) // Accumulate (i!)^{-1}
+            weight /= static_cast<Real>(j);
+
+          if (j <= degree+dim-i) // Accumulate ( (d+n-i)! )^{-1}
+            weight /= static_cast<Real>(j);
+        }
+
+      // Each ordered composition of |beta| = s-i into dim+1 parts,
+      // and each permutation of one, gives a point with this weight,
+      // made from its first dim entries.  We generate them one at a
+      // time in workspace, rather than storing them all, with a
+      // routine originally due to:
+      //
+      // Albert Nijenhuis, Herbert Wilf,
+      // Combinatorial Algorithms for Computers and Calculators,
+      // Second Edition,
+      // Academic Press, 1978,
+      // ISBN: 0-12-519260-6,
+      // LC: QA164.N54.
+      //
+      // The routine is deceptively simple: I still don't understand exactly
+      // why it works, but it does.
+      const unsigned int comp_s = s-i;
+
+      // The first composition is always (comp_s,0,...,0)
+      unsigned int workspace[4] = {comp_s, 0, 0, 0};
+
+      // the value of the first non-zero entry
+      unsigned int head_value=comp_s;
+
+      // When head_index=-1, it refers to "off the front" of the array.  Therefore,
+      // this needs to be a regular int rather than unsigned.  I initially tried to
+      // do this with head_index unsigned and an else statement below, but then there
+      // is the special case: (1,0,...,0) which does not work correctly.
+      int head_index = -1;
+
+      for (;;)
+        {
+          // We use the first dim entries of each composition to
+          // construct an integration point.
+          for (unsigned int j=0; j<dim; ++j)
+            points[offset](j) =
+              static_cast<Real>(2.*workspace[j] + 1.) /
+              static_cast<Real>(  degree + dim - 2.*i     );
+
+          weights[offset] = weight;
+          ++offset;
+
+          // At the end, all the entries will be in the final slot of workspace
+          if (workspace[dim] == comp_s)
+            break;
+
+          // If the previous head value is still larger than 1, reset the index
+          // to "off the front" of the array
+          if (head_value > 1)
+            head_index = -1;
+
+          // Either move the index onto the front of the array or on to
+          // the next value.
+          head_index++;
+
+          // Get current value of the head entry
+          head_value = workspace[head_index];
+
+          // Put a zero into the head_index of the array.  If head_index==0,
+          // this will be overwritten in the next line with head_value-1.
+          workspace[head_index] = 0;
+
+          // The initial entry gets the current head value, minus 1.
+          // If head_value > 1, the next loop iteration will start back
+          // at workspace[0] again.
+          libmesh_assert_greater (head_value, 0);
+          workspace[0] = head_value - 1;
+
+          // Increment the head+1 value
+          workspace[head_index+1] += 1;
+        }
+
+      // Change sign for next iteration
+      one_pm = -one_pm;
+    }
+}
 
 } // namespace libMesh
 
