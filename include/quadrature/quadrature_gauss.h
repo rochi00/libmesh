@@ -124,7 +124,370 @@ private:
    */
   void keast_rule(const Real rule_data[][4],
                   const unsigned int n_pts);
+
+  /**
+   * As the members of the same names, but writing to \p points and
+   * \p weights, which have room for \p n_out entries, so that the
+   * static triangle and tet rules can build the same points and
+   * weights in device code.  The members call these.
+   */
+  static LIBMESH_DEVICE_INLINE
+  void dunavant_rule(const Real rule_data[][4],
+                     const unsigned int n_pts,
+                     const unsigned int n_out,
+                     Point * points,
+                     Real * weights);
+
+  static LIBMESH_DEVICE_INLINE
+  void keast_rule(const Real rule_data[][4],
+                  const unsigned int n_pts,
+                  const unsigned int n_out,
+                  Point * points,
+                  Real * weights);
+
+  /**
+   * As the member dunavant_rule2(), but writing to \p points and \p
+   * weights, which must have room for the sum of \p permutation_ids.
+   */
+  static LIBMESH_DEVICE_INLINE
+  void dunavant_rule2(const Real * wts,
+                      const Real * a,
+                      const Real * b,
+                      const unsigned int * permutation_ids,
+                      const unsigned int n_wts,
+                      Point * points,
+                      Real * weights);
 };
+
+
+
+LIBMESH_DEVICE_INLINE
+void QGauss::keast_rule(const Real rule_data[][4],
+                        const unsigned int n_pts,
+                        const unsigned int n_out,
+                        Point * points,
+                        Real * weights)
+{
+  // Like the Dunavant rule, the input data should have 4 columns.  These columns
+  // have the following format and implied permutations (w=weight).
+  // {a, 0, 0, w} = 1-permutation  (a,a,a)
+  // {a, b, 0, w} = 4-permutation  (a,b,b), (b,a,b), (b,b,a), (b,b,b)
+  // {a, 0, b, w} = 6-permutation  (a,a,b), (a,b,b), (b,b,a), (b,a,b), (b,a,a), (a,b,a)
+  // {a, b, c, w} = 12-permutation (a,a,b), (a,a,c), (b,a,a), (c,a,a), (a,b,a), (a,c,a)
+  //                               (a,b,c), (a,c,b), (b,a,c), (b,c,a), (c,a,b), (c,b,a)
+
+  // Always insert into the points & weights vector relative to the offset
+  unsigned int offset=0;
+
+
+  for (unsigned int p=0; p<n_pts; ++p)
+    {
+
+      // There must always be a non-zero entry to start the row
+      libmesh_assert_not_equal_to (rule_data[p][0], static_cast<Real>(0.0));
+
+      // A zero weight may imply you did not set up the raw data correctly
+      libmesh_assert_not_equal_to (rule_data[p][3], static_cast<Real>(0.0));
+
+      // What kind of point is this?
+      // One non-zero entry in first 3 cols   ? 1-perm (centroid) point = 1
+      // Two non-zero entries in first 3 cols ? 3-perm point            = 3
+      // Three non-zero entries               ? 6-perm point            = 6
+      unsigned int pointtype=1;
+
+      if (rule_data[p][1] != static_cast<Real>(0.0))
+        {
+          if (rule_data[p][2] != static_cast<Real>(0.0))
+            pointtype = 12;
+          else
+            pointtype = 4;
+        }
+      else
+        {
+          // The second entry is zero.  What about the third?
+          if (rule_data[p][2] != static_cast<Real>(0.0))
+            pointtype = 6;
+        }
+
+
+      switch (pointtype)
+        {
+        case 1:
+          {
+            // Be sure we have enough space to insert this point
+            libmesh_assert_less (offset + 0, n_out);
+
+            const Real a = rule_data[p][0];
+
+            // The point has only a single permutation (the centroid!)
+            points[offset  + 0] = Point(a,a,a);
+
+            // The weight is always the last entry in the row.
+            weights[offset + 0] = rule_data[p][3];
+
+            offset += pointtype;
+            break;
+          }
+
+        case 4:
+          {
+            // Be sure we have enough space to insert these points
+            libmesh_assert_less (offset + 3, n_out);
+
+            const Real a  = rule_data[p][0];
+            const Real b  = rule_data[p][1];
+            const Real wt = rule_data[p][3];
+
+            // Here it's understood the second entry is to be used twice, and
+            // thus there are three possible permutations.
+            points[offset + 0] = Point(a,b,b);
+            points[offset + 1] = Point(b,a,b);
+            points[offset + 2] = Point(b,b,a);
+            points[offset + 3] = Point(b,b,b);
+
+            for (unsigned int j=0; j<pointtype; ++j)
+              weights[offset + j] = wt;
+
+            offset += pointtype;
+            break;
+          }
+
+        case 6:
+          {
+            // Be sure we have enough space to insert these points
+            libmesh_assert_less (offset + 5, n_out);
+
+            const Real a  = rule_data[p][0];
+            const Real b  = rule_data[p][2];
+            const Real wt = rule_data[p][3];
+
+            // Three individual entries with six permutations.
+            points[offset + 0] = Point(a,a,b);
+            points[offset + 1] = Point(a,b,b);
+            points[offset + 2] = Point(b,b,a);
+            points[offset + 3] = Point(b,a,b);
+            points[offset + 4] = Point(b,a,a);
+            points[offset + 5] = Point(a,b,a);
+
+            for (unsigned int j=0; j<pointtype; ++j)
+              weights[offset + j] = wt;
+
+            offset += pointtype;
+            break;
+          }
+
+
+        case 12:
+          {
+            // Be sure we have enough space to insert these points
+            libmesh_assert_less (offset + 11, n_out);
+
+            const Real a  = rule_data[p][0];
+            const Real b  = rule_data[p][1];
+            const Real c  = rule_data[p][2];
+            const Real wt = rule_data[p][3];
+
+            // Three individual entries with six permutations.
+            points[offset + 0] = Point(a,a,b);  points[offset + 6]  = Point(a,b,c);
+            points[offset + 1] = Point(a,a,c); points[offset + 7]  = Point(a,c,b);
+            points[offset + 2] = Point(b,a,a); points[offset + 8]  = Point(b,a,c);
+            points[offset + 3] = Point(c,a,a); points[offset + 9]  = Point(b,c,a);
+            points[offset + 4] = Point(a,b,a); points[offset + 10] = Point(c,a,b);
+            points[offset + 5] = Point(a,c,a); points[offset + 11] = Point(c,b,a);
+
+            for (unsigned int j=0; j<pointtype; ++j)
+              weights[offset + j] = wt;
+
+            offset += pointtype;
+            break;
+          }
+
+        default:
+          libmesh_error_msg("Don't know what to do with this many permutation points!");
+        }
+
+    }
+
+}
+
+
+
+// A number of different rules for triangles can be described by
+// permutations of the following types of points:
+// I:   "1"-permutation, (1/3,1/3)  (single point only)
+// II:   3-permutation, (a,a,1-2a)
+// III:  6-permutation, (a,b,1-a-b)
+// The weights for a given set of permutations are all the same.
+LIBMESH_DEVICE_INLINE
+void QGauss::dunavant_rule2(const Real * wts,
+                            const Real * a,
+                            const Real * b,
+                            const unsigned int * permutation_ids,
+                            const unsigned int n_wts,
+                            Point * points,
+                            Real * weights)
+{
+  // Always insert into the points & weights vector relative to the offset
+  unsigned int offset=0;
+
+  for (unsigned int p=0; p<n_wts; ++p)
+    {
+      switch (permutation_ids[p])
+        {
+        case 1:
+          {
+            // The point has only a single permutation (the centroid!)
+            // So we don't even need to look in the a or b arrays.
+            points [offset  + 0] = Point(Real(1)/3, Real(1)/3);
+            weights[offset + 0] = wts[p];
+
+            offset += 1;
+            break;
+          }
+
+
+        case 3:
+          {
+            // For this type of rule, don't need to look in the b array.
+            points[offset + 0] = Point(a[p],         a[p]);         // (a,a)
+            points[offset + 1] = Point(a[p],         1-2*a[p]); // (a,1-2a)
+            points[offset + 2] = Point(1-2*a[p], a[p]);         // (1-2a,a)
+
+            for (unsigned int j=0; j<3; ++j)
+              weights[offset + j] = wts[p];
+
+            offset += 3;
+            break;
+          }
+
+        case 6:
+          {
+            // This type of point uses all 3 arrays...
+            points[offset + 0] = Point(a[p], b[p]);
+            points[offset + 1] = Point(b[p], a[p]);
+            points[offset + 2] = Point(a[p], 1-a[p]-b[p]);
+            points[offset + 3] = Point(1-a[p]-b[p], a[p]);
+            points[offset + 4] = Point(b[p], 1-a[p]-b[p]);
+            points[offset + 5] = Point(1-a[p]-b[p], b[p]);
+
+            for (unsigned int j=0; j<6; ++j)
+              weights[offset + j] = wts[p];
+
+            offset += 6;
+            break;
+          }
+
+        default:
+          // Device code can only report a literal, so this no longer
+          // names the bad id.
+          libmesh_error_msg("Unknown permutation id!");
+        }
+    }
+
+}
+
+
+
+LIBMESH_DEVICE_INLINE
+void QGauss::dunavant_rule(const Real rule_data[][4],
+                           const unsigned int n_pts,
+                           const unsigned int n_out,
+                           Point * points,
+                           Real * weights)
+{
+  // The input data array has 4 columns.  The first 3 are the permutation points.
+  // The last column is the weights for a given set of permutation points.  A zero
+  // in two of the first 3 columns implies the point is a 1-permutation (centroid).
+  // A zero in one of the first 3 columns implies the point is a 3-permutation.
+  // Otherwise each point is assumed to be a 6-permutation.
+
+  // Always insert into the points & weights vector relative to the offset
+  unsigned int offset=0;
+
+
+  for (unsigned int p=0; p<n_pts; ++p)
+    {
+
+      // There must always be a non-zero entry to start the row
+      libmesh_assert_not_equal_to ( rule_data[p][0], static_cast<Real>(0.0) );
+
+      // A zero weight may imply you did not set up the raw data correctly
+      libmesh_assert_not_equal_to ( rule_data[p][3], static_cast<Real>(0.0) );
+
+      // What kind of point is this?
+      // One non-zero entry in first 3 cols   ? 1-perm (centroid) point = 1
+      // Two non-zero entries in first 3 cols ? 3-perm point            = 3
+      // Three non-zero entries               ? 6-perm point            = 6
+      unsigned int pointtype=1;
+
+      if (rule_data[p][1] != static_cast<Real>(0.0))
+        {
+          if (rule_data[p][2] != static_cast<Real>(0.0))
+            pointtype = 6;
+          else
+            pointtype = 3;
+        }
+
+      switch (pointtype)
+        {
+        case 1:
+          {
+            // Be sure we have enough space to insert this point
+            libmesh_assert_less (offset + 0, n_out);
+
+            // The point has only a single permutation (the centroid!)
+            points[offset  + 0] = Point(rule_data[p][0], rule_data[p][0]);
+
+            // The weight is always the last entry in the row.
+            weights[offset + 0] = rule_data[p][3];
+
+            offset += 1;
+            break;
+          }
+
+        case 3:
+          {
+            // Be sure we have enough space to insert these points
+            libmesh_assert_less (offset + 2, n_out);
+
+            // Here it's understood the second entry is to be used twice, and
+            // thus there are three possible permutations.
+            points[offset + 0] = Point(rule_data[p][0], rule_data[p][1]);
+            points[offset + 1] = Point(rule_data[p][1], rule_data[p][0]);
+            points[offset + 2] = Point(rule_data[p][1], rule_data[p][1]);
+
+            for (unsigned int j=0; j<3; ++j)
+              weights[offset + j] = rule_data[p][3];
+
+            offset += 3;
+            break;
+          }
+
+        case 6:
+          {
+            // Be sure we have enough space to insert these points
+            libmesh_assert_less (offset + 5, n_out);
+
+            // Three individual entries with six permutations.
+            points[offset + 0] = Point(rule_data[p][0], rule_data[p][1]);
+            points[offset + 1] = Point(rule_data[p][0], rule_data[p][2]);
+            points[offset + 2] = Point(rule_data[p][1], rule_data[p][0]);
+            points[offset + 3] = Point(rule_data[p][1], rule_data[p][2]);
+            points[offset + 4] = Point(rule_data[p][2], rule_data[p][0]);
+            points[offset + 5] = Point(rule_data[p][2], rule_data[p][1]);
+
+            for (unsigned int j=0; j<6; ++j)
+              weights[offset + j] = rule_data[p][3];
+
+            offset += 6;
+            break;
+          }
+
+        default:
+          libmesh_error_msg("Don't know what to do with this many permutation points!");
+        }
+    }
+}
 
 } // namespace libMesh
 
