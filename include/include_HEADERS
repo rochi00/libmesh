@@ -358,6 +358,7 @@ include_HEADERS =  \
         quadrature/quadrature_gauss.h \
         quadrature/quadrature_gauss_1D.h \
         quadrature/quadrature_gauss_2D.h \
+        quadrature/quadrature_gauss_3D.h \
         quadrature/quadrature_gauss_lobatto.h \
         quadrature/quadrature_gm.h \
         quadrature/quadrature_grid.h \
