@@ -32,6 +32,7 @@
 #ifdef LIBMESH_HAVE_FPARSER
 // FParser includes
 #include "libmesh/fparser_ad.hh"
+#include "libmesh/parsed_function.h" // add_parsed_constants()
 #endif
 
 // C++ includes
@@ -461,9 +462,7 @@ ParsedFEMFunction<Output>::build_program_bundle() const
   bundle.uses_additional_variables = !_additional_vars.empty();
 
   auto fp = std::make_unique<FunctionParserADBase<Output>>();
-  fp->AddConstant("NaN", std::numeric_limits<Real>::quiet_NaN());
-  fp->AddConstant("pi", std::acos(Real(-1)));
-  fp->AddConstant("e", std::exp(Real(1)));
+  add_parsed_constants(*fp);
   libmesh_error_msg_if
     (fp->Parse(_subexpressions.front(), variables) != -1, // -1 for success
      "ERROR: FunctionParser is unable to parse expression for Kokkos export: "
@@ -595,9 +594,7 @@ ParsedFEMFunction<Output>::get_inline_value(std::string_view inline_var_name) co
       // Parse and evaluate the new subexpression.
       // Add the same constants as we used originally.
       auto fp = std::make_unique<FunctionParserBase<Output>>();
-      fp->AddConstant("NaN", std::numeric_limits<Real>::quiet_NaN());
-      fp->AddConstant("pi", std::acos(Real(-1)));
-      fp->AddConstant("e", std::exp(Real(1)));
+      add_parsed_constants(*fp);
       libmesh_error_msg_if
         (fp->Parse(new_subexpression, variables) != -1, // -1 for success
          "ERROR: FunctionParser is unable to parse modified expression: "
@@ -737,9 +734,7 @@ ParsedFEMFunction<Output>::partial_reparse (std::string expression)
       // Parse (and optimize if possible) the subexpression.
       // Add some basic constants, to Real precision.
       auto fp = std::make_unique<FunctionParserBase<Output>>();
-      fp->AddConstant("NaN", std::numeric_limits<Real>::quiet_NaN());
-      fp->AddConstant("pi", std::acos(Real(-1)));
-      fp->AddConstant("e", std::exp(Real(1)));
+      add_parsed_constants(*fp);
       libmesh_error_msg_if
         (fp->Parse(_subexpressions.back(), variables) != -1, // -1 for success
          "ERROR: FunctionParser is unable to parse expression: "
