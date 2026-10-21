@@ -241,18 +241,8 @@ void QBase::tensor_product_quad(const QBase & q1D)
 
   _weights.resize(np * np);
 
-  unsigned int q=0;
-
-  for (unsigned int j=0; j<np; j++)
-    for (unsigned int i=0; i<np; i++)
-      {
-        _points[q](0) = q1D.qp(i)(0);
-        _points[q](1) = q1D.qp(j)(0);
-
-        _weights[q] = q1D.w(i)*q1D.w(j);
-
-        q++;
-      }
+  tensor_product_quad(np, q1D._points.data(), q1D._weights.data(),
+                      _points.data(), _weights.data());
 }
 
 
@@ -267,20 +257,8 @@ void QBase::tensor_product_hex(const QBase & q1D)
 
   _weights.resize(np * np * np);
 
-  unsigned int q=0;
-
-  for (unsigned int k=0; k<np; k++)
-    for (unsigned int j=0; j<np; j++)
-      for (unsigned int i=0; i<np; i++)
-        {
-          _points[q](0) = q1D.qp(i)(0);
-          _points[q](1) = q1D.qp(j)(0);
-          _points[q](2) = q1D.qp(k)(0);
-
-          _weights[q] = q1D.w(i) * q1D.w(j) * q1D.w(k);
-
-          q++;
-        }
+  tensor_product_hex(np, q1D._points.data(), q1D._weights.data(),
+                     _points.data(), _weights.data());
 }
 
 
@@ -294,20 +272,9 @@ void QBase::tensor_product_prism(const QBase & q1D, const QBase & q2D)
   _points.resize  (n_points1D * n_points2D);
   _weights.resize (n_points1D * n_points2D);
 
-  unsigned int q=0;
-
-  for (unsigned int j=0; j<n_points1D; j++)
-    for (unsigned int i=0; i<n_points2D; i++)
-      {
-        _points[q](0) = q2D.qp(i)(0);
-        _points[q](1) = q2D.qp(i)(1);
-        _points[q](2) = q1D.qp(j)(0);
-
-        _weights[q] = q2D.w(i) * q1D.w(j);
-
-        q++;
-      }
-
+  tensor_product_prism(n_points1D, q1D._points.data(), q1D._weights.data(),
+                       n_points2D, q2D._points.data(), q2D._weights.data(),
+                       _points.data(), _weights.data());
 }
 
 
