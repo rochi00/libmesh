@@ -83,6 +83,23 @@ public:
 
   virtual std::unique_ptr<QBase> clone() const override;
 
+  /**
+   * Writes the points and weights of the order \p o rule for the
+   * weight function (1-x)^alpha * (1+x)^beta to \p points and \p
+   * weights, which must have room for QGauss::n_points_1D(o) entries,
+   * with all but the first coordinate of each point zero.  This is
+   * the rule init_1D() fills in; it is static, and defined in
+   * quadrature_jacobi_1D.h, so that device code, which cannot
+   * construct a QJacobi, evaluates the same rule.  Only (1,0) and
+   * (2,0) are implemented; any other pair is an error.
+   */
+  static LIBMESH_DEVICE_INLINE
+  void rule_1D (const unsigned int alpha,
+                const unsigned int beta,
+                const Order o,
+                Point * points,
+                Real * weights);
+
 private:
   unsigned int _alpha;
   unsigned int _beta;

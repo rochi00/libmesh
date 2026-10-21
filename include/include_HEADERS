@@ -361,6 +361,7 @@ include_HEADERS =  \
         quadrature/quadrature_gm.h \
         quadrature/quadrature_grid.h \
         quadrature/quadrature_jacobi.h \
+        quadrature/quadrature_jacobi_1D.h \
         quadrature/quadrature_monomial.h \
         quadrature/quadrature_nodal.h \
         quadrature/quadrature_simpson.h \
