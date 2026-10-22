@@ -565,14 +565,7 @@ std::pair<Real, Real> Quad::qual_bounds (const ElemQuality q) const
 bool Quad::on_reference_element(const Point & p,
                                 const Real eps) const
 {
-  const Real & xi = p(0);
-  const Real & eta = p(1);
-
-  // The reference quadrilateral element is [-1,1]^2.
-  return ((xi  >= -1.-eps) &&
-          (xi  <=  1.+eps) &&
-          (eta >= -1.-eps) &&
-          (eta <=  1.+eps));
+  return Elem::on_reference_element(QUAD4, p, eps);
 }
 
 

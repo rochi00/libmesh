@@ -323,16 +323,7 @@ std::pair<Real, Real> Tet::qual_bounds (const ElemQuality q) const
 bool Tet::on_reference_element(const Point & p,
                                const Real eps) const
 {
-  const Real & xi = p(0);
-  const Real & eta = p(1);
-  const Real & zeta = p(2);
-        // The reference tetrahedral is isosceles
-        // and is bound by xi=0, eta=0, zeta=0,
-        // and xi+eta+zeta=1.
-  return ((xi   >= 0.-eps) &&
-          (eta  >= 0.-eps) &&
-          (zeta >= 0.-eps) &&
-          ((xi + eta + zeta) <= 1.+eps));
+  return Elem::on_reference_element(TET4, p, eps);
 }
 
 

@@ -28,6 +28,7 @@
 #include "libmesh/reference_counted_object.h"
 #include "libmesh/node.h"
 #include "libmesh/enum_elem_type.h" // INVALID_ELEM
+#include "libmesh/enum_to_string.h"
 #include "libmesh/multi_predicates.h"
 #include "libmesh/pointer_to_pointer_iter.h"
 #include "libmesh/int_range.h"
@@ -47,6 +48,15 @@
 
 namespace libMesh
 {
+
+namespace Utility
+{
+// Defined in string_to_enum.C; declared here because the inline
+// Elem::on_reference_element(ElemType, ...) names it, which would
+// otherwise instantiate the primary template first.
+template <>
+std::string enum_to_string<ElemType> (const ElemType e);
+}
 
 // Forward declarations
 class BoundaryInfo;
@@ -1237,6 +1247,17 @@ public:
                                     const Real eps = TOLERANCE) const = 0;
 
   /**
+   * \returns \p true if the master-space point p is contained in the
+   * reference element of type \p t, as on_reference_element() does
+   * for an element of that type; it is static so that device code,
+   * which has no Elem to ask, checks the same way.
+   */
+  static LIBMESH_DEVICE_INLINE
+  bool on_reference_element(const ElemType t,
+                            const Point & p,
+                            const Real eps = TOLERANCE);
+
+  /**
    * \returns \p true if this element is "close" to the point p, where
    * "close" is determined by the tolerance tol.
    */
@@ -2410,6 +2431,212 @@ protected:
    */
   unsigned char _map_data;
 };
+
+
+
+LIBMESH_DEVICE_INLINE
+bool Elem::on_reference_element(const ElemType t,
+                                const Point & p,
+                                const Real eps)
+{
+  const Real xi   = p(0);
+#if LIBMESH_DIM > 1
+  const Real eta  = p(1);
+#else
+  const Real eta  = 0.;
+#endif
+#if LIBMESH_DIM > 2
+  const Real zeta = p(2);
+#else
+  const Real zeta  = 0.;
+#endif
+
+  switch (t)
+    {
+    case NODEELEM:
+      {
+        return (!xi && !eta && !zeta);
+      }
+    case EDGE2:
+    case EDGE3:
+    case EDGE4:
+      {
+        // The reference 1D element is [-1,1].
+        if ((xi >= -1.-eps) &&
+            (xi <=  1.+eps))
+          return true;
+
+        return false;
+      }
+
+
+    case TRI3:
+    case TRISHELL3:
+    case TRI6:
+    case TRI7:
+      {
+        // The reference triangle is isosceles
+        // and is bound by xi=0, eta=0, and xi+eta=1.
+        if ((xi  >= 0.-eps) &&
+            (eta >= 0.-eps) &&
+            ((xi + eta) <= 1.+eps))
+          return true;
+
+        return false;
+      }
+
+
+    case QUAD4:
+    case QUADSHELL4:
+    case QUAD8:
+    case QUADSHELL8:
+    case QUAD9:
+    case QUADSHELL9:
+      {
+        // The reference quadrilateral element is [-1,1]^2.
+        if ((xi  >= -1.-eps) &&
+            (xi  <=  1.+eps) &&
+            (eta >= -1.-eps) &&
+            (eta <=  1.+eps))
+          return true;
+
+        return false;
+      }
+
+
+    case TET4:
+    case TET10:
+    case TET14:
+      {
+        // The reference tetrahedral is isosceles
+        // and is bound by xi=0, eta=0, zeta=0,
+        // and xi+eta+zeta=1.
+        if ((xi   >= 0.-eps) &&
+            (eta  >= 0.-eps) &&
+            (zeta >= 0.-eps) &&
+            ((xi + eta + zeta) <= 1.+eps))
+          return true;
+
+        return false;
+      }
+
+
+    case HEX8:
+    case HEX20:
+    case HEX27:
+      {
+        /*
+          if ((xi   >= -1.) &&
+          (xi   <=  1.) &&
+          (eta  >= -1.) &&
+          (eta  <=  1.) &&
+          (zeta >= -1.) &&
+          (zeta <=  1.))
+          return true;
+        */
+
+        // The reference hexahedral element is [-1,1]^3.
+        if ((xi   >= -1.-eps) &&
+            (xi   <=  1.+eps) &&
+            (eta  >= -1.-eps) &&
+            (eta  <=  1.+eps) &&
+            (zeta >= -1.-eps) &&
+            (zeta <=  1.+eps))
+          {
+            //    libMesh::out << "Strange Point:\n";
+            //    p.print();
+            return true;
+          }
+
+        return false;
+      }
+
+    case PRISM6:
+    case PRISM15:
+    case PRISM18:
+    case PRISM20:
+    case PRISM21:
+      {
+        // Figure this one out...
+        // inside the reference triangle with zeta in [-1,1]
+        if ((xi   >=  0.-eps) &&
+            (eta  >=  0.-eps) &&
+            (zeta >= -1.-eps) &&
+            (zeta <=  1.+eps) &&
+            ((xi + eta) <= 1.+eps))
+          return true;
+
+        return false;
+      }
+
+
+    case PYRAMID5:
+    case PYRAMID13:
+    case PYRAMID14:
+    case PYRAMID18:
+      {
+        // Check that the point is on the same side of all the faces
+        // by testing whether:
+        //
+        // n_i.(x - x_i) <= 0
+        //
+        // for each i, where:
+        //   n_i is the outward normal of face i,
+        //   x_i is a point on face i.
+        if ((-eta - 1. + zeta <= 0.+eps) &&
+            (  xi - 1. + zeta <= 0.+eps) &&
+            ( eta - 1. + zeta <= 0.+eps) &&
+            ( -xi - 1. + zeta <= 0.+eps) &&
+            (            zeta >= 0.-eps))
+          return true;
+
+        return false;
+      }
+
+#ifdef LIBMESH_ENABLE_INFINITE_ELEMENTS
+    case INFHEX8:
+    case INFHEX16:
+    case INFHEX18:
+      {
+        // The reference infhex8 is a [-1,1]^3.
+        if ((xi   >= -1.-eps) &&
+            (xi   <=  1.+eps) &&
+            (eta  >= -1.-eps) &&
+            (eta  <=  1.+eps) &&
+            (zeta >= -1.-eps) &&
+            (zeta <=  1.+eps))
+          {
+            return true;
+          }
+        return false;
+      }
+
+    case INFPRISM6:
+    case INFPRISM12:
+      {
+        // inside the reference triangle with zeta in [-1,1]
+        if ((xi   >=  0.-eps) &&
+            (eta  >=  0.-eps) &&
+            (zeta >= -1.-eps) &&
+            (zeta <=  1.+eps) &&
+            ((xi + eta) <= 1.+eps))
+          {
+            return true;
+          }
+
+        return false;
+      }
+#endif
+
+    default:
+      libmesh_error_msg("ERROR: Unknown element type " << Utility::enum_to_string(t));
+    }
+
+  // If we get here then the point is _not_ in the
+  // reference element.   Better return false.
+
+  return false;
+}
 
 
 
