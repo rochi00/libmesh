@@ -24,6 +24,7 @@
 #include "libmesh/fe_interface.h"
 #include "libmesh/fe_macro.h"
 #include "libmesh/fe_map.h"
+#include "libmesh/fe_map_point.h"
 #include "libmesh/fe_xyz_map.h"
 #include "libmesh/inf_fe_map.h"
 #include "libmesh/mesh_subdivision_support.h"
@@ -558,40 +559,19 @@ void FEMap::compute_single_point_map(const unsigned int dim,
 #endif
           }
 
-        // Compute the jacobian
-        //
-        // 1D elements can live in 2D or 3D space.
-        // The transformation matrix from local->global
-        // coordinates is
-        //
-        // T = | dx/dxi |
-        //     | dy/dxi |
-        //     | dz/dxi |
-        //
-        // The generalized determinant of T (from the
-        // so-called "normal" eqns.) is
-        // jac = "det(T)" = sqrt(det(T'T))
-        //
-        // where T'= transpose of T, so
-        //
-        // jac = sqrt( (dx/dxi)^2 + (dy/dxi)^2 + (dz/dxi)^2 )
-
+        // Compute the jacobian, and from it the inverse map
         if (calculate_dxyz)
           {
-            jac[p] = dxyzdxi_map[p].norm();
+            FEMapPoint m;
+            fe_map_1D(dxyzdxi_map[p], m, check_for_degenerate_map);
+            jac[p] = m.jac;
 
-            check_for_degenerate_map(jac[p]);
-
-            // The inverse Jacobian entries also come from the
-            // generalized inverse of T (see also the 2D element
-            // living in 3D code).
-            const Real jacm2 = 1./jac[p]/jac[p];
-            dxidx_map[p] = jacm2*dxdxi_map(p);
+            dxidx_map[p] = m.dxi(0);
 #if LIBMESH_DIM > 1
-            dxidy_map[p] = jacm2*dydxi_map(p);
+            dxidy_map[p] = m.dxi(1);
 #endif
 #if LIBMESH_DIM > 2
-            dxidz_map[p] = jacm2*dzdxi_map(p);
+            dxidz_map[p] = m.dxi(2);
 #endif
 
             JxW[p] = jac[p]*qw[p];
@@ -772,35 +752,17 @@ void FEMap::compute_single_point_map(const unsigned int dim,
         if (calculate_dxyz)
           {
             // compute the jacobian once
-            const Real dx_dxi = dxdxi_map(p),
-              dx_deta = dxdeta_map(p),
-              dy_dxi = dydxi_map(p),
-              dy_deta = dydeta_map(p);
-
-#if LIBMESH_DIM == 2
-            // Compute the Jacobian.  This assumes the 2D face
-            // lives in 2D space
-            //
-            // Symbolically, the matrix determinant is
-            //
-            //         | dx/dxi  dx/deta |
-            // jac =   | dy/dxi  dy/deta |
-            //
-            // jac = dx/dxi*dy/deta - dx/deta*dy/dxi
-            jac[p] = (dx_dxi*dy_deta - dx_deta*dy_dxi);
-
-            check_for_degenerate_map(jac[p]);
+            FEMapPoint m;
+            fe_map_2D(dxyzdxi_map[p], dxyzdeta_map[p], m, check_for_degenerate_map);
+            jac[p] = m.jac;
 
             JxW[p] = jac[p]*qw[p];
 
-            // Compute the shape function derivatives wrt x,y at the
-            // quadrature points
-            const Real inv_jac = 1./jac[p];
-
-            dxidx_map[p]  =  dy_deta*inv_jac; //dxi/dx  =  (1/J)*dy/deta
-            dxidy_map[p]  = -dx_deta*inv_jac; //dxi/dy  = -(1/J)*dx/deta
-            detadx_map[p] = -dy_dxi* inv_jac; //deta/dx = -(1/J)*dy/dxi
-            detady_map[p] =  dx_dxi* inv_jac; //deta/dy =  (1/J)*dx/dxi
+#if LIBMESH_DIM == 2
+            dxidx_map[p]  = m.dxi(0);
+            dxidy_map[p]  = m.dxi(1);
+            detadx_map[p] = m.deta(0);
+            detady_map[p] = m.deta(1);
 
             dxidz_map[p] = detadz_map[p] = 0.;
 
@@ -809,72 +771,28 @@ void FEMap::compute_single_point_map(const unsigned int dim,
               this->compute_inverse_map_second_derivs(p);
 #endif
 #else // LIBMESH_DIM == 3
+            dxidx_map[p]  = m.dxi(0);
+            dxidy_map[p]  = m.dxi(1);
+            dxidz_map[p]  = m.dxi(2);
 
-            const Real dz_dxi = dzdxi_map(p),
-              dz_deta = dzdeta_map(p);
-
-            // Compute the Jacobian.  This assumes a 2D face in
-            // 3D space.
-            //
-            // The transformation matrix T from local to global
-            // coordinates is
-            //
-            //         | dx/dxi  dx/deta |
-            //     T = | dy/dxi  dy/deta |
-            //         | dz/dxi  dz/deta |
-            // note det(T' T) = det(T')det(T) = det(T)det(T)
-            // so det(T) = std::sqrt(det(T' T))
-            //
-            //----------------------------------------------
-            // Notes:
-            //
-            //       dX = R dXi -> R'dX = R'R dXi
-            // (R^-1)dX =   dXi    [(R'R)^-1 R']dX = dXi
-            //
-            // so R^-1 = (R'R)^-1 R'
-            //
-            // and R^-1 R = (R'R)^-1 R'R = I.
-            //
-            const Real g11 = (dx_dxi*dx_dxi +
-                              dy_dxi*dy_dxi +
-                              dz_dxi*dz_dxi);
-
-            const Real g12 = (dx_dxi*dx_deta +
-                              dy_dxi*dy_deta +
-                              dz_dxi*dz_deta);
-
-            const Real g21 = g12;
-
-            const Real g22 = (dx_deta*dx_deta +
-                              dy_deta*dy_deta +
-                              dz_deta*dz_deta);
-
-            const Real det = (g11*g22 - g12*g21);
-
-            check_for_degenerate_map(det);
-
-            const Real inv_det = 1./det;
-            jac[p] = std::sqrt(det);
-
-            JxW[p] = jac[p]*qw[p];
-
-            const Real g11inv =  g22*inv_det;
-            const Real g12inv = -g12*inv_det;
-            const Real g21inv = -g21*inv_det;
-            const Real g22inv =  g11*inv_det;
-
-            dxidx_map[p]  = g11inv*dx_dxi + g12inv*dx_deta;
-            dxidy_map[p]  = g11inv*dy_dxi + g12inv*dy_deta;
-            dxidz_map[p]  = g11inv*dz_dxi + g12inv*dz_deta;
-
-            detadx_map[p] = g21inv*dx_dxi + g22inv*dx_deta;
-            detady_map[p] = g21inv*dy_dxi + g22inv*dy_deta;
-            detadz_map[p] = g21inv*dz_dxi + g22inv*dz_deta;
+            detadx_map[p] = m.deta(0);
+            detady_map[p] = m.deta(1);
+            detadz_map[p] = m.deta(2);
 
 #ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
 
             if (calculate_d2xyz)
               {
+                const Real dx_dxi = dxdxi_map(p),
+                  dx_deta = dxdeta_map(p),
+                  dy_dxi = dydxi_map(p),
+                  dy_deta = dydeta_map(p),
+                  dz_dxi = dzdxi_map(p),
+                  dz_deta = dzdeta_map(p);
+
+                const Real g11inv = m.g11inv, g12inv = m.g12inv,
+                  g21inv = m.g21inv, g22inv = m.g22inv;
+
                 // Compute inverse map second derivative values for
                 // 2D-element-living-in-3D case.  We pursue a least-squares
                 // solution approach for this "non-square" case, see JWP notes
@@ -1028,44 +946,24 @@ void FEMap::compute_single_point_map(const unsigned int dim,
         if (calculate_dxyz)
           {
             // compute the jacobian
-            const Real
-              dx_dxi   = dxdxi_map(p),   dy_dxi   = dydxi_map(p),   dz_dxi   = dzdxi_map(p),
-              dx_deta  = dxdeta_map(p),  dy_deta  = dydeta_map(p),  dz_deta  = dzdeta_map(p),
-              dx_dzeta = dxdzeta_map(p), dy_dzeta = dydzeta_map(p), dz_dzeta = dzdzeta_map(p);
-
-            // Symbolically, the matrix determinant is
-            //
-            //         | dx/dxi   dy/dxi   dz/dxi   |
-            // jac =   | dx/deta  dy/deta  dz/deta  |
-            //         | dx/dzeta dy/dzeta dz/dzeta |
-            //
-            // jac = dx/dxi*(dy/deta*dz/dzeta - dz/deta*dy/dzeta) +
-            //       dy/dxi*(dz/deta*dx/dzeta - dx/deta*dz/dzeta) +
-            //       dz/dxi*(dx/deta*dy/dzeta - dy/deta*dx/dzeta)
-
-            jac[p] = (dx_dxi*(dy_deta*dz_dzeta - dz_deta*dy_dzeta)  +
-                      dy_dxi*(dz_deta*dx_dzeta - dx_deta*dz_dzeta)  +
-                      dz_dxi*(dx_deta*dy_dzeta - dy_deta*dx_dzeta));
-
-            check_for_degenerate_map(jac[p]);
+            FEMapPoint m;
+            fe_map_3D(dxyzdxi_map[p], dxyzdeta_map[p], dxyzdzeta_map[p], m,
+                      check_for_degenerate_map);
+            jac[p] = m.jac;
 
             JxW[p] = jac[p]*qw[p];
 
-            // Compute the shape function derivatives wrt x,y at the
-            // quadrature points
-            const Real inv_jac  = 1./jac[p];
+            dxidx_map[p]   = m.dxi(0);
+            dxidy_map[p]   = m.dxi(1);
+            dxidz_map[p]   = m.dxi(2);
 
-            dxidx_map[p]   = (dy_deta*dz_dzeta - dz_deta*dy_dzeta)*inv_jac;
-            dxidy_map[p]   = (dz_deta*dx_dzeta - dx_deta*dz_dzeta)*inv_jac;
-            dxidz_map[p]   = (dx_deta*dy_dzeta - dy_deta*dx_dzeta)*inv_jac;
+            detadx_map[p]  = m.deta(0);
+            detady_map[p]  = m.deta(1);
+            detadz_map[p]  = m.deta(2);
 
-            detadx_map[p]  = (dz_dxi*dy_dzeta  - dy_dxi*dz_dzeta )*inv_jac;
-            detady_map[p]  = (dx_dxi*dz_dzeta  - dz_dxi*dx_dzeta )*inv_jac;
-            detadz_map[p]  = (dy_dxi*dx_dzeta  - dx_dxi*dy_dzeta )*inv_jac;
-
-            dzetadx_map[p] = (dy_dxi*dz_deta   - dz_dxi*dy_deta  )*inv_jac;
-            dzetady_map[p] = (dz_dxi*dx_deta   - dx_dxi*dz_deta  )*inv_jac;
-            dzetadz_map[p] = (dx_dxi*dy_deta   - dy_dxi*dx_deta  )*inv_jac;
+            dzetadx_map[p] = m.dzeta(0);
+            dzetady_map[p] = m.dzeta(1);
+            dzetadz_map[p] = m.dzeta(2);
           }
 
 #ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
