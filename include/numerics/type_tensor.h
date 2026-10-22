@@ -28,6 +28,7 @@
 // C++ includes
 #include <cstdlib> // *must* precede <cmath> for proper std:abs() on PGI, Sun Studio CC
 #include <cmath>
+#include <new> // std::nothrow_t
 #include <tuple>
 
 #ifdef LIBMESH_HAVE_METAPHYSICL
@@ -375,6 +376,14 @@ public:
    */
   LIBMESH_DEVICE_INLINE
   void solve(const TypeVector<T> & b, TypeVector<T> & x) const;
+
+  /**
+   * As solve() above, but \returns false, leaving \p x unchanged,
+   * where that throws because A is singular; for device code, which
+   * cannot catch.
+   */
+  LIBMESH_DEVICE_INLINE
+  bool solve(const TypeVector<T> & b, TypeVector<T> & x, std::nothrow_t) const;
 
   /**
    * \returns The Frobenius norm of the tensor, i.e. the square-root of
@@ -1157,9 +1166,19 @@ template <typename T>
 LIBMESH_DEVICE_INLINE
 void TypeTensor<T>::solve(const TypeVector<T> & b, TypeVector<T> & x) const
 {
+  if (!this->solve(b, x, std::nothrow_t()))
+    libmesh_convergence_failure();
+}
+
+
+
+template <typename T>
+LIBMESH_DEVICE_INLINE
+bool TypeTensor<T>::solve(const TypeVector<T> & b, TypeVector<T> & x, std::nothrow_t) const
+{
 #if LIBMESH_DIM == 1
   if (_coords[0] == static_cast<T>(0.))
-    libmesh_convergence_failure();
+    return false;
   x(0) = b(0) / _coords[0];
 #endif
 
@@ -1167,7 +1186,7 @@ void TypeTensor<T>::solve(const TypeVector<T> & b, TypeVector<T> & x) const
   T my_det = _coords[0]*_coords[3] - _coords[1]*_coords[2];
 
   if (my_det == static_cast<T>(0.))
-    libmesh_convergence_failure();
+    return false;
 
   T my_det_inv = 1./my_det;
 
@@ -1185,7 +1204,7 @@ void TypeTensor<T>::solve(const TypeVector<T> & b, TypeVector<T> & x) const
     /**/ +_coords[6]*(_coords[5]*_coords[1] - _coords[4]*_coords[2]);
 
   if (my_det == static_cast<T>(0.))
-    libmesh_convergence_failure();
+    return false;
 
   T my_det_inv = 1./my_det;
   x(0) = my_det_inv*((_coords[8]*_coords[4] - _coords[7]*_coords[5])*b(0) -
@@ -1200,6 +1219,8 @@ void TypeTensor<T>::solve(const TypeVector<T> & b, TypeVector<T> & x) const
                      (_coords[7]*_coords[0] - _coords[6]*_coords[1])*b(1) +
                      (_coords[4]*_coords[0] - _coords[3]*_coords[1])*b(2));
 #endif
+
+  return true;
 }
 
 

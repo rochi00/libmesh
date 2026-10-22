@@ -20,11 +20,18 @@
 
 // Local includes
 #include "libmesh/libmesh_device.h"
+#include "libmesh/enum_elem_type.h"
+#include "libmesh/enum_fe_family.h"
+#include "libmesh/enum_order.h"
+#include "libmesh/fe_lagrange_shape_1D.h"
+#include "libmesh/fe_lagrange_shape_2D.h"
+#include "libmesh/fe_lagrange_shape_3D.h"
 #include "libmesh/point.h"
 #include "libmesh/tensor_value.h"
 
 // C++ includes
 #include <cmath> // std::sqrt
+#include <new> // std::nothrow_t
 
 // The Jacobian of the reference-to-physical map at one point, and the
 // inverse map's first derivatives, from the map's first derivatives
@@ -249,6 +256,19 @@ void fe_map_3D(const Point & dxyzdxi,
 
 
 /**
+ * Sets the first \p dim coordinates of \p p to the far away point
+ * fe_inverse_map() and its policies return when Newton gives up.
+ */
+LIBMESH_DEVICE_INLINE
+void fe_inverse_map_far_point(const unsigned int dim, Point & p)
+{
+  for (unsigned int i=0; i != dim; ++i)
+    p(i) = 1e6;
+}
+
+
+
+/**
  * The Newton iteration of FEMap::inverse_map(): \returns the reference
  * point that \p eval maps to \p physical_point, to within \p
  * tolerance.  \p eval.map(p) and \p eval.map_deriv(j, p) evaluate the
@@ -258,10 +278,10 @@ void fe_map_3D(const Point & dxyzdxi,
  * \p policy.singular(p) is called on a singular 1D or 2D Jacobian when
  * \p secure, \p policy.solve(J, delta, dp, p) takes the 3D step, and
  * \p policy.not_converged(...) is called when \p secure and Newton has
- * taken too many steps.  singular() returns true, and solve() false, to
- * stop and return \p p.  \p converged is set false when Newton stops
- * early like that, or gives up and returns a far away point, and true
- * when it converges.
+ * taken too many steps.  singular() and not_converged() return true,
+ * and solve() false, to stop and return \p p.  \p converged is set
+ * false when Newton stops early like that, or gives up and returns a
+ * far away point, and true when it converges.
  */
 template <typename MapEval, typename InverseMapPolicy>
 LIBMESH_DEVICE_INLINE
@@ -517,15 +537,20 @@ Point fe_inverse_map(const unsigned int dim,
           //  Warn about divergence when secure is true - this
           //  shouldn't happen
           if (secure)
-            policy.not_converged(cnt, max_cnt, physical_guess, dp, p,
-                                 inverse_map_error);
+            {
+              if (policy.not_converged(cnt, max_cnt, physical_guess, dp, p,
+                                       inverse_map_error))
+                {
+                  converged = false;
+                  return p;
+                }
+            }
           //  Return a far off point when secure is false - this
           //  should only happen when we're trying to map a point
           //  that's outside the element
           else
             {
-              for (unsigned int i=0; i != dim; ++i)
-                p(i) = 1e6;
+              fe_inverse_map_far_point(dim, p);
 
               converged = false;
               return p;
@@ -537,6 +562,103 @@ Point fe_inverse_map(const unsigned int dim,
   converged = true;
   return p;
 }
+
+
+
+/**
+ * A Lagrange map for fe_inverse_map(), evaluated as FEMap::map() and
+ * FEMap::map_deriv() evaluate it: the order \p order shapes on \p type,
+ * weighting \p nodes(i), the element's node points, in node order.
+ * \p nodes is anything that returns node i's point, so device code can
+ * read node coordinates from wherever it keeps them.
+ */
+template <typename NodeAccessor>
+struct LagrangeMapEval
+{
+  unsigned int dim;
+  ElemType type;
+  Order order;
+  unsigned int n_nodes;
+  NodeAccessor nodes;
+
+  LIBMESH_DEVICE_INLINE
+  Point map(const Point & p) const
+  { return this->sum(invalid_uint, p); }
+
+  LIBMESH_DEVICE_INLINE
+  Point map_deriv(const unsigned int j, const Point & p) const
+  { return this->sum(j, p); }
+
+  // The node points weighted by the shapes, or by their derivatives in
+  // direction j unless j is invalid_uint
+  LIBMESH_DEVICE_INLINE
+  Point sum(const unsigned int j, const Point & p) const
+  {
+    Point x;
+    for (unsigned int i = 0; i != n_nodes; ++i)
+      x.add_scaled(nodes(i), this->shape(i, j, p));
+    return x;
+  }
+
+  LIBMESH_DEVICE_INLINE
+  Real shape(const unsigned int i, const unsigned int j, const Point & p) const
+  {
+    const bool value = (j == invalid_uint);
+    switch (dim)
+      {
+      case 1:
+        return value ? fe_lagrange_1D_shape(order, i, p(0)) :
+          fe_lagrange_1D_shape_deriv(order, i, j, p(0));
+      case 2:
+        return value ? fe_lagrange_2D_shape<LAGRANGE>(type, order, i, p) :
+          fe_lagrange_2D_shape_deriv<LAGRANGE>(type, order, i, j, p);
+      default:
+        return value ? fe_lagrange_3D_shape<LAGRANGE>(type, order, i, p) :
+          fe_lagrange_3D_shape_deriv<LAGRANGE>(type, order, i, j, p);
+      }
+  }
+};
+
+
+
+/**
+ * A policy for fe_inverse_map() in device code, which can neither throw
+ * nor print: it stops, leaving fe_inverse_map() to report Newton hasn't
+ * converged, wherever FEMap's policy would throw.  Unlike FEMap, it
+ * doesn't return a singular node, such as a pyramid's apex, for a
+ * singular 3D Jacobian, but the far away point FEMap returns when not
+ * \p secure.
+ */
+struct NothrowInverseMapPolicy
+{
+  unsigned int dim;
+
+  LIBMESH_DEVICE_INLINE
+  bool singular(const Point &) const
+  { return true; }
+
+  LIBMESH_DEVICE_INLINE
+  bool solve(const RealTensorValue & J,
+             const Point & delta,
+             Point & dp,
+             Point & p) const
+  {
+    if (J.solve(delta, dp, std::nothrow_t()))
+      return true;
+
+    fe_inverse_map_far_point(dim, p);
+    return false;
+  }
+
+  LIBMESH_DEVICE_INLINE
+  bool not_converged(const unsigned int cnt,
+                     const unsigned int max_cnt,
+                     const Point &,
+                     const Point &,
+                     const Point &,
+                     const Real) const
+  { return cnt > 2*max_cnt; }
+};
 
 } // namespace libMesh
 

@@ -1483,8 +1483,7 @@ struct HostInverseMapPolicy
           }
         else
           {
-            for (unsigned int i=0; i != dim; ++i)
-              p(i) = 1e6;
+            fe_inverse_map_far_point(dim, p);
             return false;
           }
       }
@@ -1492,7 +1491,7 @@ struct HostInverseMapPolicy
     return true;
   }
 
-  void not_converged(const unsigned int cnt,
+  bool not_converged(const unsigned int cnt,
                      const unsigned int max_cnt,
                      const Point & physical_guess,
                      const Point & dp,
@@ -1540,6 +1539,8 @@ struct HostInverseMapPolicy
           " for physical point = " << physical_point <<
           std::endl << elem->get_info());
       }
+
+    return false;
   }
 };
 
