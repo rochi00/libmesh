@@ -1407,6 +1407,146 @@ void FEMap::compute_inverse_map_second_derivs(unsigned p)
 
 
 
+// The map FEMap::inverse_map() inverts, and what it does when Newton
+// fails: throw or warn, as it always has, or return the singular node
+// or a far away point.
+namespace
+{
+using namespace libMesh;
+
+struct HostMapEval
+{
+  const unsigned int dim;
+  const Elem * elem;
+
+  Point map(const Point & p) const
+  { return FEMap::map(dim, elem, p); }
+
+  Point map_deriv(const unsigned int j, const Point & p) const
+  { return FEMap::map_deriv(dim, elem, j, p); }
+};
+
+struct HostInverseMapPolicy
+{
+  const unsigned int dim;
+  const Elem * elem;
+  const Point & physical_point;
+  const Real tolerance;
+  const bool secure;
+
+  bool singular(const Point & p) const
+  {
+    libmesh_degenerate_mapping_msg
+      ("inverse_map found a singular Jacobian " <<
+       " at master point " << p << " in element " <<
+       elem->id());
+    return true;
+  }
+
+  bool solve(const RealTensorValue & J,
+             const Point & delta,
+             Point & dp,
+             Point & p) const
+  {
+    libmesh_try
+      {
+        J.solve(delta, dp);
+      }
+    libmesh_catch (ConvergenceFailure &)
+      {
+        // If we encountered a singular Jacobian, but are at
+        // a singular node, return said singular node.
+        const unsigned int local_singular_node =
+          elem->local_singular_node(physical_point, tolerance);
+        if (local_singular_node != invalid_uint)
+        {
+          libmesh_assert_less(local_singular_node, elem->n_nodes());
+          p = elem->master_point(local_singular_node);
+          return false;
+        }
+
+        // We encountered a singular Jacobian.  The value of
+        // dp is zero, since it was never changed during the
+        // call to RealTensorValue::solve().  We don't want to
+        // continue iterating until max_cnt since there is no
+        // update to the Newton iterate, and we don't want to
+        // print the inverse_map_error value since it will
+        // confusingly be 0.  Therefore, in the secure case we
+        // need to throw an error message while in the !secure
+        // case we can just return a far away point.
+        if (secure)
+          {
+            libmesh_degenerate_mapping_msg(
+              "inverse_map found a singular Jacobian" <<
+              " at master point " << p << " in element " <<
+              elem->id());
+          }
+        else
+          {
+            for (unsigned int i=0; i != dim; ++i)
+              p(i) = 1e6;
+            return false;
+          }
+      }
+
+    return true;
+  }
+
+  void not_converged(const unsigned int cnt,
+                     const unsigned int max_cnt,
+                     const Point & physical_guess,
+                     const Point & dp,
+                     const Point & p,
+                     const Real inverse_map_error) const
+  {
+    // Print every time in devel/dbg modes
+#ifndef NDEBUG
+    libmesh_here();
+    libMesh::err << "WARNING: Newton scheme has not converged in "
+                 << cnt << " iterations:" << std::endl
+                 << "   physical_point="
+                 << physical_point
+                 << "   physical_guess="
+                 << physical_guess
+                 << "   dp="
+                 << dp
+                 << "   p="
+                 << p
+                 << "   error=" << inverse_map_error
+                 << "   in element " << elem->id()
+                 << std::endl;
+
+    elem->print_info(libMesh::err);
+#else
+    // In optimized mode, just print once that an inverse_map() call
+    // had trouble converging its Newton iteration.
+    libmesh_do_once(libMesh::err << "WARNING: At least one element took more than "
+                    << max_cnt
+                    << " iterations to converge in inverse_map()...\n"
+                    << "Rerun in devel/dbg mode for more details."
+                    << std::endl;);
+
+#endif // NDEBUG
+
+    if (cnt > 2*max_cnt)
+      {
+        // Whether or not this is a degenerate map in the
+        // "Jacobian becomes singular or negative" sense,
+        // it's at least degenerate in the "straightforward
+        // Newton is failing to invert it" sense.
+        libmesh_degenerate_mapping_msg(
+          "inverse_map Newton FAILED to converge in " <<
+          cnt << " iterations in element " << elem->id() <<
+          " for physical point = " << physical_point <<
+          std::endl << elem->get_info());
+      }
+  }
+};
+
+}
+
+
+
 Point FEMap::inverse_map (const unsigned int dim,
                           const Elem * elem,
                           const Point & physical_point,
@@ -1433,339 +1573,16 @@ Point FEMap::inverse_map (const unsigned int dim,
   // Start logging the map inversion.
   LOG_SCOPE("inverse_map()", "FEMap");
 
-  // How much did the point on the reference
-  // element change by in this Newton step?
-  Real inverse_map_error = 0.;
+  const HostMapEval eval{dim, elem};
+  const HostInverseMapPolicy policy{dim, elem, physical_point, tolerance, secure};
 
-  //  The point on the reference element.  This is
-  //  the "initial guess" for Newton's method.  The
-  //  centroid seems like a good idea, but computing
-  //  it is a little more intensive than, say taking
-  //  the zero point.
-  //
-  //  Convergence should be insensitive of this choice
-  //  for "good" elements.
-  Point p; // the zero point.  No computation required
+  bool converged;
+  const Point p = fe_inverse_map(dim, physical_point, tolerance, secure,
+                                 eval, policy, converged);
 
-  //  The number of iterations in the map inversion process.
-  unsigned int cnt = 0;
-
-  //  The number of iterations after which we give up and declare
-  //  divergence
-  const unsigned int max_cnt = 10;
-
-  //  The distance (in master element space) beyond which we give up
-  //  and declare divergence.  This is no longer used...
-  // Real max_step_length = 4.;
-
-
-
-  //  Newton iteration loop.
-  do
-    {
-      //  Where our current iterate \p p maps to.
-      const Point physical_guess = map(dim, elem, p);
-
-      //  How far our current iterate is from the actual point.
-      const Point delta = physical_point - physical_guess;
-
-      //  Increment in current iterate \p p, will be computed.
-      Point dp;
-
-
-      //  The form of the map and how we invert it depends
-      //  on the dimension that we are in.
-      switch (dim)
-        {
-          // ------------------------------------------------------------------
-          //  0D map inversion is trivial
-        case 0:
-          {
-            break;
-          }
-
-          // ------------------------------------------------------------------
-          //  1D map inversion
-          //
-          //  Here we find the point on a 1D reference element that maps to
-          //  the point \p physical_point in the domain.  This is a bit tricky
-          //  since we do not want to assume that the point \p physical_point
-          //  is also in a 1D domain.  In particular, this method might get
-          //  called on the edge of a 3D element, in which case
-          //  \p physical_point actually lives in 3D.
-        case 1:
-          {
-            const Point dxi = map_deriv (dim, elem, 0, p);
-
-            //  Newton's method in this case looks like
-            //
-            //  {X} - {X_n} = [J]*dp
-            //
-            //  Where {X}, {X_n} are 3x1 vectors, [J] is a 3x1 matrix
-            //  d(x,y,z)/dxi, and we seek dp, a scalar.  Since the above
-            //  system is either overdetermined or rank-deficient, we will
-            //  solve the normal equations for this system
-            //
-            //  [J]^T ({X} - {X_n}) = [J]^T [J] {dp}
-            //
-            //  which involves the trivial inversion of the scalar
-            //  G = [J]^T [J]
-            const Real G = dxi*dxi;
-
-            if (secure && G <= 0)
-              libmesh_degenerate_mapping_msg
-                ("inverse_map found a singular Jacobian " <<
-                 " at master point " << p << " in element " <<
-                 elem->id());
-
-            const Real Ginv = 1./G;
-
-            const Real  dxidelta = dxi*delta;
-
-            dp(0) = Ginv*dxidelta;
-
-            // No master elements have radius > 4, but sometimes we
-            // can take a step that big while still converging
-            // if (secure)
-            // libmesh_assert_less (dp.size(), max_step_length);
-
-            break;
-          }
-
-
-
-          // ------------------------------------------------------------------
-          //  2D map inversion
-          //
-          //  Here we find the point on a 2D reference element that maps to
-          //  the point \p physical_point in the domain.  This is a bit tricky
-          //  since we do not want to assume that the point \p physical_point
-          //  is also in a 2D domain.  In particular, this method might get
-          //  called on the face of a 3D element, in which case
-          //  \p physical_point actually lives in 3D.
-        case 2:
-          {
-            const Point dxi  = map_deriv (dim, elem, 0, p);
-            const Point deta = map_deriv (dim, elem, 1, p);
-
-            //  Newton's method in this case looks like
-            //
-            //  {X} - {X_n} = [J]*{dp}
-            //
-            //  Where {X}, {X_n} are 3x1 vectors, [J] is a 3x2 matrix
-            //  d(x,y,z)/d(xi,eta), and we seek {dp}, a 2x1 vector.  Since
-            //  the above system is either over-determined or rank-deficient,
-            //  we will solve the normal equations for this system
-            //
-            //  [J]^T ({X} - {X_n}) = [J]^T [J] {dp}
-            //
-            //  which involves the inversion of the 2x2 matrix
-            //  [G] = [J]^T [J]
-            const Real
-              G11 = dxi*dxi,  G12 = dxi*deta,
-              G21 = dxi*deta, G22 = deta*deta;
-
-
-            const Real det = (G11*G22 - G12*G21);
-
-            if (secure && det == 0)
-              libmesh_degenerate_mapping_msg
-                ("inverse_map found a singular Jacobian " <<
-                 " at master point " << p << " in element " <<
-                 elem->id());
-
-            const Real inv_det = 1./det;
-
-            const Real
-              Ginv11 =  G22*inv_det,
-              Ginv12 = -G12*inv_det,
-
-              Ginv21 = -G21*inv_det,
-              Ginv22 =  G11*inv_det;
-
-
-            const Real  dxidelta  = dxi*delta;
-            const Real  detadelta = deta*delta;
-
-            dp(0) = (Ginv11*dxidelta + Ginv12*detadelta);
-            dp(1) = (Ginv21*dxidelta + Ginv22*detadelta);
-
-            // No master elements have radius > 4, but sometimes we
-            // can take a step that big while still converging
-            // if (secure)
-            // libmesh_assert_less (dp.size(), max_step_length);
-
-            break;
-          }
-
-
-
-          // ------------------------------------------------------------------
-          //  3D map inversion
-          //
-          //  Here we find the point in a 3D reference element that maps to
-          //  the point \p physical_point in a 3D domain. Nothing special
-          //  has to happen here, since (unless the map is singular because
-          //  you have a BAD element) the map will be invertible and we can
-          //  apply Newton's method directly.
-        case 3:
-          {
-            const Point dxi   = map_deriv (dim, elem, 0, p);
-            const Point deta  = map_deriv (dim, elem, 1, p);
-            const Point dzeta = map_deriv (dim, elem, 2, p);
-
-            //  Newton's method in this case looks like
-            //
-            //  {X} = {X_n} + [J]*{dp}
-            //
-            //  Where {X}, {X_n} are 3x1 vectors, [J] is a 3x3 matrix
-            //  d(x,y,z)/d(xi,eta,zeta), and we seek {dp}, a 3x1 vector.
-            //  Since the above system is nonsingular for invertible maps
-            //  we will solve
-            //
-            //  {dp} = [J]^-1 ({X} - {X_n})
-            //
-            //  which involves the inversion of the 3x3 matrix [J]
-            libmesh_try
-              {
-                RealTensorValue(dxi(0), deta(0), dzeta(0),
-                                dxi(1), deta(1), dzeta(1),
-                                dxi(2), deta(2), dzeta(2)).solve(delta, dp);
-              }
-            libmesh_catch (ConvergenceFailure &)
-              {
-                // If we encountered a singular Jacobian, but are at
-                // a singular node, return said singular node.
-                const unsigned int local_singular_node =
-                  elem->local_singular_node(physical_point, tolerance);
-                if (local_singular_node != invalid_uint)
-                {
-                  libmesh_assert_less(local_singular_node, elem->n_nodes());
-                  return elem->master_point(local_singular_node);
-                }
-
-                // We encountered a singular Jacobian.  The value of
-                // dp is zero, since it was never changed during the
-                // call to RealTensorValue::solve().  We don't want to
-                // continue iterating until max_cnt since there is no
-                // update to the Newton iterate, and we don't want to
-                // print the inverse_map_error value since it will
-                // confusingly be 0.  Therefore, in the secure case we
-                // need to throw an error message while in the !secure
-                // case we can just return a far away point.
-                if (secure)
-                  {
-                    libmesh_degenerate_mapping_msg(
-                      "inverse_map found a singular Jacobian" <<
-                      " at master point " << p << " in element " <<
-                      elem->id());
-                  }
-                else
-                  {
-                    for (unsigned int i=0; i != dim; ++i)
-                      p(i) = 1e6;
-                    return p;
-                  }
-              }
-
-            // No master elements have radius > 4, but sometimes we
-            // can take a step that big while still converging
-            // if (secure)
-            // libmesh_assert_less (dp.size(), max_step_length);
-
-            break;
-          }
-
-
-          //  Some other dimension?
-        default:
-          libmesh_error_msg("Invalid dim = " << dim);
-        } // end switch(Dim), dp now computed
-
-
-
-      //  ||P_n+1 - P_n||
-      inverse_map_error = dp.norm();
-
-      //  P_n+1 = P_n + dp
-      p.add (dp);
-
-      //  Increment the iteration count.
-      cnt++;
-
-      //  Watch for divergence of Newton's
-      //  method.  Here's how it goes:
-      //  (1) For good elements, we expect convergence in 10
-      //      iterations, with no too-large steps.
-      //      - If called with (secure == true) and we have not yet converged
-      //        print out a warning message.
-      //      - If called with (secure == true) and we have not converged in
-      //        20 iterations abort
-      //  (2) This method may be called in cases when the target point is not
-      //      inside the element and we have no business expecting convergence.
-      //      For these cases if we have not converged in 10 iterations forget
-      //      about it.
-      if (cnt > max_cnt)
-        {
-          //  Warn about divergence when secure is true - this
-          //  shouldn't happen
-          if (secure)
-            {
-              // Print every time in devel/dbg modes
-#ifndef NDEBUG
-              libmesh_here();
-              libMesh::err << "WARNING: Newton scheme has not converged in "
-                           << cnt << " iterations:" << std::endl
-                           << "   physical_point="
-                           << physical_point
-                           << "   physical_guess="
-                           << physical_guess
-                           << "   dp="
-                           << dp
-                           << "   p="
-                           << p
-                           << "   error=" << inverse_map_error
-                           << "   in element " << elem->id()
-                           << std::endl;
-
-              elem->print_info(libMesh::err);
-#else
-              // In optimized mode, just print once that an inverse_map() call
-              // had trouble converging its Newton iteration.
-              libmesh_do_once(libMesh::err << "WARNING: At least one element took more than "
-                              << max_cnt
-                              << " iterations to converge in inverse_map()...\n"
-                              << "Rerun in devel/dbg mode for more details."
-                              << std::endl;);
-
-#endif // NDEBUG
-
-              if (cnt > 2*max_cnt)
-                {
-                  // Whether or not this is a degenerate map in the
-                  // "Jacobian becomes singular or negative" sense,
-                  // it's at least degenerate in the "straightforward
-                  // Newton is failing to invert it" sense.
-                  libmesh_degenerate_mapping_msg(
-                    "inverse_map Newton FAILED to converge in " <<
-                    cnt << " iterations in element " << elem->id() <<
-                    " for physical point = " << physical_point <<
-                    std::endl << elem->get_info());
-                }
-            }
-          //  Return a far off point when secure is false - this
-          //  should only happen when we're trying to map a point
-          //  that's outside the element
-          else
-            {
-              for (unsigned int i=0; i != dim; ++i)
-                p(i) = 1e6;
-
-              return p;
-            }
-        }
-    }
-  while (inverse_map_error > tolerance);
+  // A point Newton gave up on is returned as is, without the checks
+  if (!converged)
+    return p;
 
 
 
