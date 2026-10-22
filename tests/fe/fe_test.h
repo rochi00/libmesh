@@ -855,6 +855,12 @@ public:
     if (!this->_elem)
       return;
 
+    // compute_dual_shape_coeffs() Cholesky-factors the mass matrix on
+    // the default quadrature rule, and for reduced (SECOND order)
+    // Clough elements that matrix isn't positive definite.
+    if (family == CLOUGH && order == SECOND)
+      return;
+
     // Request dual calculations
     this->_fe->get_dual_phi();
 
