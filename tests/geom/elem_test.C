@@ -8,6 +8,7 @@
 #include <libmesh/parallel_implementation.h>
 #include <libmesh/enum_to_string.h>
 #include <libmesh/elem_quality.h>
+#include <libmesh/fe_abstract.h>
 
 using namespace libMesh;
 
@@ -66,10 +67,20 @@ public:
 
         const Elem & ref_elem = *elem->reference_elem();
 
+        // FEAbstract keeps its own copy of the master points, in a switch
+        // on ElemType; the FE tests only check it on the types they
+        // instantiate, so check it here on every type.
+        std::vector<Point> refspace_nodes;
+        FEAbstract::get_refspace_nodes(elem->type(), refspace_nodes);
+        CPPUNIT_ASSERT_EQUAL(std::size_t(elem->n_nodes()), refspace_nodes.size());
+
         for (auto i : elem->node_index_range())
           {
             LIBMESH_ASSERT_REALVEC_EQUAL(elem->master_point(i),
                                          ref_elem.point(i),
+                                         TOLERANCE*TOLERANCE);
+            LIBMESH_ASSERT_REALVEC_EQUAL(elem->master_point(i),
+                                         refspace_nodes[i],
                                          TOLERANCE*TOLERANCE);
           }
       }
