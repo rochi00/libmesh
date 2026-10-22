@@ -86,6 +86,7 @@ BUILT_SOURCES = \
         fe_macro.h \
         fe_map.h \
         fe_monomial_n_dofs.h \
+        fe_monomial_shape.h \
         fe_reference_element_traits.h \
         fe_simplex_lagrange.h \
         fe_tensor_product_lagrange.h \
@@ -878,6 +879,9 @@ fe_map.h: $(top_srcdir)/include/fe/fe_map.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 fe_monomial_n_dofs.h: $(top_srcdir)/include/fe/fe_monomial_n_dofs.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+fe_monomial_shape.h: $(top_srcdir)/include/fe/fe_monomial_shape.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 fe_reference_element_traits.h: $(top_srcdir)/include/fe/fe_reference_element_traits.h
