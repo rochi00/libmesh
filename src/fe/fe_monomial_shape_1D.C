@@ -20,6 +20,7 @@
 
 // Local includes
 #include "libmesh/fe.h"
+#include "libmesh/fe_monomial_shape.h"
 #include "libmesh/elem.h"
 
 
@@ -32,38 +33,11 @@ LIBMESH_DEFAULT_VECTORIZED_FE(1,MONOMIAL)
 
 template <>
 Real FE<1,MONOMIAL>::shape(const ElemType,
-                           const Order libmesh_dbg_var(order),
+                           const Order order,
                            const unsigned int i,
                            const Point & p)
 {
-  const Real xi = p(0);
-
-  libmesh_assert_less_equal (i, static_cast<unsigned int>(order));
-
-  // monomials. since they are hierarchic we only need one case block.
-  switch (i)
-    {
-    case 0:
-      return 1.;
-
-    case 1:
-      return xi;
-
-    case 2:
-      return xi*xi;
-
-    case 3:
-      return xi*xi*xi;
-
-    case 4:
-      return xi*xi*xi*xi;
-
-    default:
-      Real val = 1.;
-      for (unsigned int index = 0; index != i; ++index)
-        val *= xi;
-      return val;
-    }
+  return fe_monomial_1D_shape(order, i, p);
 }
 
 
@@ -95,43 +69,12 @@ Real FE<1,MONOMIAL>::shape(const FEType fet,
 
 template <>
 Real FE<1,MONOMIAL>::shape_deriv(const ElemType,
-                                 const Order libmesh_dbg_var(order),
+                                 const Order order,
                                  const unsigned int i,
-                                 const unsigned int libmesh_dbg_var(j),
+                                 const unsigned int j,
                                  const Point & p)
 {
-  // only d()/dxi in 1D!
-
-  libmesh_assert_equal_to (j, 0);
-
-  const Real xi = p(0);
-
-  libmesh_assert_less_equal (i, static_cast<unsigned int>(order));
-
-  // monomials. since they are hierarchic we only need one case block.
-  switch (i)
-    {
-    case 0:
-      return 0.;
-
-    case 1:
-      return 1.;
-
-    case 2:
-      return 2.*xi;
-
-    case 3:
-      return 3.*xi*xi;
-
-    case 4:
-      return 4.*xi*xi*xi;
-
-    default:
-      Real val = i;
-      for (unsigned int index = 1; index != i; ++index)
-        val *= xi;
-      return val;
-    }
+  return fe_monomial_1D_shape_deriv(order, i, j, p);
 }
 
 
@@ -169,40 +112,12 @@ Real FE<1,MONOMIAL>::shape_deriv(const FEType fet,
 
 template <>
 Real FE<1,MONOMIAL>::shape_second_deriv(const ElemType,
-                                        const Order libmesh_dbg_var(order),
+                                        const Order order,
                                         const unsigned int i,
-                                        const unsigned int libmesh_dbg_var(j),
+                                        const unsigned int j,
                                         const Point & p)
 {
-  // only d()/dxi in 1D!
-
-  libmesh_assert_equal_to (j, 0);
-
-  const Real xi = p(0);
-
-  libmesh_assert_less_equal (i, static_cast<unsigned int>(order));
-
-  switch (i)
-    {
-    case 0:
-    case 1:
-      return 0.;
-
-    case 2:
-      return 2.;
-
-    case 3:
-      return 6.*xi;
-
-    case 4:
-      return 12.*xi*xi;
-
-    default:
-      Real val = 2.;
-      for (unsigned int index = 2; index != i; ++index)
-        val *= (index+1) * xi;
-      return val;
-    }
+  return fe_monomial_1D_shape_second_deriv(order, i, j, p);
 }
 
 
