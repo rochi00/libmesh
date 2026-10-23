@@ -26,7 +26,8 @@
 // which is what the Kokkos work needs in order to evaluate the same
 // expressions on a device.  The assertions are the exception: those are
 // ours, host-only, and a device build will have to say what it wants
-// done with them.
+// done with them.  Like the 1D shapes, they are templated on the
+// coordinate type.
 //
 // Everything here is expressed in the barycentric coordinates of the
 // reference simplex -- zeta_0 = 1 - xi - eta (- zeta) and the remaining
@@ -151,14 +152,15 @@ unsigned short tet_second_deriv_index(const unsigned int i,
 }
 #endif
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * The linear triangle's shape functions are its barycentric
  * coordinates.
  */
-Real fe_lagrange_tri3_shape(const unsigned int i,
-                            const Real xi,
-                            const Real eta)
+T fe_lagrange_tri3_shape(const unsigned int i,
+                         const T & xi,
+                         const T & eta)
 {
   libmesh_assert_less(i, 3);
 
@@ -180,19 +182,20 @@ Real fe_lagrange_tri3_shape_deriv(const unsigned int i,
   return tri_dzeta(i, j);
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Quadratic on the triangle: zeta*(2*zeta - 1) at a vertex, and
  * 4*zeta_a*zeta_b at the node between vertices a and b, which
  * tri6_zeta_index() names.
  */
-Real fe_lagrange_tri6_shape(const unsigned int i,
-                            const Real xi,
-                            const Real eta)
+T fe_lagrange_tri6_shape(const unsigned int i,
+                         const T & xi,
+                         const T & eta)
 {
   libmesh_assert_less(i, 6);
 
-  const Real bary[3] = {1. - xi - eta, xi, eta};
+  const T bary[3] = {1. - xi - eta, xi, eta};
   const unsigned short m = tri6_zeta_index(i, 0);
   const unsigned short n = tri6_zeta_index(i, 1);
 
@@ -202,16 +205,17 @@ Real fe_lagrange_tri6_shape(const unsigned int i,
   return 4. * bary[m] * bary[n];
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_tri6_shape_deriv(const unsigned int i,
-                                  const unsigned int j,
-                                  const Real xi,
-                                  const Real eta)
+T fe_lagrange_tri6_shape_deriv(const unsigned int i,
+                               const unsigned int j,
+                               const T & xi,
+                               const T & eta)
 {
   libmesh_assert_less(i, 6);
   libmesh_assert_less(j, 2);
 
-  const Real bary[3] = {1. - xi - eta, xi, eta};
+  const T bary[3] = {1. - xi - eta, xi, eta};
   const unsigned short m = tri6_zeta_index(i, 0);
   const unsigned short n = tri6_zeta_index(i, 1);
 
@@ -221,6 +225,7 @@ Real fe_lagrange_tri6_shape_deriv(const unsigned int i,
   return 4. * bary[n] * tri_dzeta(m, j) + 4. * bary[m] * tri_dzeta(n, j);
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Tri6 plus the interior bubble 27*zeta_0*zeta_1*zeta_2, with the vertex
@@ -230,16 +235,16 @@ LIBMESH_DEVICE_INLINE
  * the arithmetic, and so the rounding, is the same as the .C file this
  * came from.
  */
-Real fe_lagrange_tri7_shape(const unsigned int i,
-                            const Real xi,
-                            const Real eta)
+T fe_lagrange_tri7_shape(const unsigned int i,
+                         const T & xi,
+                         const T & eta)
 {
   libmesh_assert_less(i, 7);
 
-  const Real zeta1 = xi;
-  const Real zeta2 = eta;
-  const Real zeta0 = 1. - zeta1 - zeta2;
-  const Real bubble_27th = zeta0*zeta1*zeta2;
+  const T zeta1 = xi;
+  const T zeta2 = eta;
+  const T zeta0 = 1. - zeta1 - zeta2;
+  const T bubble_27th = zeta0*zeta1*zeta2;
 
   switch (i)
     {
@@ -253,33 +258,34 @@ Real fe_lagrange_tri7_shape(const unsigned int i,
     }
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Differentiating zeta_0*zeta_1*zeta_2 and substituting zeta_0 = 1 - xi -
  * eta, zeta_1 = xi, zeta_2 = eta collapses the product rule to one term
  * per direction.
  */
-Real fe_lagrange_tri7_shape_deriv(const unsigned int i,
-                                  const unsigned int j,
-                                  const Real xi,
-                                  const Real eta)
+T fe_lagrange_tri7_shape_deriv(const unsigned int i,
+                               const unsigned int j,
+                               const T & xi,
+                               const T & eta)
 {
   libmesh_assert_less(i, 7);
   libmesh_assert_less(j, 2);
 
-  const Real zeta1 = xi;
-  const Real zeta2 = eta;
-  const Real zeta0 = 1. - zeta1 - zeta2;
+  const T zeta1 = xi;
+  const T zeta2 = eta;
+  const T zeta0 = 1. - zeta1 - zeta2;
 
   const Real dzeta0dxi  = -1.;
   const Real dzeta1dxi  = 1.;
   const Real dzeta2dxi  = 0.;
-  const Real dbubbledxi = zeta2 * (1. - 2.*zeta1 - zeta2);
+  const T dbubbledxi = zeta2 * (1. - 2.*zeta1 - zeta2);
 
   const Real dzeta0deta = -1.;
   const Real dzeta1deta = 0.;
   const Real dzeta2deta = 1.;
-  const Real dbubbledeta= zeta1 * (1. - zeta1 - 2.*zeta2);
+  const T dbubbledeta= zeta1 * (1. - zeta1 - 2.*zeta2);
 
   if (j == 0)
     switch (i)
@@ -326,6 +332,7 @@ Real fe_lagrange_tri6_shape_second_deriv(const unsigned int i,
                tri_dzeta(m, my_j) * tri_dzeta(n, my_k));
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * The bubble is quadratic in each direction at most, so its second
@@ -333,28 +340,28 @@ LIBMESH_DEVICE_INLINE
  * 2*eta mixed.  The Tri6 halves are constants, since a quadratic's
  * second derivative does not depend on the point.
  */
-Real fe_lagrange_tri7_shape_second_deriv(const unsigned int i,
-                                         const unsigned int j,
-                                         const Real xi,
-                                         const Real eta)
+T fe_lagrange_tri7_shape_second_deriv(const unsigned int i,
+                                      const unsigned int j,
+                                      const T & xi,
+                                      const T & eta)
 {
   libmesh_assert_less(i, 7);
   libmesh_assert_less(j, 3);
 
-  const Real zeta1 = xi;
-  const Real zeta2 = eta;
+  const T zeta1 = xi;
+  const T zeta2 = eta;
 
   const Real dzeta0dxi  = -1.;
   const Real dzeta1dxi  = 1.;
   const Real dzeta2dxi  = 0.;
-  const Real d2bubbledxi2 = -2. * zeta2;
+  const T d2bubbledxi2 = -2. * zeta2;
 
   const Real dzeta0deta = -1.;
   const Real dzeta1deta = 0.;
   const Real dzeta2deta = 1.;
-  const Real d2bubbledeta2 = -2. * zeta1;
+  const T d2bubbledeta2 = -2. * zeta1;
 
-  const Real d2bubbledxideta = (1. - 2.*zeta1 - 2.*zeta2);
+  const T d2bubbledxideta = (1. - 2.*zeta1 - 2.*zeta2);
 
   if (j == 0)
     switch (i)
@@ -394,15 +401,16 @@ Real fe_lagrange_tri7_shape_second_deriv(const unsigned int i,
 
 #endif
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * The linear tet's shape functions are its barycentric coordinates,
  * as for the triangle.
  */
-Real fe_lagrange_tet4_shape(const unsigned int i,
-                            const Real xi,
-                            const Real eta,
-                            const Real zeta)
+T fe_lagrange_tet4_shape(const unsigned int i,
+                         const T & xi,
+                         const T & eta,
+                         const T & zeta)
 {
   libmesh_assert_less(i, 4);
 
@@ -425,19 +433,20 @@ Real fe_lagrange_tet4_shape_deriv(const unsigned int i,
   return tet_dzeta(i, j);
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Quadratic on the tet, in the same two forms as Tri6:
  * zeta*(2*zeta - 1) at a vertex and 4*zeta_a*zeta_b at a mid-edge node.
  */
-Real fe_lagrange_tet10_shape(const unsigned int i,
-                             const Real xi,
-                             const Real eta,
-                             const Real zeta)
+T fe_lagrange_tet10_shape(const unsigned int i,
+                          const T & xi,
+                          const T & eta,
+                          const T & zeta)
 {
   libmesh_assert_less(i, 10);
 
-  const Real bary[4] = {1. - xi - eta - zeta, xi, eta, zeta};
+  const T bary[4] = {1. - xi - eta - zeta, xi, eta, zeta};
   const unsigned short m = tet10_zeta_index(i, 0);
   const unsigned short n = tet10_zeta_index(i, 1);
 
@@ -447,17 +456,18 @@ Real fe_lagrange_tet10_shape(const unsigned int i,
   return 4. * bary[m] * bary[n];
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_tet10_shape_deriv(const unsigned int i,
-                                   const unsigned int j,
-                                   const Real xi,
-                                   const Real eta,
-                                   const Real zeta)
+T fe_lagrange_tet10_shape_deriv(const unsigned int i,
+                                const unsigned int j,
+                                const T & xi,
+                                const T & eta,
+                                const T & zeta)
 {
   libmesh_assert_less(i, 10);
   libmesh_assert_less(j, 3);
 
-  const Real bary[4] = {1. - xi - eta - zeta, xi, eta, zeta};
+  const T bary[4] = {1. - xi - eta - zeta, xi, eta, zeta};
   const unsigned short m = tet10_zeta_index(i, 0);
   const unsigned short n = tet10_zeta_index(i, 1);
 
@@ -467,6 +477,7 @@ Real fe_lagrange_tet10_shape_deriv(const unsigned int i,
   return 4. * bary[n] * tet_dzeta(m, j) + 4. * bary[m] * tet_dzeta(n, j);
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Tet10 plus one bubble per face, zeta_a*zeta_b*zeta_c over the face's
@@ -477,24 +488,24 @@ LIBMESH_DEVICE_INLINE
  * fe_lagrange_tet10_shape() so that the arithmetic, and so the rounding,
  * is the same as the .C file this came from.
  */
-Real fe_lagrange_tet14_shape(const unsigned int i,
-                             const Real xi,
-                             const Real eta,
-                             const Real zeta)
+T fe_lagrange_tet14_shape(const unsigned int i,
+                          const T & xi,
+                          const T & eta,
+                          const T & zeta)
 {
   libmesh_assert_less(i, 14);
 
   // Area coordinates, pg. 205, Vol. I, Carey, Oden, Becker FEM
-  const Real zeta1 = xi;
-  const Real zeta2 = eta;
-  const Real zeta3 = zeta;
-  const Real zeta0 = 1. - zeta1 - zeta2 - zeta3;
+  const T zeta1 = xi;
+  const T zeta2 = eta;
+  const T zeta3 = zeta;
+  const T zeta0 = 1. - zeta1 - zeta2 - zeta3;
 
   // Bubble functions (not yet scaled) on side nodes
-  const Real bubble_012 = zeta0*zeta1*zeta2;
-  const Real bubble_013 = zeta0*zeta1*zeta3;
-  const Real bubble_123 = zeta1*zeta2*zeta3;
-  const Real bubble_023 = zeta0*zeta2*zeta3;
+  const T bubble_012 = zeta0*zeta1*zeta2;
+  const T bubble_013 = zeta0*zeta1*zeta3;
+  const T bubble_123 = zeta1*zeta2*zeta3;
+  const T bubble_023 = zeta0*zeta2*zeta3;
 
   switch (i)
     {
@@ -515,6 +526,7 @@ Real fe_lagrange_tet14_shape(const unsigned int i,
     }
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Tet10 plus one cubic bubble per face, each bubble differentiated in
@@ -523,46 +535,46 @@ LIBMESH_DEVICE_INLINE
  * vertex loses a factor outright while the faces containing it pick up
  * the difference of the two coordinates that vary.
  */
-Real fe_lagrange_tet14_shape_deriv(const unsigned int i,
-                                   const unsigned int j,
-                                   const Real xi,
-                                   const Real eta,
-                                   const Real zeta)
+T fe_lagrange_tet14_shape_deriv(const unsigned int i,
+                                const unsigned int j,
+                                const T & xi,
+                                const T & eta,
+                                const T & zeta)
 {
   libmesh_assert_less(i, 14);
   libmesh_assert_less(j, 3);
 
-  const Real zeta1 = xi;
-  const Real zeta2 = eta;
-  const Real zeta3 = zeta;
-  const Real zeta0 = 1. - zeta1 - zeta2 - zeta3;
+  const T zeta1 = xi;
+  const T zeta2 = eta;
+  const T zeta3 = zeta;
+  const T zeta0 = 1. - zeta1 - zeta2 - zeta3;
 
   const Real dzeta0dxi = -1.;
   const Real dzeta1dxi =  1.;
   const Real dzeta2dxi =  0.;
   const Real dzeta3dxi =  0.;
-  const Real dbubble012dxi = (zeta0-zeta1)*zeta2;
-  const Real dbubble013dxi = (zeta0-zeta1)*zeta3;
-  const Real dbubble123dxi = zeta2*zeta3;
-  const Real dbubble023dxi = -zeta2*zeta3;
+  const T dbubble012dxi = (zeta0-zeta1)*zeta2;
+  const T dbubble013dxi = (zeta0-zeta1)*zeta3;
+  const T dbubble123dxi = zeta2*zeta3;
+  const T dbubble023dxi = -zeta2*zeta3;
 
   const Real dzeta0deta = -1.;
   const Real dzeta1deta =  0.;
   const Real dzeta2deta =  1.;
   const Real dzeta3deta =  0.;
-  const Real dbubble012deta = (zeta0-zeta2)*zeta1;
-  const Real dbubble013deta = -zeta1*zeta3;
-  const Real dbubble123deta = zeta1*zeta3;
-  const Real dbubble023deta = (zeta0-zeta2)*zeta3;
+  const T dbubble012deta = (zeta0-zeta2)*zeta1;
+  const T dbubble013deta = -zeta1*zeta3;
+  const T dbubble123deta = zeta1*zeta3;
+  const T dbubble023deta = (zeta0-zeta2)*zeta3;
 
   const Real dzeta0dzeta = -1.;
   const Real dzeta1dzeta =  0.;
   const Real dzeta2dzeta =  0.;
   const Real dzeta3dzeta =  1.;
-  const Real dbubble012dzeta = -zeta1*zeta2;
-  const Real dbubble013dzeta = (zeta0-zeta3)*zeta1;
-  const Real dbubble123dzeta = zeta1*zeta2;
-  const Real dbubble023dzeta = (zeta0-zeta3)*zeta2;
+  const T dbubble012dzeta = -zeta1*zeta2;
+  const T dbubble013dzeta = (zeta0-zeta3)*zeta1;
+  const T dbubble123dzeta = zeta1*zeta2;
+  const T dbubble023dzeta = (zeta0-zeta3)*zeta2;
 
   if (j == 0)
     switch (i)
@@ -642,6 +654,7 @@ Real fe_lagrange_tet10_shape_second_deriv(const unsigned int i,
                tet_dzeta(m, my_j) * tet_dzeta(n, my_k));
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * The Tet10 half of each second derivative is a constant, so it comes
@@ -649,24 +662,24 @@ LIBMESH_DEVICE_INLINE
  * Tet10 half at all.  Each bubble is trilinear in the barycentric
  * coordinates, so its second derivatives are linear in the point.
  */
-Real fe_lagrange_tet14_shape_second_deriv(const unsigned int i,
-                                          const unsigned int j,
-                                          const Real xi,
-                                          const Real eta,
-                                          const Real zeta)
+T fe_lagrange_tet14_shape_second_deriv(const unsigned int i,
+                                       const unsigned int j,
+                                       const T & xi,
+                                       const T & eta,
+                                       const T & zeta)
 {
   libmesh_assert_less(i, 14);
   libmesh_assert_less(j, 6);
 
-  const Real returnval = (i < 10) ? fe_lagrange_tet10_shape_second_deriv(i, j) : 0.;
+  const T returnval = (i < 10) ? fe_lagrange_tet10_shape_second_deriv(i, j) : 0.;
 
-  const Real zeta1 = xi;
-  const Real zeta2 = eta;
-  const Real zeta3 = zeta;
-  const Real zeta0 = 1. - zeta1 - zeta2 - zeta3;
+  const T zeta1 = xi;
+  const T zeta2 = eta;
+  const T zeta3 = zeta;
+  const T zeta0 = 1. - zeta1 - zeta2 - zeta3;
 
   // Fill these with whichever derivative we're concerned with
-  Real d2bubble012, d2bubble013, d2bubble023, d2bubble123;
+  T d2bubble012, d2bubble013, d2bubble023, d2bubble123;
   switch (j)
     {
       // d^2()/dxi^2

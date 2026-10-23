@@ -36,7 +36,8 @@
 // FE<dim,family>, which device code can't call, so device code, which
 // only learns the FE type of a variable at run time, picks it here.
 // Each takes the element's dimension, as FEInterface does, rather
-// than looking it up from the type.
+// than looking it up from the type, and like the shapes it calls is
+// templated on the coordinate type.
 
 namespace libMesh
 {
@@ -45,13 +46,13 @@ namespace libMesh
 // their shape functions; T only decides whether higher orders on
 // first order elements, which only L2_LAGRANGE supports, assert.
 
-template <FEFamily T>
+template <FEFamily T, typename Scalar>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_shape(const unsigned int dim,
-                       const ElemType type,
-                       const Order order,
-                       const unsigned int i,
-                       const Point & p)
+Scalar fe_lagrange_shape(const unsigned int dim,
+                         const ElemType type,
+                         const Order order,
+                         const unsigned int i,
+                         const TypeVector<Scalar> & p)
 {
   switch (dim)
     {
@@ -68,14 +69,14 @@ Real fe_lagrange_shape(const unsigned int dim,
 
 
 
-template <FEFamily T>
+template <FEFamily T, typename Scalar>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_shape_deriv(const unsigned int dim,
-                             const ElemType type,
-                             const Order order,
-                             const unsigned int i,
-                             const unsigned int j,
-                             const Point & p)
+Scalar fe_lagrange_shape_deriv(const unsigned int dim,
+                               const ElemType type,
+                               const Order order,
+                               const unsigned int i,
+                               const unsigned int j,
+                               const TypeVector<Scalar> & p)
 {
   switch (dim)
     {
@@ -92,13 +93,14 @@ Real fe_lagrange_shape_deriv(const unsigned int dim,
 
 
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_shape(const unsigned int dim,
-              const FEFamily family,
-              const ElemType type,
-              const Order order,
-              const unsigned int i,
-              const Point & p)
+T fe_shape(const unsigned int dim,
+           const FEFamily family,
+           const ElemType type,
+           const Order order,
+           const unsigned int i,
+           const TypeVector<T> & p)
 {
   switch (family)
     {
@@ -128,14 +130,15 @@ Real fe_shape(const unsigned int dim,
 
 
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_shape_deriv(const unsigned int dim,
-                    const FEFamily family,
-                    const ElemType type,
-                    const Order order,
-                    const unsigned int i,
-                    const unsigned int j,
-                    const Point & p)
+T fe_shape_deriv(const unsigned int dim,
+                 const FEFamily family,
+                 const ElemType type,
+                 const Order order,
+                 const unsigned int i,
+                 const unsigned int j,
+                 const TypeVector<T> & p)
 {
   switch (family)
     {
@@ -167,14 +170,14 @@ Real fe_shape_deriv(const unsigned int dim,
 
 #ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
 
-template <FEFamily T>
+template <FEFamily T, typename Scalar>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_shape_second_deriv(const unsigned int dim,
-                                    const ElemType type,
-                                    const Order order,
-                                    const unsigned int i,
-                                    const unsigned int j,
-                                    const Point & p)
+Scalar fe_lagrange_shape_second_deriv(const unsigned int dim,
+                                      const ElemType type,
+                                      const Order order,
+                                      const unsigned int i,
+                                      const unsigned int j,
+                                      const TypeVector<Scalar> & p)
 {
   switch (dim)
     {
@@ -191,14 +194,15 @@ Real fe_lagrange_shape_second_deriv(const unsigned int dim,
 
 
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_shape_second_deriv(const unsigned int dim,
-                           const FEFamily family,
-                           const ElemType type,
-                           const Order order,
-                           const unsigned int i,
-                           const unsigned int j,
-                           const Point & p)
+T fe_shape_second_deriv(const unsigned int dim,
+                        const FEFamily family,
+                        const ElemType type,
+                        const Order order,
+                        const unsigned int i,
+                        const unsigned int j,
+                        const TypeVector<T> & p)
 {
   switch (family)
     {

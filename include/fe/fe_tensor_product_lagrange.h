@@ -22,7 +22,8 @@
 // which is what the Kokkos work needs in order to evaluate the same
 // expressions on a device.  The assertions are the exception: those are
 // ours, host-only, and a device build will have to say what it wants
-// done with them.
+// done with them.  Like the 1D shapes, they are templated on the
+// coordinate type.
 //
 // The full-tensor members -- Quad4, Quad9, Hex8, Hex27 -- are products of
 // the 1D shapes in fe_lagrange_shape_1D.h, one factor per reference
@@ -216,13 +217,14 @@ unsigned int hex27_i2(const unsigned int i)
     }
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Quad4 is the product of two linear 1D shapes, one per reference coordinate.
  */
-Real fe_lagrange_quad4_shape(const unsigned int i,
-                             const Real xi,
-                             const Real eta)
+T fe_lagrange_quad4_shape(const unsigned int i,
+                          const T & xi,
+                          const T & eta)
 {
   libmesh_assert_less(i, 4);
 
@@ -230,15 +232,16 @@ Real fe_lagrange_quad4_shape(const unsigned int i,
          fe_lagrange_1D_linear_shape(quad4_i1(i), eta);
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Differentiating a product of two 1D shapes replaces the factor in the
  * requested direction with its 1D derivative and leaves the others.
  */
-Real fe_lagrange_quad4_shape_deriv(const unsigned int i,
-                                   const unsigned int j,
-                                   const Real xi,
-                                   const Real eta)
+T fe_lagrange_quad4_shape_deriv(const unsigned int i,
+                                const unsigned int j,
+                                const T & xi,
+                                const T & eta)
 {
   libmesh_assert_less(i, 4);
   libmesh_assert_less(j, 2);
@@ -255,13 +258,14 @@ Real fe_lagrange_quad4_shape_deriv(const unsigned int i,
     }
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Quad9 is the product of two quadratic 1D shapes, one per reference coordinate.
  */
-Real fe_lagrange_quad9_shape(const unsigned int i,
-                             const Real xi,
-                             const Real eta)
+T fe_lagrange_quad9_shape(const unsigned int i,
+                          const T & xi,
+                          const T & eta)
 {
   libmesh_assert_less(i, 9);
 
@@ -269,15 +273,16 @@ Real fe_lagrange_quad9_shape(const unsigned int i,
          fe_lagrange_1D_quadratic_shape(quad9_i1(i), eta);
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Differentiating a product of two 1D shapes replaces the factor in the
  * requested direction with its 1D derivative and leaves the others.
  */
-Real fe_lagrange_quad9_shape_deriv(const unsigned int i,
-                                   const unsigned int j,
-                                   const Real xi,
-                                   const Real eta)
+T fe_lagrange_quad9_shape_deriv(const unsigned int i,
+                                const unsigned int j,
+                                const T & xi,
+                                const T & eta)
 {
   libmesh_assert_less(i, 9);
   libmesh_assert_less(j, 2);
@@ -294,14 +299,15 @@ Real fe_lagrange_quad9_shape_deriv(const unsigned int i,
     }
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Hex8 is the product of three linear 1D shapes, one per reference coordinate.
  */
-Real fe_lagrange_hex8_shape(const unsigned int i,
-                            const Real xi,
-                            const Real eta,
-                            const Real zeta)
+T fe_lagrange_hex8_shape(const unsigned int i,
+                         const T & xi,
+                         const T & eta,
+                         const T & zeta)
 {
   libmesh_assert_less(i, 8);
 
@@ -310,16 +316,17 @@ Real fe_lagrange_hex8_shape(const unsigned int i,
          fe_lagrange_1D_linear_shape(hex8_i2(i), zeta);
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Differentiating a product of three 1D shapes replaces the factor in the
  * requested direction with its 1D derivative and leaves the others.
  */
-Real fe_lagrange_hex8_shape_deriv(const unsigned int i,
-                                  const unsigned int j,
-                                  const Real xi,
-                                  const Real eta,
-                                  const Real zeta)
+T fe_lagrange_hex8_shape_deriv(const unsigned int i,
+                               const unsigned int j,
+                               const T & xi,
+                               const T & eta,
+                               const T & zeta)
 {
   libmesh_assert_less(i, 8);
   libmesh_assert_less(j, 3);
@@ -343,14 +350,15 @@ Real fe_lagrange_hex8_shape_deriv(const unsigned int i,
     }
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Hex27 is the product of three quadratic 1D shapes, one per reference coordinate.
  */
-Real fe_lagrange_hex27_shape(const unsigned int i,
-                             const Real xi,
-                             const Real eta,
-                             const Real zeta)
+T fe_lagrange_hex27_shape(const unsigned int i,
+                          const T & xi,
+                          const T & eta,
+                          const T & zeta)
 {
   libmesh_assert_less(i, 27);
 
@@ -359,16 +367,17 @@ Real fe_lagrange_hex27_shape(const unsigned int i,
          fe_lagrange_1D_quadratic_shape(hex27_i2(i), zeta);
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Differentiating a product of three 1D shapes replaces the factor in the
  * requested direction with its 1D derivative and leaves the others.
  */
-Real fe_lagrange_hex27_shape_deriv(const unsigned int i,
-                                   const unsigned int j,
-                                   const Real xi,
-                                   const Real eta,
-                                   const Real zeta)
+T fe_lagrange_hex27_shape_deriv(const unsigned int i,
+                                const unsigned int j,
+                                const T & xi,
+                                const T & eta,
+                                const T & zeta)
 {
   libmesh_assert_less(i, 27);
   libmesh_assert_less(j, 3);
@@ -394,16 +403,17 @@ Real fe_lagrange_hex27_shape_deriv(const unsigned int i,
 
 #ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Likewise for the second derivatives: a repeated direction takes the
  * 1D second derivative, and a mixed pair takes two 1D first
  * derivatives.
  */
-Real fe_lagrange_quad4_shape_second_deriv(const unsigned int i,
-                                          const unsigned int j,
-                                          const Real xi,
-                                          const Real eta)
+T fe_lagrange_quad4_shape_second_deriv(const unsigned int i,
+                                       const unsigned int j,
+                                       const T & xi,
+                                       const T & eta)
 {
   libmesh_assert_less(i, 4);
   libmesh_assert_less(j, 3);
@@ -420,16 +430,17 @@ Real fe_lagrange_quad4_shape_second_deriv(const unsigned int i,
     }
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Likewise for the second derivatives: a repeated direction takes the
  * 1D second derivative, and a mixed pair takes two 1D first
  * derivatives.
  */
-Real fe_lagrange_quad9_shape_second_deriv(const unsigned int i,
-                                          const unsigned int j,
-                                          const Real xi,
-                                          const Real eta)
+T fe_lagrange_quad9_shape_second_deriv(const unsigned int i,
+                                       const unsigned int j,
+                                       const T & xi,
+                                       const T & eta)
 {
   libmesh_assert_less(i, 9);
   libmesh_assert_less(j, 3);
@@ -450,17 +461,18 @@ Real fe_lagrange_quad9_shape_second_deriv(const unsigned int i,
     }
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Likewise for the second derivatives: a repeated direction takes the
  * 1D second derivative, and a mixed pair takes two 1D first
  * derivatives.
  */
-Real fe_lagrange_hex8_shape_second_deriv(const unsigned int i,
-                                         const unsigned int j,
-                                         const Real xi,
-                                         const Real eta,
-                                         const Real zeta)
+T fe_lagrange_hex8_shape_second_deriv(const unsigned int i,
+                                      const unsigned int j,
+                                      const T & xi,
+                                      const T & eta,
+                                      const T & zeta)
 {
   libmesh_assert_less(i, 8);
   libmesh_assert_less(j, 6);
@@ -489,17 +501,18 @@ Real fe_lagrange_hex8_shape_second_deriv(const unsigned int i,
     }
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Likewise for the second derivatives: a repeated direction takes the
  * 1D second derivative, and a mixed pair takes two 1D first
  * derivatives.
  */
-Real fe_lagrange_hex27_shape_second_deriv(const unsigned int i,
-                                          const unsigned int j,
-                                          const Real xi,
-                                          const Real eta,
-                                          const Real zeta)
+T fe_lagrange_hex27_shape_second_deriv(const unsigned int i,
+                                       const unsigned int j,
+                                       const T & xi,
+                                       const T & eta,
+                                       const T & zeta)
 {
   libmesh_assert_less(i, 27);
   libmesh_assert_less(j, 6);
@@ -546,6 +559,7 @@ Real fe_lagrange_hex27_shape_second_deriv(const unsigned int i,
 // bases are not products of 1D factors, but they live on the same
 // reference domains and dispatch through the same element classes.
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Quad8 is serendipity rather than a tensor product: the Quad9 interior
@@ -553,9 +567,9 @@ LIBMESH_DEVICE_INLINE
  * +- eta) and a mid-edge shape is 0.5*(1 - xi^2)*(1 -+ eta) or its
  * transpose.
  */
-Real fe_lagrange_quad8_shape(const unsigned int i,
-                             const Real xi,
-                             const Real eta)
+T fe_lagrange_quad8_shape(const unsigned int i,
+                          const T & xi,
+                          const T & eta)
 {
   libmesh_assert_less(i, 8);
 
@@ -572,14 +586,15 @@ Real fe_lagrange_quad8_shape(const unsigned int i,
     }
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Differentiated in place: the serendipity forms are not products, so each derivative is written out.
  */
-Real fe_lagrange_quad8_shape_deriv(const unsigned int i,
-                                   const unsigned int j,
-                                   const Real xi,
-                                   const Real eta)
+T fe_lagrange_quad8_shape_deriv(const unsigned int i,
+                                const unsigned int j,
+                                const T & xi,
+                                const T & eta)
 {
   libmesh_assert_less(i, 8);
   libmesh_assert_less(j, 2);
@@ -625,14 +640,15 @@ Real fe_lagrange_quad8_shape_deriv(const unsigned int i,
 }
 
 #ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Second derivatives of the serendipity forms, likewise written out.
  */
-Real fe_lagrange_quad8_shape_second_deriv(const unsigned int i,
-                                          const unsigned int j,
-                                          const Real xi,
-                                          const Real eta)
+T fe_lagrange_quad8_shape_second_deriv(const unsigned int i,
+                                       const unsigned int j,
+                                       const T & xi,
+                                       const T & eta)
 {
   libmesh_assert_less(i, 8);
   libmesh_assert_less(j, 3);
@@ -689,6 +705,7 @@ Real fe_lagrange_quad8_shape_second_deriv(const unsigned int i,
 }
 #endif
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Hex20 is serendipity, the Hex27 tensor product without its face and
@@ -696,16 +713,16 @@ LIBMESH_DEVICE_INLINE
  * x, y, z = (reference + 1)/2, which is the form in which the vertex and
  * mid-edge expressions are usually tabulated.
  */
-Real fe_lagrange_hex20_shape(const unsigned int i,
-                             const Real xi,
-                             const Real eta,
-                             const Real zeta)
+T fe_lagrange_hex20_shape(const unsigned int i,
+                          const T & xi,
+                          const T & eta,
+                          const T & zeta)
 {
   libmesh_assert_less(i, 20);
 
-  const Real x = 0.5 * (xi + 1.0);
-  const Real y = 0.5 * (eta + 1.0);
-  const Real z = 0.5 * (zeta + 1.0);
+  const T x = 0.5 * (xi + 1.0);
+  const T y = 0.5 * (eta + 1.0);
+  const T z = 0.5 * (zeta + 1.0);
 
   switch (i)
     {
@@ -732,22 +749,23 @@ Real fe_lagrange_hex20_shape(const unsigned int i,
     }
 }
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Differentiated in place: the serendipity forms are not products, so each derivative is written out.
  */
-Real fe_lagrange_hex20_shape_deriv(const unsigned int i,
-                                   const unsigned int j,
-                                   const Real xi,
-                                   const Real eta,
-                                   const Real zeta)
+T fe_lagrange_hex20_shape_deriv(const unsigned int i,
+                                const unsigned int j,
+                                const T & xi,
+                                const T & eta,
+                                const T & zeta)
 {
   libmesh_assert_less(i, 20);
   libmesh_assert_less(j, 3);
 
-  const Real x = 0.5 * (xi + 1.0);
-  const Real y = 0.5 * (eta + 1.0);
-  const Real z = 0.5 * (zeta + 1.0);
+  const T x = 0.5 * (xi + 1.0);
+  const T y = 0.5 * (eta + 1.0);
+  const T z = 0.5 * (zeta + 1.0);
 
   switch (j)
     {
@@ -829,22 +847,23 @@ Real fe_lagrange_hex20_shape_deriv(const unsigned int i,
 }
 
 #ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
+template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
  * Second derivatives of the serendipity forms, likewise written out.
  */
-Real fe_lagrange_hex20_shape_second_deriv(const unsigned int i,
-                                          const unsigned int j,
-                                          const Real xi,
-                                          const Real eta,
-                                          const Real zeta)
+T fe_lagrange_hex20_shape_second_deriv(const unsigned int i,
+                                       const unsigned int j,
+                                       const T & xi,
+                                       const T & eta,
+                                       const T & zeta)
 {
   libmesh_assert_less(i, 20);
   libmesh_assert_less(j, 6);
 
-  const Real x = 0.5 * (xi + 1.0);
-  const Real y = 0.5 * (eta + 1.0);
-  const Real z = 0.5 * (zeta + 1.0);
+  const T x = 0.5 * (xi + 1.0);
+  const T y = 0.5 * (eta + 1.0);
+  const T z = 0.5 * (zeta + 1.0);
 
   switch (j)
     {
