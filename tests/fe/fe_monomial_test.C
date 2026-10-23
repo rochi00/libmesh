@@ -160,3 +160,34 @@ INSTANTIATE_FETEST(THIRD, MONOMIAL, PYRAMID18);
 INSTANTIATE_FETEST(THIRD, MONOMIAL, PYRAMID5);
 INSTANTIATE_FETEST(THIRD, MONOMIAL, TET4);
 #endif
+
+#ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
+
+// FETest's test solution is at most quartic, so it gives the xi^5 and
+// higher bases no weight and never sees their second derivatives;
+// check those against i (i-1) xi^(i-2) directly.
+class MonomialSecondDerivTest : public CppUnit::TestCase
+{
+public:
+  LIBMESH_CPPUNIT_TEST_SUITE( MonomialSecondDerivTest );
+  CPPUNIT_TEST( test1D );
+  CPPUNIT_TEST_SUITE_END();
+
+  void test1D()
+  {
+    LOG_UNIT_TEST;
+
+    for (const Real xi : {-0.7, 0.2, 1.4})
+      for (unsigned int o = 2; o <= EIGHTH; ++o)
+        for (unsigned int i = 0; i <= o; ++i)
+          {
+            const Real exact = (i < 2) ? 0 : i * (i-1) * std::pow(xi, int(i) - 2);
+            const Real d2phi = FE<1,MONOMIAL>::shape_second_deriv(EDGE3, Order(o), i, 0, Point(xi));
+            LIBMESH_ASSERT_FP_EQUAL(exact, d2phi, TOLERANCE * TOLERANCE * (1 + std::abs(exact)));
+          }
+  }
+};
+
+CPPUNIT_TEST_SUITE_REGISTRATION( MonomialSecondDerivTest );
+
+#endif // LIBMESH_ENABLE_SECOND_DERIVATIVES
