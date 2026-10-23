@@ -23,9 +23,7 @@
 #include "libmesh/enum_elem_type.h"
 #include "libmesh/enum_fe_family.h"
 #include "libmesh/enum_order.h"
-#include "libmesh/fe_lagrange_shape_1D.h"
-#include "libmesh/fe_lagrange_shape_2D.h"
-#include "libmesh/fe_lagrange_shape_3D.h"
+#include "libmesh/fe_shape.h"
 #include "libmesh/point.h"
 #include "libmesh/tensor_value.h"
 
@@ -603,19 +601,9 @@ struct LagrangeMapEval
   LIBMESH_DEVICE_INLINE
   Real shape(const unsigned int i, const unsigned int j, const Point & p) const
   {
-    const bool value = (j == invalid_uint);
-    switch (dim)
-      {
-      case 1:
-        return value ? fe_lagrange_1D_shape(order, i, p(0)) :
-          fe_lagrange_1D_shape_deriv(order, i, j, p(0));
-      case 2:
-        return value ? fe_lagrange_2D_shape<LAGRANGE>(type, order, i, p) :
-          fe_lagrange_2D_shape_deriv<LAGRANGE>(type, order, i, j, p);
-      default:
-        return value ? fe_lagrange_3D_shape<LAGRANGE>(type, order, i, p) :
-          fe_lagrange_3D_shape_deriv<LAGRANGE>(type, order, i, j, p);
-      }
+    return (j == invalid_uint) ?
+      fe_lagrange_shape<LAGRANGE>(dim, type, order, i, p) :
+      fe_lagrange_shape_deriv<LAGRANGE>(dim, type, order, i, j, p);
   }
 };
 

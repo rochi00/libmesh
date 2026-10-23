@@ -10,6 +10,7 @@
 // and a nonzero exit status marks the run as failed.
 
 #include "libmesh/libmesh_config.h"
+#include "fe/kokkos_fe_shape_oracle.h"
 #include "fe/kokkos_inverse_map_oracle.h"
 #include "numerics/kokkos_tensor_ops_oracle_runners.h"
 #include "numerics/kokkos_vector_ops_oracle_runners.h"
@@ -25,6 +26,7 @@ main(int argc, char ** argv)
   int total_fail = 0;
   total_fail += libMeshTest::KokkosVectorOracle::run_all_oracles();
   total_fail += libMeshTest::KokkosTensorOracle::run_all_oracles();
+  total_fail += libMeshTest::KokkosFEShapeOracle::run_all_oracles();
   total_fail += libMeshTest::KokkosInverseMapOracle::run_all_oracles();
 
   Kokkos::finalize();
