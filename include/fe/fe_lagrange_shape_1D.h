@@ -25,13 +25,21 @@
 #include "libmesh/point.h"
 
 // Inline functions useful to inline on tensor elements.
+//
+// These, and the shared shapes built on them, are templated on the
+// type of the reference coordinates, so that an automatic
+// differentiation type such as MetaPhysicL's DualNumber gets the same
+// shapes along with their derivatives with respect to the point.
+// Mortar needs that to project quadrature points by Newton's method;
+// every other caller passes Reals and gets the Real functions.
 
 namespace libMesh
 {
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_1D_linear_shape(const unsigned int i,
-                                 const Real xi)
+T fe_lagrange_1D_linear_shape(const unsigned int i,
+                              const T & xi)
 {
   libmesh_assert_less (i, 2);
 
@@ -48,9 +56,10 @@ Real fe_lagrange_1D_linear_shape(const unsigned int i,
 
 
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_1D_quadratic_shape(const unsigned int i,
-                                    const Real xi)
+T fe_lagrange_1D_quadratic_shape(const unsigned int i,
+                                 const T & xi)
 {
   libmesh_assert_less (i, 3);
 
@@ -70,9 +79,10 @@ Real fe_lagrange_1D_quadratic_shape(const unsigned int i,
 
 
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_1D_cubic_shape(const unsigned int i,
-                                const Real xi)
+T fe_lagrange_1D_cubic_shape(const unsigned int i,
+                             const T & xi)
 {
   libmesh_assert_less (i, 4);
 
@@ -95,10 +105,11 @@ Real fe_lagrange_1D_cubic_shape(const unsigned int i,
 
 
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_1D_shape(const Order order,
-                          const unsigned int i,
-                          const Real xi)
+T fe_lagrange_1D_shape(const Order order,
+                       const unsigned int i,
+                       const T & xi)
 {
   libmesh_assert_less_equal(order, THIRD);
 
@@ -121,10 +132,11 @@ Real fe_lagrange_1D_shape(const Order order,
 
 
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_1D_linear_shape_deriv(const unsigned int i,
-                                       const unsigned int libmesh_dbg_var(j),
-                                       const Real)
+T fe_lagrange_1D_linear_shape_deriv(const unsigned int i,
+                                    const unsigned int libmesh_dbg_var(j),
+                                    const T &)
 {
   // only d()/dxi in 1D!
   libmesh_assert_equal_to (j, 0);
@@ -143,10 +155,11 @@ Real fe_lagrange_1D_linear_shape_deriv(const unsigned int i,
 }
 
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_1D_quadratic_shape_deriv(const unsigned int i,
-                                          const unsigned int libmesh_dbg_var(j),
-                                          const Real xi)
+T fe_lagrange_1D_quadratic_shape_deriv(const unsigned int i,
+                                       const unsigned int libmesh_dbg_var(j),
+                                       const T & xi)
 {
   // only d()/dxi in 1D!
   libmesh_assert_equal_to (j, 0);
@@ -168,10 +181,11 @@ Real fe_lagrange_1D_quadratic_shape_deriv(const unsigned int i,
 }
 
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_1D_cubic_shape_deriv(const unsigned int i,
-                                      const unsigned int libmesh_dbg_var(j),
-                                      const Real xi)
+T fe_lagrange_1D_cubic_shape_deriv(const unsigned int i,
+                                   const unsigned int libmesh_dbg_var(j),
+                                   const T & xi)
 {
   // only d()/dxi in 1D!
   libmesh_assert_equal_to (j, 0);
@@ -197,11 +211,12 @@ Real fe_lagrange_1D_cubic_shape_deriv(const unsigned int i,
 
 
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_1D_shape_deriv(const Order order,
-                                const unsigned int i,
-                                const unsigned int j,
-                                const Real xi)
+T fe_lagrange_1D_shape_deriv(const Order order,
+                             const unsigned int i,
+                             const unsigned int j,
+                             const T & xi)
 {
   libmesh_assert_less_equal(order, THIRD);
 
@@ -225,10 +240,11 @@ Real fe_lagrange_1D_shape_deriv(const Order order,
 // fe_lagrange_1D_linear_shape_second_deriv is 0
 
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_1D_quadratic_shape_second_deriv(const unsigned int i,
-                                                 const unsigned int libmesh_dbg_var(j),
-                                                 const Real)
+T fe_lagrange_1D_quadratic_shape_second_deriv(const unsigned int i,
+                                              const unsigned int libmesh_dbg_var(j),
+                                              const T &)
 {
   // Don't need to switch on j.  1D shape functions
   // depend on xi only!
@@ -250,10 +266,11 @@ Real fe_lagrange_1D_quadratic_shape_second_deriv(const unsigned int i,
 }
 
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_1D_cubic_shape_second_deriv(const unsigned int i,
-                                             const unsigned int libmesh_dbg_var(j),
-                                             const Real xi)
+T fe_lagrange_1D_cubic_shape_second_deriv(const unsigned int i,
+                                          const unsigned int libmesh_dbg_var(j),
+                                          const T & xi)
 {
   // Don't need to switch on j.  1D shape functions
   // depend on xi only!
@@ -279,11 +296,12 @@ Real fe_lagrange_1D_cubic_shape_second_deriv(const unsigned int i,
 
 
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_1D_shape_second_deriv(const Order order,
-                                       const unsigned int i,
-                                       const unsigned int j,
-                                       const Real xi)
+T fe_lagrange_1D_shape_second_deriv(const Order order,
+                                    const unsigned int i,
+                                    const unsigned int j,
+                                    const T & xi)
 {
   libmesh_assert_less_equal(order, THIRD);
 

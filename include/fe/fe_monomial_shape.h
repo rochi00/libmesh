@@ -24,17 +24,19 @@
 #include "libmesh/point.h"
 
 // FE<Dim,MONOMIAL> shape functions, which don't depend on the element
-// type; inline here so device code evaluates the same functions.
+// type; inline here so device code evaluates the same functions, and
+// templated on the coordinate type as in fe_lagrange_shape_1D.h.
 
 namespace libMesh
 {
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_monomial_1D_shape(const Order libmesh_dbg_var(order),
-                          const unsigned int i,
-                          const Point & p)
+T fe_monomial_1D_shape(const Order libmesh_dbg_var(order),
+                       const unsigned int i,
+                       const TypeVector<T> & p)
 {
-  const Real xi = p(0);
+  const T xi = p(0);
 
   libmesh_assert_less_equal (i, static_cast<unsigned int>(order));
 
@@ -57,7 +59,7 @@ Real fe_monomial_1D_shape(const Order libmesh_dbg_var(order),
       return xi*xi*xi*xi;
 
     default:
-      Real val = 1.;
+      T val = 1.;
       for (unsigned int index = 0; index != i; ++index)
         val *= xi;
       return val;
@@ -66,17 +68,18 @@ Real fe_monomial_1D_shape(const Order libmesh_dbg_var(order),
 
 
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_monomial_1D_shape_deriv(const Order libmesh_dbg_var(order),
-                                const unsigned int i,
-                                const unsigned int libmesh_dbg_var(j),
-                                const Point & p)
+T fe_monomial_1D_shape_deriv(const Order libmesh_dbg_var(order),
+                             const unsigned int i,
+                             const unsigned int libmesh_dbg_var(j),
+                             const TypeVector<T> & p)
 {
   // only d()/dxi in 1D!
 
   libmesh_assert_equal_to (j, 0);
 
-  const Real xi = p(0);
+  const T xi = p(0);
 
   libmesh_assert_less_equal (i, static_cast<unsigned int>(order));
 
@@ -99,7 +102,7 @@ Real fe_monomial_1D_shape_deriv(const Order libmesh_dbg_var(order),
       return 4.*xi*xi*xi;
 
     default:
-      Real val = i;
+      T val = i;
       for (unsigned int index = 1; index != i; ++index)
         val *= xi;
       return val;
@@ -110,17 +113,18 @@ Real fe_monomial_1D_shape_deriv(const Order libmesh_dbg_var(order),
 
 #ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_monomial_1D_shape_second_deriv(const Order libmesh_dbg_var(order),
-                                       const unsigned int i,
-                                       const unsigned int libmesh_dbg_var(j),
-                                       const Point & p)
+T fe_monomial_1D_shape_second_deriv(const Order libmesh_dbg_var(order),
+                                    const unsigned int i,
+                                    const unsigned int libmesh_dbg_var(j),
+                                    const TypeVector<T> & p)
 {
   // only d()/dxi in 1D!
 
   libmesh_assert_equal_to (j, 0);
 
-  const Real xi = p(0);
+  const T xi = p(0);
 
   libmesh_assert_less_equal (i, static_cast<unsigned int>(order));
 
@@ -140,7 +144,7 @@ Real fe_monomial_1D_shape_second_deriv(const Order libmesh_dbg_var(order),
       return 12.*xi*xi;
 
     default:
-      Real val = i*(i-1);
+      T val = i*(i-1);
       for (unsigned int index = 2; index != i; ++index)
         val *= xi;
       return val;
@@ -151,18 +155,19 @@ Real fe_monomial_1D_shape_second_deriv(const Order libmesh_dbg_var(order),
 
 
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_monomial_2D_shape(const Order libmesh_dbg_var(order),
-                          const unsigned int i,
-                          const Point & p)
+T fe_monomial_2D_shape(const Order libmesh_dbg_var(order),
+                       const unsigned int i,
+                       const TypeVector<T> & p)
 {
 #if LIBMESH_DIM > 1
 
   libmesh_assert_less (i, (static_cast<unsigned int>(order)+1)*
                        (static_cast<unsigned int>(order)+2)/2);
 
-  const Real xi  = p(0);
-  const Real eta = p(1);
+  const T xi  = p(0);
+  const T eta = p(1);
 
   switch (i)
     {
@@ -221,7 +226,7 @@ Real fe_monomial_2D_shape(const Order libmesh_dbg_var(order),
       for (; i >= (o+1)*(o+2)/2; o++) { }
       const int ny = i - (o*(o+1)/2);
       const int nx = o - ny;
-      Real val = 1.;
+      T val = 1.;
       for (int index=0; index != nx; index++)
         val *= xi;
       for (int index=0; index != ny; index++)
@@ -238,11 +243,12 @@ Real fe_monomial_2D_shape(const Order libmesh_dbg_var(order),
 
 
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_monomial_2D_shape_deriv(const Order libmesh_dbg_var(order),
-                                const unsigned int i,
-                                const unsigned int j,
-                                const Point & p)
+T fe_monomial_2D_shape_deriv(const Order libmesh_dbg_var(order),
+                             const unsigned int i,
+                             const unsigned int j,
+                             const TypeVector<T> & p)
 {
 #if LIBMESH_DIM > 1
 
@@ -252,8 +258,8 @@ Real fe_monomial_2D_shape_deriv(const Order libmesh_dbg_var(order),
   libmesh_assert_less (i, (static_cast<unsigned int>(order)+1)*
                        (static_cast<unsigned int>(order)+2)/2);
 
-  const Real xi  = p(0);
-  const Real eta = p(1);
+  const T xi  = p(0);
+  const T eta = p(1);
 
   // monomials. since they are hierarchic we only need one case block.
 
@@ -319,7 +325,7 @@ Real fe_monomial_2D_shape_deriv(const Order libmesh_dbg_var(order),
             for (; i >= (o+1)*(o+2)/2; o++) { }
             const int ny = i - (o*(o+1)/2);
             const int nx = o - ny;
-            Real val = nx;
+            T val = nx;
             for (int index=1; index < nx; index++)
               val *= xi;
             for (int index=0; index != ny; index++)
@@ -389,7 +395,7 @@ Real fe_monomial_2D_shape_deriv(const Order libmesh_dbg_var(order),
             for (; i >= (o+1)*(o+2)/2; o++) { }
             const int ny = i - (o*(o+1)/2);
             const int nx = o - ny;
-            Real val = ny;
+            T val = ny;
             for (int index=0; index != nx; index++)
               val *= xi;
             for (int index=1; index < ny; index++)
@@ -413,11 +419,12 @@ Real fe_monomial_2D_shape_deriv(const Order libmesh_dbg_var(order),
 
 #ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_monomial_2D_shape_second_deriv(const Order libmesh_dbg_var(order),
-                                       const unsigned int i,
-                                       const unsigned int j,
-                                       const Point & p)
+T fe_monomial_2D_shape_second_deriv(const Order libmesh_dbg_var(order),
+                                    const unsigned int i,
+                                    const unsigned int j,
+                                    const TypeVector<T> & p)
 {
 #if LIBMESH_DIM > 1
 
@@ -427,8 +434,8 @@ Real fe_monomial_2D_shape_second_deriv(const Order libmesh_dbg_var(order),
   libmesh_assert_less (i, (static_cast<unsigned int>(order)+1)*
                        (static_cast<unsigned int>(order)+2)/2);
 
-  const Real xi  = p(0);
-  const Real eta = p(1);
+  const T xi  = p(0);
+  const T eta = p(1);
 
   // monomials. since they are hierarchic we only need one case block.
 
@@ -484,7 +491,7 @@ Real fe_monomial_2D_shape_second_deriv(const Order libmesh_dbg_var(order),
             for (; i >= (o+1)*(o+2)/2; o++) { }
             const int ny = i - (o*(o+1)/2);
             const int nx = o - ny;
-            Real val = nx * (nx - 1);
+            T val = nx * (nx - 1);
             for (int index=2; index < nx; index++)
               val *= xi;
             for (int index=0; index != ny; index++)
@@ -549,7 +556,7 @@ Real fe_monomial_2D_shape_second_deriv(const Order libmesh_dbg_var(order),
             for (; i >= (o+1)*(o+2)/2; o++) { }
             const int ny = i - (o*(o+1)/2);
             const int nx = o - ny;
-            Real val = nx * ny;
+            T val = nx * ny;
             for (int index=1; index < nx; index++)
               val *= xi;
             for (int index=1; index < ny; index++)
@@ -611,7 +618,7 @@ Real fe_monomial_2D_shape_second_deriv(const Order libmesh_dbg_var(order),
             for (; i >= (o+1)*(o+2)/2; o++) { }
             const int ny = i - (o*(o+1)/2);
             const int nx = o - ny;
-            Real val = ny * (ny - 1);
+            T val = ny * (ny - 1);
             for (int index=0; index != nx; index++)
               val *= xi;
             for (int index=2; index < ny; index++)
@@ -635,16 +642,17 @@ Real fe_monomial_2D_shape_second_deriv(const Order libmesh_dbg_var(order),
 
 
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_monomial_3D_shape(const Order libmesh_dbg_var(order),
-                          const unsigned int i,
-                          const Point & p)
+T fe_monomial_3D_shape(const Order libmesh_dbg_var(order),
+                       const unsigned int i,
+                       const TypeVector<T> & p)
 {
 #if LIBMESH_DIM == 3
 
-  const Real xi   = p(0);
-  const Real eta  = p(1);
-  const Real zeta = p(2);
+  const T xi   = p(0);
+  const T eta  = p(1);
+  const T zeta = p(2);
 
   libmesh_assert_less (i, (static_cast<unsigned int>(order)+1)*
                        (static_cast<unsigned int>(order)+2)*
@@ -771,7 +779,7 @@ Real fe_monomial_3D_shape(const Order libmesh_dbg_var(order),
       for (; block < i2; block += (o-nz+1)) { nz++; }
       const int nx = block - i2;
       const int ny = o - nx - nz;
-      Real val = 1.;
+      T val = 1.;
       for (int index=0; index != nx; index++)
         val *= xi;
       for (int index=0; index != ny; index++)
@@ -790,11 +798,12 @@ Real fe_monomial_3D_shape(const Order libmesh_dbg_var(order),
 
 
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_monomial_3D_shape_deriv(const Order libmesh_dbg_var(order),
-                                const unsigned int i,
-                                const unsigned int j,
-                                const Point & p)
+T fe_monomial_3D_shape_deriv(const Order libmesh_dbg_var(order),
+                             const unsigned int i,
+                             const unsigned int j,
+                             const TypeVector<T> & p)
 {
 #if LIBMESH_DIM == 3
 
@@ -805,9 +814,9 @@ Real fe_monomial_3D_shape_deriv(const Order libmesh_dbg_var(order),
                        (static_cast<unsigned int>(order)+3)/6);
 
 
-  const Real xi   = p(0);
-  const Real eta  = p(1);
-  const Real zeta = p(2);
+  const T xi   = p(0);
+  const T eta  = p(1);
+  const T zeta = p(2);
 
   // monomials. since they are hierarchic we only need one case block.
   switch (j)
@@ -935,7 +944,7 @@ Real fe_monomial_3D_shape_deriv(const Order libmesh_dbg_var(order),
             for (; block < i2; block += (o-nz+1)) { nz++; }
             const int nx = block - i2;
             const int ny = o - nx - nz;
-            Real val = nx;
+            T val = nx;
             for (int index=1; index < nx; index++)
               val *= xi;
             for (int index=0; index != ny; index++)
@@ -1070,7 +1079,7 @@ Real fe_monomial_3D_shape_deriv(const Order libmesh_dbg_var(order),
             for (; block < i2; block += (o-nz+1)) { nz++; }
             const int nx = block - i2;
             const int ny = o - nx - nz;
-            Real val = ny;
+            T val = ny;
             for (int index=0; index != nx; index++)
               val *= xi;
             for (int index=1; index < ny; index++)
@@ -1205,7 +1214,7 @@ Real fe_monomial_3D_shape_deriv(const Order libmesh_dbg_var(order),
             for (; block < i2; block += (o-nz+1)) { nz++; }
             const int nx = block - i2;
             const int ny = o - nx - nz;
-            Real val = nz;
+            T val = nz;
             for (int index=0; index != nx; index++)
               val *= xi;
             for (int index=0; index != ny; index++)
@@ -1231,11 +1240,12 @@ Real fe_monomial_3D_shape_deriv(const Order libmesh_dbg_var(order),
 
 #ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
 
+template <typename T>
 LIBMESH_DEVICE_INLINE
-Real fe_monomial_3D_shape_second_deriv(const Order libmesh_dbg_var(order),
-                                       const unsigned int i,
-                                       const unsigned int j,
-                                       const Point & p)
+T fe_monomial_3D_shape_second_deriv(const Order libmesh_dbg_var(order),
+                                    const unsigned int i,
+                                    const unsigned int j,
+                                    const TypeVector<T> & p)
 {
 #if LIBMESH_DIM == 3
 
@@ -1245,9 +1255,9 @@ Real fe_monomial_3D_shape_second_deriv(const Order libmesh_dbg_var(order),
                        (static_cast<unsigned int>(order)+2)*
                        (static_cast<unsigned int>(order)+3)/6);
 
-  const Real xi   = p(0);
-  const Real eta  = p(1);
-  const Real zeta = p(2);
+  const T xi   = p(0);
+  const T eta  = p(1);
+  const T zeta = p(2);
 
   // monomials. since they are hierarchic we only need one case block.
   switch (j)
@@ -1340,7 +1350,7 @@ Real fe_monomial_3D_shape_second_deriv(const Order libmesh_dbg_var(order),
             for (; block < i2; block += (o-nz+1)) { nz++; }
             const int nx = block - i2;
             const int ny = o - nx - nz;
-            Real val = nx * (nx - 1);
+            T val = nx * (nx - 1);
             for (int index=2; index < nx; index++)
               val *= xi;
             for (int index=0; index != ny; index++)
@@ -1446,7 +1456,7 @@ Real fe_monomial_3D_shape_second_deriv(const Order libmesh_dbg_var(order),
             for (; block < i2; block += (o-nz+1)) { nz++; }
             const int nx = block - i2;
             const int ny = o - nx - nz;
-            Real val = nx * ny;
+            T val = nx * ny;
             for (int index=1; index < nx; index++)
               val *= xi;
             for (int index=1; index < ny; index++)
@@ -1551,7 +1561,7 @@ Real fe_monomial_3D_shape_second_deriv(const Order libmesh_dbg_var(order),
             for (; block < i2; block += (o-nz+1)) { nz++; }
             const int nx = block - i2;
             const int ny = o - nx - nz;
-            Real val = ny * (ny - 1);
+            T val = ny * (ny - 1);
             for (int index=0; index != nx; index++)
               val *= xi;
             for (int index=2; index < ny; index++)
@@ -1657,7 +1667,7 @@ Real fe_monomial_3D_shape_second_deriv(const Order libmesh_dbg_var(order),
             for (; block < i2; block += (o-nz+1)) { nz++; }
             const int nx = block - i2;
             const int ny = o - nx - nz;
-            Real val = nx * nz;
+            T val = nx * nz;
             for (int index=1; index < nx; index++)
               val *= xi;
             for (int index=0; index != ny; index++)
@@ -1762,7 +1772,7 @@ Real fe_monomial_3D_shape_second_deriv(const Order libmesh_dbg_var(order),
             for (; block < i2; block += (o-nz+1)) { nz++; }
             const int nx = block - i2;
             const int ny = o - nx - nz;
-            Real val = ny * nz;
+            T val = ny * nz;
             for (int index=0; index != nx; index++)
               val *= xi;
             for (int index=1; index < ny; index++)
@@ -1856,7 +1866,7 @@ Real fe_monomial_3D_shape_second_deriv(const Order libmesh_dbg_var(order),
             for (; block < i2; block += (o-nz+1)) { nz++; }
             const int nx = block - i2;
             const int ny = o - nx - nz;
-            Real val = nz * (nz - 1);
+            T val = nz * (nz - 1);
             for (int index=0; index != nx; index++)
               val *= xi;
             for (int index=0; index != ny; index++)

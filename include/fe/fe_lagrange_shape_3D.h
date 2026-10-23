@@ -30,23 +30,25 @@
 #include "libmesh/fe_simplex_lagrange.h"
 #include "libmesh/fe_tensor_product_lagrange.h"
 #include "libmesh/point.h"
+#include "libmesh/vector_value.h"
 
 // The 3D LAGRANGE and L2_LAGRANGE shape functions, and their first
 // and second derivatives, for every element type that defines them
 // by its ElemType alone: everything but C0Polyhedron, whose shapes
 // depend on the polyhedron itself.  FE<3,LAGRANGE> and
 // FE<3,L2_LAGRANGE> call these, and they are inline here so that
-// device code evaluates the same functions.
+// device code evaluates the same functions.  As in
+// fe_lagrange_shape_1D.h, they are templated on the coordinate type.
 
 namespace libMesh
 {
 
-template <FEFamily T>
+template <FEFamily T, typename Scalar>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_3D_shape(const ElemType type,
-                          const Order order,
-                          const unsigned int i,
-                          const Point & p)
+Scalar fe_lagrange_3D_shape(const ElemType type,
+                            const Order order,
+                            const unsigned int i,
+                            const TypeVector<Scalar> & p)
 {
 #if LIBMESH_DIM == 3
 
@@ -88,8 +90,8 @@ Real fe_lagrange_3D_shape(const ElemType type,
               // Compute prism shape functions as a tensor-product
               // of a triangle and an edge
 
-              Point p2d(p(0),p(1));
-              Real p1d = p(2);
+              VectorValue<Scalar> p2d(p(0),p(1));
+              Scalar p1d = p(2);
 
               //                                0  1  2  3  4  5
               constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1};
@@ -107,9 +109,9 @@ Real fe_lagrange_3D_shape(const ElemType type,
             {
               libmesh_assert_less (i, 5);
 
-              const Real xi   = p(0);
-              const Real eta  = p(1);
-              const Real zeta = p(2);
+              const Scalar xi   = p(0);
+              const Scalar eta  = p(1);
+              const Scalar zeta = p(2);
               const Real eps  = 1.e-35;
 
               switch(i)
@@ -185,9 +187,9 @@ Real fe_lagrange_3D_shape(const ElemType type,
             {
               libmesh_assert_less (i, 15);
 
-              const Real xi   = p(0);
-              const Real eta  = p(1);
-              const Real zeta = p(2);
+              const Scalar xi   = p(0);
+              const Scalar eta  = p(1);
+              const Scalar zeta = p(2);
 
               switch(i)
                 {
@@ -255,8 +257,8 @@ Real fe_lagrange_3D_shape(const ElemType type,
               // Compute prism shape functions as a tensor-product
               // of a triangle and an edge
 
-              Point p2d(p(0),p(1));
-              Real p1d = p(2);
+              VectorValue<Scalar> p2d(p(0),p(1));
+              Scalar p1d = p(2);
 
               //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17
               constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2};
@@ -273,14 +275,14 @@ Real fe_lagrange_3D_shape(const ElemType type,
             {
               libmesh_assert_less (i, 13);
 
-              const Real xi   = p(0);
-              const Real eta  = p(1);
-              const Real zeta = p(2);
+              const Scalar xi   = p(0);
+              const Scalar eta  = p(1);
+              const Scalar zeta = p(2);
               const Real eps  = 1.e-35;
 
               // Denominators are perturbed by epsilon to avoid
               // divide-by-zero issues.
-              Real den = (1. - zeta + eps);
+              Scalar den = (1. - zeta + eps);
 
               switch(i)
                 {
@@ -340,14 +342,14 @@ Real fe_lagrange_3D_shape(const ElemType type,
             {
               libmesh_assert_less (i, 14);
 
-              const Real xi   = p(0);
-              const Real eta  = p(1);
-              const Real zeta = p(2);
+              const Scalar xi   = p(0);
+              const Scalar eta  = p(1);
+              const Scalar zeta = p(2);
               const Real eps  = 1.e-35;
 
               // The "normalized coordinates" defined by Graglia.  These are
               // the planes which define the faces of the pyramid.
-              Real
+              Scalar
                 p1 = 0.5*(1. - eta - zeta), // back
                 p2 = 0.5*(1. + xi  - zeta), // left
                 p3 = 0.5*(1. + eta - zeta), // front
@@ -355,7 +357,7 @@ Real fe_lagrange_3D_shape(const ElemType type,
 
               // Denominators are perturbed by epsilon to avoid
               // divide-by-zero issues.
-              Real
+              Scalar
                 den = (-1. + zeta + eps),
                 den2 = den*den;
 
@@ -431,15 +433,15 @@ Real fe_lagrange_3D_shape(const ElemType type,
               //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19
               constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1};
 
-              Point p2d(p(0),p(1));
-              Real p1d = p(2);
+              VectorValue<Scalar> p2d(p(0),p(1));
+              Scalar p1d = p(2);
 
-              const Real mainval = fe_lagrange_3D_shape<LAGRANGE>(PRISM21, THIRD, i, p);
+              const Scalar mainval = fe_lagrange_3D_shape<LAGRANGE>(PRISM21, THIRD, i, p);
 
               if (i0[i] != 2)
                 return mainval;
 
-              const Real bubbleval =
+              const Scalar bubbleval =
                 fe_lagrange_2D_shape<LAGRANGE>(TRI7, THIRD, 6, p2d) *
                 fe_lagrange_1D_quadratic_shape(2, p1d);
 
@@ -457,8 +459,8 @@ Real fe_lagrange_3D_shape(const ElemType type,
               // Compute prism shape functions as a tensor-product
               // of a triangle and an edge
 
-              Point p2d(p(0),p(1));
-              Real p1d = p(2);
+              VectorValue<Scalar> p2d(p(0),p(1));
+              Scalar p1d = p(2);
 
               //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
               constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1, 2};
@@ -473,14 +475,14 @@ Real fe_lagrange_3D_shape(const ElemType type,
             {
               libmesh_assert_less (i, 18);
 
-              const Real xi   = p(0);
-              const Real eta  = p(1);
-              const Real zeta = p(2);
+              const Scalar xi   = p(0);
+              const Scalar eta  = p(1);
+              const Scalar zeta = p(2);
               const Real eps  = 1.e-35;
 
               // The "normalized coordinates" defined by Graglia.  These are
               // the planes which define the faces of the pyramid.
-              const Real
+              const Scalar
                 p1 = 0.5*(1. - eta - zeta), // back
                 p2 = 0.5*(1. + xi  - zeta), // left
                 p3 = 0.5*(1. + eta - zeta), // front
@@ -488,7 +490,7 @@ Real fe_lagrange_3D_shape(const ElemType type,
 
               // Denominators are perturbed by epsilon to avoid
               // divide-by-zero issues.
-              const Real
+              const Scalar
                 den = (-1. + zeta + eps),
                 den2 = den*den;
 
@@ -497,13 +499,13 @@ Real fe_lagrange_3D_shape(const ElemType type,
               // not certain how best to use it, so let's leave it
               // as a variable in case we figure that out later.
               constexpr Real alpha = 0.5;
-              const Real
+              const Scalar
                 bub_f1 = ((1-alpha)*(1-zeta) + alpha*(-eta)),
                 bub_f2 = ((1-alpha)*(1-zeta) + alpha*(xi)),
                 bub_f3 = ((1-alpha)*(1-zeta) + alpha*(eta)),
                 bub_f4 = ((1-alpha)*(1-zeta) + alpha*(-xi));
 
-              const Real
+              const Scalar
                 bub1 = bub_f1*p1*p2*p4*zeta/den2,
                 bub2 = bub_f2*p1*p2*p3*zeta/den2,
                 bub3 = bub_f3*p2*p3*p4*zeta/den2,
@@ -598,13 +600,13 @@ Real fe_lagrange_3D_shape(const ElemType type,
 
 
 
-template <FEFamily T>
+template <FEFamily T, typename Scalar>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_3D_shape_deriv(const ElemType type,
-                                const Order order,
-                                const unsigned int i,
-                                const unsigned int j,
-                                const Point & p)
+Scalar fe_lagrange_3D_shape_deriv(const ElemType type,
+                                  const Order order,
+                                  const unsigned int i,
+                                  const unsigned int j,
+                                  const TypeVector<Scalar> & p)
 {
 #if LIBMESH_DIM == 3
 
@@ -648,8 +650,8 @@ Real fe_lagrange_3D_shape_deriv(const ElemType type,
               // Compute prism shape functions as a tensor-product
               // of a triangle and an edge
 
-              Point p2d(p(0),p(1));
-              Real p1d = p(2);
+              VectorValue<Scalar> p2d(p(0),p(1));
+              Scalar p1d = p(2);
 
               //                                0  1  2  3  4  5
               constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1};
@@ -685,9 +687,9 @@ Real fe_lagrange_3D_shape_deriv(const ElemType type,
             {
               libmesh_assert_less (i, 5);
 
-              const Real xi   = p(0);
-              const Real eta  = p(1);
-              const Real zeta = p(2);
+              const Scalar xi   = p(0);
+              const Scalar eta  = p(1);
+              const Scalar zeta = p(2);
               const Real eps  = 1.e-35;
 
               switch (j)
@@ -745,7 +747,7 @@ Real fe_lagrange_3D_shape_deriv(const ElemType type,
                   {
                     // We computed the derivatives with general eps and
                     // then let eps tend to zero in the numerators...
-                    Real
+                    Scalar
                       num = zeta*(2. - zeta) - 1.,
                       den = (1. - zeta + eps)*(1. - zeta + eps);
 
@@ -822,9 +824,9 @@ Real fe_lagrange_3D_shape_deriv(const ElemType type,
             {
               libmesh_assert_less (i, 15);
 
-              const Real xi   = p(0);
-              const Real eta  = p(1);
-              const Real zeta = p(2);
+              const Scalar xi   = p(0);
+              const Scalar eta  = p(1);
+              const Scalar zeta = p(2);
 
               switch (j)
                 {
@@ -971,8 +973,8 @@ Real fe_lagrange_3D_shape_deriv(const ElemType type,
               // Compute prism shape functions as a tensor-product
               // of a triangle and an edge
 
-              Point p2d(p(0),p(1));
-              Real p1d = p(2);
+              VectorValue<Scalar> p2d(p(0),p(1));
+              Scalar p1d = p(2);
 
               //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17
               constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2};
@@ -1007,14 +1009,14 @@ Real fe_lagrange_3D_shape_deriv(const ElemType type,
             {
               libmesh_assert_less (i, 13);
 
-              const Real xi   = p(0);
-              const Real eta  = p(1);
-              const Real zeta = p(2);
+              const Scalar xi   = p(0);
+              const Scalar eta  = p(1);
+              const Scalar zeta = p(2);
               const Real eps  = 1.e-35;
 
               // Denominators are perturbed by epsilon to avoid
               // divide-by-zero issues.
-              Real
+              Scalar
                 den = (-1. + zeta + eps),
                 den2 = den*den,
                 xi2 = xi*xi,
@@ -1184,14 +1186,14 @@ Real fe_lagrange_3D_shape_deriv(const ElemType type,
             {
               libmesh_assert_less (i, 14);
 
-              const Real xi   = p(0);
-              const Real eta  = p(1);
-              const Real zeta = p(2);
+              const Scalar xi   = p(0);
+              const Scalar eta  = p(1);
+              const Scalar zeta = p(2);
               const Real eps  = 1.e-35;
 
               // The "normalized coordinates" defined by Graglia.  These are
               // the planes which define the faces of the pyramid.
-              Real
+              Scalar
                 p1 = 0.5*(1. - eta - zeta), // back
                 p2 = 0.5*(1. + xi  - zeta), // left
                 p3 = 0.5*(1. + eta - zeta), // front
@@ -1199,7 +1201,7 @@ Real fe_lagrange_3D_shape_deriv(const ElemType type,
 
               // Denominators are perturbed by epsilon to avoid
               // divide-by-zero issues.
-              Real
+              Scalar
                 den = (-1. + zeta + eps),
                 den2 = den*den,
                 den3 = den2*den;
@@ -1428,15 +1430,15 @@ Real fe_lagrange_3D_shape_deriv(const ElemType type,
               //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
               constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1, 2};
 
-              Point p2d(p(0),p(1));
-              Real p1d = p(2);
+              VectorValue<Scalar> p2d(p(0),p(1));
+              Scalar p1d = p(2);
 
-              const Real mainval = fe_lagrange_3D_shape_deriv<LAGRANGE>(PRISM21, THIRD, i, j, p);
+              const Scalar mainval = fe_lagrange_3D_shape_deriv<LAGRANGE>(PRISM21, THIRD, i, j, p);
 
               if (i0[i] != 2)
                 return mainval;
 
-              Real bubbleval = 0;
+              Scalar bubbleval = 0;
 
               switch (j)
                 {
@@ -1478,8 +1480,8 @@ Real fe_lagrange_3D_shape_deriv(const ElemType type,
               // Compute prism shape functions as a tensor-product
               // of a triangle and an edge
 
-              Point p2d(p(0),p(1));
-              Real p1d = p(2);
+              VectorValue<Scalar> p2d(p(0),p(1));
+              Scalar p1d = p(2);
 
               //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
               constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1, 2};
@@ -1511,7 +1513,7 @@ Real fe_lagrange_3D_shape_deriv(const ElemType type,
             {
               return detail::fe_fdm_deriv(type, order, i, j, p,
                                           [](const ElemType t, const Order o,
-                                             const unsigned int n, const Point & q)
+                                             const unsigned int n, const auto & q)
                                           { return fe_lagrange_3D_shape<T>(t, o, n, q); });
             }
 
@@ -1538,13 +1540,13 @@ Real fe_lagrange_3D_shape_deriv(const ElemType type,
 
 #ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
 
-template <FEFamily T>
+template <FEFamily T, typename Scalar>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_3D_shape_second_deriv(const ElemType type,
-                                       const Order order,
-                                       const unsigned int i,
-                                       const unsigned int j,
-                                       const Point & p)
+Scalar fe_lagrange_3D_shape_second_deriv(const ElemType type,
+                                         const Order order,
+                                         const unsigned int i,
+                                         const unsigned int j,
+                                         const TypeVector<Scalar> & p)
 {
 #if LIBMESH_DIM == 3
 
@@ -1580,8 +1582,8 @@ Real fe_lagrange_3D_shape_second_deriv(const ElemType type,
               // Compute prism shape functions as a tensor-product
               // of a triangle and an edge
 
-              Point p2d(p(0),p(1));
-              Real p1d = p(2);
+              VectorValue<Scalar> p2d(p(0),p(1));
+              Scalar p1d = p(2);
 
               //                                0  1  2  3  4  5
               constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1};
@@ -1618,9 +1620,9 @@ Real fe_lagrange_3D_shape_second_deriv(const ElemType type,
             {
               libmesh_assert_less (i, 5);
 
-              const Real xi   = p(0);
-              const Real eta  = p(1);
-              const Real zeta = p(2);
+              const Scalar xi   = p(0);
+              const Scalar eta  = p(1);
+              const Scalar zeta = p(2);
               const Real eps  = 1.e-35;
 
               switch (j)
@@ -1649,7 +1651,7 @@ Real fe_lagrange_3D_shape_second_deriv(const ElemType type,
 
                 case 3: // d^2()/dxidzeta
                   {
-                    Real den = (1. - zeta + eps)*(1. - zeta + eps);
+                    Scalar den = (1. - zeta + eps)*(1. - zeta + eps);
 
                     switch (i)
                       {
@@ -1668,7 +1670,7 @@ Real fe_lagrange_3D_shape_second_deriv(const ElemType type,
 
                 case 4: // d^2()/detadzeta
                   {
-                    Real den = (1. - zeta + eps)*(1. - zeta + eps);
+                    Scalar den = (1. - zeta + eps)*(1. - zeta + eps);
 
                     switch (i)
                       {
@@ -1687,7 +1689,7 @@ Real fe_lagrange_3D_shape_second_deriv(const ElemType type,
 
                 case 5: // d^2()/dzeta^2
                   {
-                    Real den = (1. - zeta + eps)*(1. - zeta + eps)*(1. - zeta + eps);
+                    Scalar den = (1. - zeta + eps)*(1. - zeta + eps)*(1. - zeta + eps);
 
                     switch (i)
                       {
@@ -1775,9 +1777,9 @@ Real fe_lagrange_3D_shape_second_deriv(const ElemType type,
             {
               libmesh_assert_less (i, 15);
 
-              const Real xi   = p(0);
-              const Real eta  = p(1);
-              const Real zeta = p(2);
+              const Scalar xi   = p(0);
+              const Scalar eta  = p(1);
+              const Scalar zeta = p(2);
 
               switch (j)
                 {
@@ -2000,8 +2002,8 @@ Real fe_lagrange_3D_shape_second_deriv(const ElemType type,
               // Compute prism shape functions as a tensor-product
               // of a triangle and an edge
 
-              Point p2d(p(0),p(1));
-              Real p1d = p(2);
+              VectorValue<Scalar> p2d(p(0),p(1));
+              Scalar p1d = p(2);
 
               //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17
               constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2};
@@ -2057,14 +2059,14 @@ Real fe_lagrange_3D_shape_second_deriv(const ElemType type,
             {
               libmesh_assert_less (i, 14);
 
-              const Real xi   = p(0);
-              const Real eta  = p(1);
-              const Real zeta = p(2);
+              const Scalar xi   = p(0);
+              const Scalar eta  = p(1);
+              const Scalar zeta = p(2);
               const Real eps  = 1.e-35;
 
               // The "normalized coordinates" defined by Graglia.  These are
               // the planes which define the faces of the pyramid.
-              Real
+              Scalar
                 p1 = 0.5*(1. - eta - zeta), // back
                 p2 = 0.5*(1. + xi  - zeta), // left
                 p3 = 0.5*(1. + eta - zeta), // front
@@ -2072,14 +2074,14 @@ Real fe_lagrange_3D_shape_second_deriv(const ElemType type,
 
               // Denominators are perturbed by epsilon to avoid
               // divide-by-zero issues.
-              Real
+              Scalar
                 den = (-1. + zeta + eps),
                 den2 = den*den,
                 den3 = den2*den,
                 den4 = den2*den2;
 
               // These terms are used in several of the derivatives
-              Real
+              Scalar
                 numer_mp = xi*eta - zeta + zeta*zeta,
                 numer_pm = xi*eta + zeta - zeta*zeta;
 
@@ -2574,14 +2576,14 @@ Real fe_lagrange_3D_shape_second_deriv(const ElemType type,
             {
               libmesh_assert_less (i, 13);
 
-              const Real xi   = p(0);
-              const Real eta  = p(1);
-              const Real zeta = p(2);
+              const Scalar xi   = p(0);
+              const Scalar eta  = p(1);
+              const Scalar zeta = p(2);
               const Real eps  = 1.e-35;
 
               // Denominators are perturbed by epsilon to avoid
               // divide-by-zero issues.
-              Real
+              Scalar
                 den = (-1. + zeta + eps),
                 den2 = den*den,
                 den3 = den2*den,
@@ -2878,18 +2880,18 @@ Real fe_lagrange_3D_shape_second_deriv(const ElemType type,
               // Compute prism shape functions as a tensor-product
               // of a triangle and an edge
 
-              Point p2d(p(0),p(1));
-              Real p1d = p(2);
+              VectorValue<Scalar> p2d(p(0),p(1));
+              Scalar p1d = p(2);
 
               //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19
               constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1};
 
-              const Real mainval = fe_lagrange_3D_shape_second_deriv<LAGRANGE>(PRISM21, THIRD, i, j, p);
+              const Scalar mainval = fe_lagrange_3D_shape_second_deriv<LAGRANGE>(PRISM21, THIRD, i, j, p);
 
               if (i0[i] != 2)
                 return mainval;
 
-              Real bubbleval = 0;
+              Scalar bubbleval = 0;
 
               switch (j)
                 {
@@ -2952,8 +2954,8 @@ Real fe_lagrange_3D_shape_second_deriv(const ElemType type,
               // Compute prism shape functions as a tensor-product
               // of a triangle and an edge
 
-              Point p2d(p(0),p(1));
-              Real p1d = p(2);
+              VectorValue<Scalar> p2d(p(0),p(1));
+              Scalar p1d = p(2);
 
               //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
               constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1, 2};
@@ -3001,7 +3003,7 @@ Real fe_lagrange_3D_shape_second_deriv(const ElemType type,
               return detail::fe_fdm_second_deriv(type, order, i, j, p,
                                                  [](const ElemType t, const Order o,
                                                     const unsigned int n, const unsigned int d,
-                                                    const Point & q)
+                                                    const auto & q)
                                                  { return fe_lagrange_3D_shape_deriv<T>(t, o, n, d, q); });
             }
 

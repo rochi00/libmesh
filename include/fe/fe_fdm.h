@@ -32,7 +32,9 @@
 // fe_fdm_deriv() and fe_fdm_second_deriv() overloads declared in
 // fe.h take the shape function as a function pointer; these take it
 // as any callable, so that device code, which cannot call through a
-// host function pointer, takes the same differences.
+// host function pointer, takes the same differences.  They take any
+// point type, so that the shared shapes, which are templated on their
+// coordinate type, difference their own points.
 
 namespace libMesh
 {
@@ -40,15 +42,16 @@ namespace libMesh
 namespace detail
 {
 
+template <typename PointType>
 LIBMESH_DEVICE_INLINE
-std::tuple<Point, Point, Real>
-fdm_points(const unsigned int j, const Point & p)
+std::tuple<PointType, PointType, Real>
+fdm_points(const unsigned int j, const PointType & p)
 {
   libmesh_assert_less (j, LIBMESH_DIM);
 
   // cheat by using finite difference approximations:
   const Real eps = 1.e-6;
-  Point pp = p, pm = p;
+  PointType pp = p, pm = p;
 
   switch (j)
     {
@@ -83,13 +86,14 @@ fdm_points(const unsigned int j, const Point & p)
   return std::make_tuple(pp, pm, eps);
 }
 
+template <typename PointType>
 LIBMESH_DEVICE_INLINE
-std::tuple<Point, Point, Real, unsigned int>
-fdm_second_points(const unsigned int j, const Point & p)
+std::tuple<PointType, PointType, Real, unsigned int>
+fdm_second_points(const unsigned int j, const PointType & p)
 {
   // cheat by using finite difference approximations:
   const Real eps = 1.e-5;
-  Point pp = p, pm = p;
+  PointType pp = p, pm = p;
   unsigned int deriv_j = 0;
 
   switch (j)
@@ -159,13 +163,13 @@ fdm_second_points(const unsigned int j, const Point & p)
  * The derivative in direction \p j of shape function \p i, where \p
  * shape_func(type, order, i, p) evaluates the shape functions.
  */
-template <typename ShapeFunc>
+template <typename PointType, typename ShapeFunc>
 LIBMESH_DEVICE_INLINE
 auto fe_fdm_deriv(const ElemType type,
                   const Order order,
                   const unsigned int i,
                   const unsigned int j,
-                  const Point & p,
+                  const PointType & p,
                   const ShapeFunc & shape_func)
 {
   auto [pp, pm, eps] = fdm_points(j, p);
@@ -179,13 +183,13 @@ auto fe_fdm_deriv(const ElemType type,
  * deriv_func(type, order, i, j, p) evaluates the shape functions'
  * first derivatives.
  */
-template <typename DerivFunc>
+template <typename PointType, typename DerivFunc>
 LIBMESH_DEVICE_INLINE
 auto fe_fdm_second_deriv(const ElemType type,
                          const Order order,
                          const unsigned int i,
                          const unsigned int j,
-                         const Point & p,
+                         const PointType & p,
                          const DerivFunc & deriv_func)
 {
   auto [pp, pm, eps, deriv_j] = fdm_second_points(j, p);

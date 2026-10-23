@@ -33,17 +33,18 @@
 // by its ElemType alone: everything but C0Polygon, whose shapes
 // depend on the polygon itself.  FE<2,LAGRANGE> and FE<2,L2_LAGRANGE>
 // call these, and they are inline here so that device code evaluates
-// the same functions.
+// the same functions.  As in fe_lagrange_shape_1D.h, they are
+// templated on the coordinate type.
 
 namespace libMesh
 {
 
-template <FEFamily T>
+template <FEFamily T, typename Scalar>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_2D_shape(const ElemType type,
-                          const Order order,
-                          const unsigned int i,
-                          const Point & p)
+Scalar fe_lagrange_2D_shape(const ElemType type,
+                            const Order order,
+                            const unsigned int i,
+                            const TypeVector<Scalar> & p)
 {
 #if LIBMESH_DIM > 1
 
@@ -155,13 +156,13 @@ Real fe_lagrange_2D_shape(const ElemType type,
 
 
 
-template <FEFamily T>
+template <FEFamily T, typename Scalar>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_2D_shape_deriv(const ElemType type,
-                                const Order order,
-                                const unsigned int i,
-                                const unsigned int j,
-                                const Point & p)
+Scalar fe_lagrange_2D_shape_deriv(const ElemType type,
+                                  const Order order,
+                                  const unsigned int i,
+                                  const unsigned int j,
+                                  const TypeVector<Scalar> & p)
 {
 #if LIBMESH_DIM > 1
 
@@ -276,13 +277,13 @@ Real fe_lagrange_2D_shape_deriv(const ElemType type,
 
 #ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
 
-template <FEFamily T>
+template <FEFamily T, typename Scalar>
 LIBMESH_DEVICE_INLINE
-Real fe_lagrange_2D_shape_second_deriv(const ElemType type,
-                                       const Order order,
-                                       const unsigned int i,
-                                       const unsigned int j,
-                                       const Point & p)
+Scalar fe_lagrange_2D_shape_second_deriv(const ElemType type,
+                                         const Order order,
+                                         const unsigned int i,
+                                         const unsigned int j,
+                                         const TypeVector<Scalar> & p)
 {
 #if LIBMESH_DIM > 1
 
