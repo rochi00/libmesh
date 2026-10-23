@@ -18,6 +18,8 @@
 #undef __CUDACC_VER__
 
 #include <cmath>
+#include <cstdio>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -41,6 +43,44 @@ upload_objects(const std::vector<T> & values, const char * label)
     h(i) = values[i];
   ::Kokkos::deep_copy(d, h);
   return d;
+}
+
+// Counts the values a kernel computed and those that differ from the
+// host's, printing the first few that do.  A value matches if it has
+// the host's bits, so that a kernel reproducing a host NaN matches it,
+// or is within tol of the host's, relative to 1 + |host|: a device may
+// contract the arithmetic differently from the host compiler.
+struct ValueCheck
+{
+  // Prefixes each printed mismatch, as the oracle's name does its
+  // summary
+  const char * oracle;
+
+  // The relative tolerance
+  Real tol;
+
+  // The values checked so far, and those of them that mismatched
+  int n_values = 0, n_fail = 0;
+
+  // describe() says which value of which case mismatched; it is called
+  // only to print a mismatch, and only for the first 10, so a broken
+  // kernel doesn't flood the output.
+  template <typename Describe>
+  void operator() (const Real host, const Real kernel, const Describe & describe);
+};
+
+template <typename Describe>
+inline void
+ValueCheck::operator() (const Real host, const Real kernel, const Describe & describe)
+{
+  ++n_values;
+  if (!std::memcmp(&host, &kernel, sizeof(Real)) ||
+      std::abs(kernel - host) <= tol * (1 + std::abs(host)))
+    return;
+  if (n_fail < 10)
+    std::printf("[%s] mismatch: %s: host %.17g kernel %.17g\n",
+                oracle, describe().c_str(), double(host), double(kernel));
+  ++n_fail;
 }
 
 // The compare_device_* helpers below deep-copy the device results to a
