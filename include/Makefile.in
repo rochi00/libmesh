@@ -723,6 +723,7 @@ include_HEADERS = \
         fe/fe_monomial_n_dofs.h \
         fe/fe_monomial_shape.h \
         fe/fe_reference_element_traits.h \
+        fe/fe_shape.h \
         fe/fe_simplex_lagrange.h \
         fe/fe_tensor_product_lagrange.h \
         fe/fe_transformation_base.h \
