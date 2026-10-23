@@ -140,9 +140,9 @@ Real fe_monomial_1D_shape_second_deriv(const Order libmesh_dbg_var(order),
       return 12.*xi*xi;
 
     default:
-      Real val = 2.;
+      Real val = i*(i-1);
       for (unsigned int index = 2; index != i; ++index)
-        val *= (index+1) * xi;
+        val *= xi;
       return val;
     }
 }
