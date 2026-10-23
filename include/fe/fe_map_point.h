@@ -26,6 +26,7 @@
 #include "libmesh/fe_shape.h"
 #include "libmesh/point.h"
 #include "libmesh/tensor_value.h"
+#include "libmesh/vector_value.h"
 
 // C++ includes
 #include <cmath> // std::sqrt
@@ -37,7 +38,8 @@
 // checks for a degenerate map, before dividing by it: FEMap passes its
 // check, which throws, and device code one that records the failure.
 // FEMap calls these; they are inline here so that device code maps
-// points the same way.
+// points the same way, and templated on the coordinate type, as the
+// shared shape functions are, so that automatic differentiation does.
 
 namespace libMesh
 {
@@ -47,27 +49,28 @@ namespace libMesh
  * degenerate map: \p jac itself, except for a 2D element in 3D space,
  * where it is det(J^T J) and \p jac is its square root.
  */
+template <typename T = Real>
 struct FEMapPoint
 {
-  Real det = 0;
-  Real jac = 0;
+  T det = 0;
+  T jac = 0;
 
   // The gradients of xi, eta and zeta with respect to (x, y, z)
-  Point dxi, deta, dzeta;
+  VectorValue<T> dxi, deta, dzeta;
 
 #if LIBMESH_DIM == 3
   // (J^T J)^-1 for a 2D element in 3D space, which its inverse map
   // second derivatives also need.
-  Real g11inv = 0, g12inv = 0, g21inv = 0, g22inv = 0;
+  T g11inv = 0, g12inv = 0, g21inv = 0, g22inv = 0;
 #endif
 };
 
 
 
-template <typename DegenerateCheck>
+template <typename T, typename DegenerateCheck>
 LIBMESH_DEVICE_INLINE
-void fe_map_1D(const Point & dxyzdxi,
-               FEMapPoint & m,
+void fe_map_1D(const TypeVector<T> & dxyzdxi,
+               FEMapPoint<T> & m,
                const DegenerateCheck & check)
 {
   // 1D elements can live in 2D or 3D space.
@@ -92,7 +95,7 @@ void fe_map_1D(const Point & dxyzdxi,
   // The inverse Jacobian entries also come from the
   // generalized inverse of T (see also the 2D element
   // living in 3D code).
-  const Real jacm2 = 1./m.jac/m.jac;
+  const T jacm2 = 1./m.jac/m.jac;
   m.dxi(0) = jacm2*dxyzdxi(0);
 #if LIBMESH_DIM > 1
   m.dxi(1) = jacm2*dxyzdxi(1);
@@ -104,15 +107,15 @@ void fe_map_1D(const Point & dxyzdxi,
 
 
 
-template <typename DegenerateCheck>
+template <typename T, typename DegenerateCheck>
 LIBMESH_DEVICE_INLINE
-void fe_map_2D(const Point & dxyzdxi,
-               const Point & dxyzdeta,
-               FEMapPoint & m,
+void fe_map_2D(const TypeVector<T> & dxyzdxi,
+               const TypeVector<T> & dxyzdeta,
+               FEMapPoint<T> & m,
                const DegenerateCheck & check)
 {
   // compute the jacobian once
-  const Real dx_dxi = dxyzdxi(0),
+  const T dx_dxi = dxyzdxi(0),
     dx_deta = dxyzdeta(0),
     dy_dxi = dxyzdxi(1),
     dy_deta = dxyzdeta(1);
@@ -133,7 +136,7 @@ void fe_map_2D(const Point & dxyzdxi,
 
   // Compute the shape function derivatives wrt x,y at the
   // quadrature points
-  const Real inv_jac = 1./m.jac;
+  const T inv_jac = 1./m.jac;
 
   m.dxi(0)  =  dy_deta*inv_jac; //dxi/dx  =  (1/J)*dy/deta
   m.dxi(1)  = -dx_deta*inv_jac; //dxi/dy  = -(1/J)*dx/deta
@@ -141,7 +144,7 @@ void fe_map_2D(const Point & dxyzdxi,
   m.deta(1) =  dx_dxi* inv_jac; //deta/dy =  (1/J)*dx/dxi
 #else // LIBMESH_DIM == 3
 
-  const Real dz_dxi = dxyzdxi(2),
+  const T dz_dxi = dxyzdxi(2),
     dz_deta = dxyzdeta(2);
 
   // Compute the Jacobian.  This assumes a 2D face in
@@ -166,26 +169,27 @@ void fe_map_2D(const Point & dxyzdxi,
   //
   // and R^-1 R = (R'R)^-1 R'R = I.
   //
-  const Real g11 = (dx_dxi*dx_dxi +
-                    dy_dxi*dy_dxi +
-                    dz_dxi*dz_dxi);
+  const T g11 = (dx_dxi*dx_dxi +
+                 dy_dxi*dy_dxi +
+                 dz_dxi*dz_dxi);
 
-  const Real g12 = (dx_dxi*dx_deta +
-                    dy_dxi*dy_deta +
-                    dz_dxi*dz_deta);
+  const T g12 = (dx_dxi*dx_deta +
+                 dy_dxi*dy_deta +
+                 dz_dxi*dz_deta);
 
-  const Real g21 = g12;
+  const T g21 = g12;
 
-  const Real g22 = (dx_deta*dx_deta +
-                    dy_deta*dy_deta +
-                    dz_deta*dz_deta);
+  const T g22 = (dx_deta*dx_deta +
+                 dy_deta*dy_deta +
+                 dz_deta*dz_deta);
 
   m.det = (g11*g22 - g12*g21);
 
   check(m.det);
 
-  const Real inv_det = 1./m.det;
-  m.jac = std::sqrt(m.det);
+  const T inv_det = 1./m.det;
+  using std::sqrt;
+  m.jac = sqrt(m.det);
 
   m.g11inv =  g22*inv_det;
   m.g12inv = -g12*inv_det;
@@ -204,16 +208,16 @@ void fe_map_2D(const Point & dxyzdxi,
 
 
 
-template <typename DegenerateCheck>
+template <typename T, typename DegenerateCheck>
 LIBMESH_DEVICE_INLINE
-void fe_map_3D(const Point & dxyzdxi,
-               const Point & dxyzdeta,
-               const Point & dxyzdzeta,
-               FEMapPoint & m,
+void fe_map_3D(const TypeVector<T> & dxyzdxi,
+               const TypeVector<T> & dxyzdeta,
+               const TypeVector<T> & dxyzdzeta,
+               FEMapPoint<T> & m,
                const DegenerateCheck & check)
 {
   // compute the jacobian
-  const Real
+  const T
     dx_dxi   = dxyzdxi(0),   dy_dxi   = dxyzdxi(1),   dz_dxi   = dxyzdxi(2),
     dx_deta  = dxyzdeta(0),  dy_deta  = dxyzdeta(1),  dz_deta  = dxyzdeta(2),
     dx_dzeta = dxyzdzeta(0), dy_dzeta = dxyzdzeta(1), dz_dzeta = dxyzdzeta(2);
@@ -236,7 +240,7 @@ void fe_map_3D(const Point & dxyzdxi,
 
   // Compute the shape function derivatives wrt x,y at the
   // quadrature points
-  const Real inv_jac  = 1./m.jac;
+  const T inv_jac  = 1./m.jac;
 
   m.dxi(0)   = (dy_deta*dz_dzeta - dz_deta*dy_dzeta)*inv_jac;
   m.dxi(1)   = (dz_deta*dx_dzeta - dx_deta*dz_dzeta)*inv_jac;

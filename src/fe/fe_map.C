@@ -562,7 +562,7 @@ void FEMap::compute_single_point_map(const unsigned int dim,
         // Compute the jacobian, and from it the inverse map
         if (calculate_dxyz)
           {
-            FEMapPoint m;
+            FEMapPoint<> m;
             fe_map_1D(dxyzdxi_map[p], m, check_for_degenerate_map);
             jac[p] = m.jac;
 
@@ -752,7 +752,7 @@ void FEMap::compute_single_point_map(const unsigned int dim,
         if (calculate_dxyz)
           {
             // compute the jacobian once
-            FEMapPoint m;
+            FEMapPoint<> m;
             fe_map_2D(dxyzdxi_map[p], dxyzdeta_map[p], m, check_for_degenerate_map);
             jac[p] = m.jac;
 
@@ -946,7 +946,7 @@ void FEMap::compute_single_point_map(const unsigned int dim,
         if (calculate_dxyz)
           {
             // compute the jacobian
-            FEMapPoint m;
+            FEMapPoint<> m;
             fe_map_3D(dxyzdxi_map[p], dxyzdeta_map[p], dxyzdzeta_map[p], m,
                       check_for_degenerate_map);
             jac[p] = m.jac;
