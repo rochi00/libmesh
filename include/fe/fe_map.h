@@ -1033,12 +1033,6 @@ protected:
 
 private:
   /**
-   * A helper function used by FEMap::compute_single_point_map() to
-   * compute second derivatives of the inverse map.
-   */
-  void compute_inverse_map_second_derivs(unsigned p);
-
-  /**
    * Work vector for compute_affine_map()
    */
   std::vector<const Node *> _elem_nodes;

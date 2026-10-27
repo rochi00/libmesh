@@ -65,6 +65,13 @@ struct FEMapPoint
   // second derivatives also need.
   T g11inv = 0, g12inv = 0, g21inv = 0, g22inv = 0;
 #endif
+
+#ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
+  // The second derivatives of xi, eta and zeta with respect to (x, y,
+  // z), in the order xx, xy, xz, yy, yz, zz, which
+  // fe_map_second_derivs_*() set from the map's second derivatives.
+  T d2xi[6] = {}, d2eta[6] = {}, d2zeta[6] = {};
+#endif
 };
 
 
@@ -256,6 +263,180 @@ void fe_map_3D(const TypeVector<T> & dxyzdxi,
   m.dzeta(1) = (dz_dxi*dx_deta   - dx_dxi*dz_deta  )*inv_jac;
   m.dzeta(2) = (dx_dxi*dy_deta   - dy_dxi*dx_deta  )*inv_jac;
 }
+
+
+
+#ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
+
+// The inverse map's second derivatives at a point m from fe_map_*D(),
+// from the map's second derivatives there, d2xyz[j], numbered as the
+// shapes' are: xi-xi, xi-eta, eta-eta, xi-zeta, eta-zeta, zeta-zeta.
+
+/**
+ * For an element whose dimension is LIBMESH_DIM, such as a 3D
+ * element, whose Jacobian is square.
+ */
+template <typename T>
+LIBMESH_DEVICE_INLINE
+void fe_map_second_derivs_square(const VectorValue<T> * d2xyz,
+                                 FEMapPoint<T> & m)
+{
+  // Construct J^{-1}, A, and B matrices (see JWP's notes for details)
+  // for cases in which the element dimension matches LIBMESH_DIM.
+#if LIBMESH_DIM==1
+  const TensorValue<T>
+    Jinv(m.dxi(0), 0., 0.,
+         0.,       0., 0.,
+         0.,       0., 0.),
+
+    A(d2xyz[0](0), 0., 0.,
+      0.,          0., 0.,
+      0.,          0., 0.),
+
+    B(0., 0., 0.,
+      0., 0., 0.,
+      0., 0., 0.);
+
+#elif LIBMESH_DIM==2
+  const TensorValue<T>
+    Jinv(m.dxi(0),  m.dxi(1),  0.,
+         m.deta(0), m.deta(1), 0.,
+         0.,        0.,        0.),
+
+    A(d2xyz[0](0), d2xyz[2](0), 0.,
+      d2xyz[0](1), d2xyz[2](1), 0.,
+      0.,          0.,          0.),
+
+    B(d2xyz[1](0), 0., 0.,
+      d2xyz[1](1), 0., 0.,
+      0.,          0., 0.);
+
+#elif LIBMESH_DIM==3
+  const TensorValue<T>
+    Jinv(m.dxi(0),   m.dxi(1),   m.dxi(2),
+         m.deta(0),  m.deta(1),  m.deta(2),
+         m.dzeta(0), m.dzeta(1), m.dzeta(2)),
+
+    A(d2xyz[0](0), d2xyz[2](0), d2xyz[5](0),
+      d2xyz[0](1), d2xyz[2](1), d2xyz[5](1),
+      d2xyz[0](2), d2xyz[2](2), d2xyz[5](2)),
+
+    B(d2xyz[1](0), d2xyz[3](0), d2xyz[4](0),
+      d2xyz[1](1), d2xyz[3](1), d2xyz[4](1),
+      d2xyz[1](2), d2xyz[3](2), d2xyz[4](2));
+#endif
+
+  // For (s,t) in {(x,x), (x,y), (x,z), (y,y), (y,z), (z,z)}, compute the
+  // vector of inverse map second derivatives [xi_{s t}, eta_{s t}, zeta_{s t}],
+  // for the directions s, t the space has
+  unsigned int ctr=0;
+  for (unsigned int s=0; s<3; ++s)
+    for (unsigned int t=s; t<3; ++t, ++ctr)
+      if (t < LIBMESH_DIM)
+        {
+          const VectorValue<T>
+            v1(m.dxi(s)*m.dxi(t),
+               m.deta(s)*m.deta(t),
+               m.dzeta(s)*m.dzeta(t)),
+
+            v2(m.dxi(s)*m.deta(t) + m.deta(s)*m.dxi(t),
+               m.dxi(s)*m.dzeta(t) + m.dzeta(s)*m.dxi(t),
+               m.deta(s)*m.dzeta(t) + m.dzeta(s)*m.deta(t));
+
+          // Compute the inverse map second derivatives
+          const VectorValue<T> v3 = -Jinv*(A*v1 + B*v2);
+
+          m.d2xi[ctr] = v3(0);
+
+          if (LIBMESH_DIM > 1)
+            m.d2eta[ctr] = v3(1);
+
+          if (LIBMESH_DIM > 2)
+            m.d2zeta[ctr] = v3(2);
+        }
+}
+
+
+
+/**
+ * For a 1D element.  In 2D or 3D space the caller checks first that
+ * dxyzdxi isn't zero, which this divides by the square of.
+ */
+template <typename T>
+LIBMESH_DEVICE_INLINE
+void fe_map_second_derivs_1D(const TypeVector<T> & dxyzdxi,
+                             const VectorValue<T> * d2xyz,
+                             FEMapPoint<T> & m)
+{
+#if LIBMESH_DIM == 1
+  libmesh_ignore(dxyzdxi);
+  fe_map_second_derivs_square(d2xyz, m);
+#else
+  // Compute inverse map second derivatives for 1D-element-living-in-2D
+  // or 3D case.  See JWP notes for details
+
+  // numer = x_xi*x_{xi xi} + y_xi*y_{xi xi} + z_xi*z_{xi xi}
+  const T numer = dxyzdxi * d2xyz[0];
+
+  // denom = (x_xi)^2 + (y_xi)^2 + (z_xi)^2 must be >= 0.0
+  const T denom = dxyzdxi * dxyzdxi;
+
+  // xi_{s t} for the directions s, t the space has
+  unsigned int ctr=0;
+  for (unsigned int s=0; s<3; ++s)
+    for (unsigned int t=s; t<3; ++t, ++ctr)
+      if (t < LIBMESH_DIM)
+        m.d2xi[ctr] = -numer * m.dxi(s)*m.dxi(t) / denom;
+#endif
+}
+
+
+
+/**
+ * For a 2D element, whose Jacobian in 3D space isn't square.
+ */
+template <typename T>
+LIBMESH_DEVICE_INLINE
+void fe_map_second_derivs_2D(const TypeVector<T> & dxyzdxi,
+                             const TypeVector<T> & dxyzdeta,
+                             const VectorValue<T> * d2xyz,
+                             FEMapPoint<T> & m)
+{
+#if LIBMESH_DIM < 3
+  libmesh_ignore(dxyzdxi, dxyzdeta);
+  fe_map_second_derivs_square(d2xyz, m);
+#else
+  // Compute inverse map second derivative values for
+  // 2D-element-living-in-3D case.  We pursue a least-squares
+  // solution approach for this "non-square" case, see JWP notes
+  // for details: with A = [x_{xi xi} x_{eta eta}],
+  //
+  // [xi_{s t}, eta_{s t}] = -(J^T J)^{-1} J^T (A [xi_s*xi_t, eta_s*eta_t]
+  //                                            + alpha x_{xi eta})
+  //
+  // where alpha = xi_s*eta_t + eta_s*xi_t, and (J^T J)^{-1} is m's g*inv.
+  unsigned int ctr=0;
+  for (unsigned int s=0; s<3; ++s)
+    for (unsigned int t=s; t<3; ++t, ++ctr)
+      {
+        const T alpha = m.dxi(s)*m.deta(t) + m.deta(s)*m.dxi(t);
+        const T xi_st = m.dxi(s)*m.dxi(t), eta_st = m.deta(s)*m.deta(t);
+
+        VectorValue<T> tmp2;
+        for (unsigned int i=0; i<3; ++i)
+          tmp2(i) = d2xyz[0](i)*xi_st + d2xyz[2](i)*eta_st + alpha*d2xyz[1](i);
+
+        // J^T tmp2
+        const T tmp3_0 = dxyzdxi * tmp2, tmp3_1 = dxyzdeta * tmp2;
+
+        // Don't forget to multiply by -1!
+        m.d2xi[ctr]  = -(m.g11inv*tmp3_0 + m.g12inv*tmp3_1);
+        m.d2eta[ctr] = -(m.g21inv*tmp3_0 + m.g22inv*tmp3_1);
+      }
+#endif
+}
+
+#endif // LIBMESH_ENABLE_SECOND_DERIVATIVES
 
 
 
