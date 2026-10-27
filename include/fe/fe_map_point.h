@@ -440,6 +440,235 @@ void fe_map_second_derivs_2D(const TypeVector<T> & dxyzdxi,
 
 
 
+#ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
+
+// The second derivatives of a shape with respect to (x, y, z), in the
+// order xx, xy, xz, yy, yz, zz, at a point m from fe_map_*D() and
+// fe_map_second_derivs_*(), from the shape's derivatives there with
+// respect to the reference coordinates: dphi[j] in direction j, and
+// d2phi[j] numbered as fe_shape_second_deriv() numbers them.  S is
+// the shape's type, which H1 vector shapes make a vector.
+
+template <typename S, typename T>
+LIBMESH_DEVICE_INLINE
+void fe_physical_second_derivs_1D(const S * dphi,
+                                  const S * d2phi,
+                                  const FEMapPoint<T> & m,
+                                  S * d2phidxyz2)
+{
+  const S & dphidxi = dphi[0];
+  const S & d2phidxi2 = d2phi[0];
+  const T & dxidx = m.dxi(0);
+#if LIBMESH_DIM>1
+  const T & dxidy = m.dxi(1);
+#endif
+#if LIBMESH_DIM>2
+  const T & dxidz = m.dxi(2);
+#endif
+
+  // phi_{x x}
+  d2phidxyz2[0] =
+    d2phidxi2*dxidx*dxidx + // (xi_x)^2 * phi_{xi xi}
+    m.d2xi[0]*dphidxi;      // xi_{x x} * phi_{xi}
+
+#if LIBMESH_DIM>1
+  // phi_{x y}
+  d2phidxyz2[1] =
+    d2phidxi2*dxidx*dxidy + // xi_x * xi_y * phi_{xi xi}
+    m.d2xi[1]*dphidxi;      // xi_{x y} * phi_{xi}
+#endif
+
+#if LIBMESH_DIM>2
+  // phi_{x z}
+  d2phidxyz2[2] =
+    d2phidxi2*dxidx*dxidz + // xi_x * xi_z * phi_{xi xi}
+    m.d2xi[2]*dphidxi;      // xi_{x z} * phi_{xi}
+#endif
+
+
+#if LIBMESH_DIM>1
+  // phi_{y y}
+  d2phidxyz2[3] =
+    d2phidxi2*dxidy*dxidy + // (xi_y)^2 * phi_{xi xi}
+    m.d2xi[3]*dphidxi;      // xi_{y y} * phi_{xi}
+#endif
+
+#if LIBMESH_DIM>2
+  // phi_{y z}
+  d2phidxyz2[4] =
+    d2phidxi2*dxidy*dxidz + // xi_y * xi_z * phi_{xi xi}
+    m.d2xi[4]*dphidxi;      // xi_{y z} * phi_{xi}
+
+  // phi_{z z}
+  d2phidxyz2[5] =
+    d2phidxi2*dxidz*dxidz + // (xi_z)^2 * phi_{xi xi}
+    m.d2xi[5]*dphidxi;      // xi_{z z} * phi_{xi}
+#endif
+}
+
+
+
+template <typename S, typename T>
+LIBMESH_DEVICE_INLINE
+void fe_physical_second_derivs_2D(const S * dphi,
+                                  const S * d2phi,
+                                  const FEMapPoint<T> & m,
+                                  S * d2phidxyz2)
+{
+  const S & dphidxi = dphi[0], & dphideta = dphi[1];
+  const S & d2phidxi2 = d2phi[0], & d2phidxideta = d2phi[1], & d2phideta2 = d2phi[2];
+  const T & dxidx = m.dxi(0), & dxidy = m.dxi(1);
+  const T & detadx = m.deta(0), & detady = m.deta(1);
+#if LIBMESH_DIM > 2
+  const T & dxidz = m.dxi(2), & detadz = m.deta(2);
+#endif
+
+  // phi_{x x}
+  d2phidxyz2[0] =
+    d2phidxi2*dxidx*dxidx +       // (xi_x)^2 * phi_{xi xi}
+    d2phideta2*detadx*detadx +    // (eta_x)^2 * phi_{eta eta}
+    2*d2phidxideta*dxidx*detadx + // 2 * xi_x * eta_x * phi_{xi eta}
+    m.d2xi[0]*dphidxi +           // xi_{x x} * phi_{xi}
+    m.d2eta[0]*dphideta;          // eta_{x x} * phi_{eta}
+
+  // phi_{x y}
+  d2phidxyz2[1] =
+    d2phidxi2*dxidx*dxidy +                      // xi_x * xi_y * phi_{xi xi}
+    d2phideta2*detadx*detady +                   // eta_x * eta_y * phi_{eta eta}
+    d2phidxideta*(dxidx*detady + detadx*dxidy) + // (xi_x*eta_y + eta_x*xi_y) * phi_{xi eta}
+    m.d2xi[1]*dphidxi +                          // xi_{x y} * phi_{xi}
+    m.d2eta[1]*dphideta;                         // eta_{x y} * phi_{eta}
+
+#if LIBMESH_DIM > 2
+  // phi_{x z}
+  d2phidxyz2[2] =
+    d2phidxi2*dxidx*dxidz +                      // xi_x * xi_z * phi_{xi xi}
+    d2phideta2*detadx*detadz +                   // eta_x * eta_z * phi_{eta eta}
+    d2phidxideta*(dxidx*detadz + detadx*dxidz) + // (xi_x*eta_z + eta_x*xi_z) * phi_{xi eta}
+    m.d2xi[2]*dphidxi +                          // xi_{x z} * phi_{xi}
+    m.d2eta[2]*dphideta;                         // eta_{x z} * phi_{eta}
+#endif
+
+  // phi_{y y}
+  d2phidxyz2[3] =
+    d2phidxi2*dxidy*dxidy +       // (xi_y)^2 * phi_{xi xi}
+    d2phideta2*detady*detady +    // (eta_y)^2 * phi_{eta eta}
+    2*d2phidxideta*dxidy*detady + // 2 * xi_y * eta_y * phi_{xi eta}
+    m.d2xi[3]*dphidxi +           // xi_{y y} * phi_{xi}
+    m.d2eta[3]*dphideta;          // eta_{y y} * phi_{eta}
+
+#if LIBMESH_DIM > 2
+  // phi_{y z}
+  d2phidxyz2[4] =
+    d2phidxi2*dxidy*dxidz +                      // xi_y * xi_z * phi_{xi xi}
+    d2phideta2*detady*detadz +                   // eta_y * eta_z * phi_{eta eta}
+    d2phidxideta*(dxidy*detadz + detady*dxidz) + // (xi_y*eta_z + eta_y*xi_z) * phi_{xi eta}
+    m.d2xi[4]*dphidxi +                          // xi_{y z} * phi_{xi}
+    m.d2eta[4]*dphideta;                         // eta_{y z} * phi_{eta}
+
+  // phi_{z z}
+  d2phidxyz2[5] =
+    d2phidxi2*dxidz*dxidz +       // (xi_z)^2 * phi_{xi xi}
+    d2phideta2*detadz*detadz +    // (eta_z)^2 * phi_{eta eta}
+    2*d2phidxideta*dxidz*detadz + // 2 * xi_z * eta_z * phi_{xi eta}
+    m.d2xi[5]*dphidxi +           // xi_{z z} * phi_{xi}
+    m.d2eta[5]*dphideta;          // eta_{z z} * phi_{eta}
+#endif
+}
+
+
+
+template <typename S, typename T>
+LIBMESH_DEVICE_INLINE
+void fe_physical_second_derivs_3D(const S * dphi,
+                                  const S * d2phi,
+                                  const FEMapPoint<T> & m,
+                                  S * d2phidxyz2)
+{
+  const S & dphidxi = dphi[0], & dphideta = dphi[1], & dphidzeta = dphi[2];
+  const S & d2phidxi2 = d2phi[0], & d2phidxideta = d2phi[1], & d2phideta2 = d2phi[2],
+    & d2phidxidzeta = d2phi[3], & d2phidetadzeta = d2phi[4], & d2phidzeta2 = d2phi[5];
+  const T & dxidx = m.dxi(0), & dxidy = m.dxi(1), & dxidz = m.dxi(2);
+  const T & detadx = m.deta(0), & detady = m.deta(1), & detadz = m.deta(2);
+  const T & dzetadx = m.dzeta(0), & dzetady = m.dzeta(1), & dzetadz = m.dzeta(2);
+
+  // phi_{x x}
+  d2phidxyz2[0] =
+    d2phidxi2*dxidx*dxidx +           // (xi_x)^2 * phi_{xi xi}
+    d2phideta2*detadx*detadx +        // (eta_x)^2 * phi_{eta eta}
+    d2phidzeta2*dzetadx*dzetadx +     // (zeta_x)^2 * phi_{zeta zeta}
+    2*d2phidxideta*dxidx*detadx +     // 2 * xi_x * eta_x * phi_{xi eta}
+    2*d2phidxidzeta*dxidx*dzetadx +   // 2 * xi_x * zeta_x * phi_{xi zeta}
+    2*d2phidetadzeta*detadx*dzetadx + // 2 * eta_x * zeta_x * phi_{eta zeta}
+    m.d2xi[0]*dphidxi +               // xi_{x x} * phi_{xi}
+    m.d2eta[0]*dphideta +             // eta_{x x} * phi_{eta}
+    m.d2zeta[0]*dphidzeta;            // zeta_{x x} * phi_{zeta}
+
+  // phi_{x y}
+  d2phidxyz2[1] =
+    d2phidxi2*dxidx*dxidy +                            // xi_x * xi_y * phi_{xi xi}
+    d2phideta2*detadx*detady +                         // eta_x * eta_y * phi_{eta eta}
+    d2phidzeta2*dzetadx*dzetady +                      // zeta_x * zeta_y * phi_{zeta zeta}
+    d2phidxideta*(dxidx*detady + detadx*dxidy) +       // (xi_x*eta_y + eta_x*xi_y) * phi_{xi eta}
+    d2phidxidzeta*(dxidx*dzetady + dzetadx*dxidy) +    // (zeta_x*xi_y + xi_x*zeta_y) * phi_{xi zeta}
+    d2phidetadzeta*(detadx*dzetady + dzetadx*detady) + // (zeta_x*eta_y + eta_x*zeta_y) * phi_{eta zeta}
+    m.d2xi[1]*dphidxi +                                // xi_{x y} * phi_{xi}
+    m.d2eta[1]*dphideta +                              // eta_{x y} * phi_{eta}
+    m.d2zeta[1]*dphidzeta;                             // zeta_{x y} * phi_{zeta}
+
+  // phi_{x z}
+  d2phidxyz2[2] =
+    d2phidxi2*dxidx*dxidz +                            // xi_x * xi_z * phi_{xi xi}
+    d2phideta2*detadx*detadz +                         // eta_x * eta_z * phi_{eta eta}
+    d2phidzeta2*dzetadx*dzetadz +                      // zeta_x * zeta_z * phi_{zeta zeta}
+    d2phidxideta*(dxidx*detadz + detadx*dxidz) +       // (xi_x*eta_z + eta_x*xi_z) * phi_{xi eta}
+    d2phidxidzeta*(dxidx*dzetadz + dzetadx*dxidz) +    // (zeta_x*xi_z + xi_x*zeta_z) * phi_{xi zeta}
+    d2phidetadzeta*(detadx*dzetadz + dzetadx*detadz) + // (zeta_x*eta_z + eta_x*zeta_z) * phi_{eta zeta}
+    m.d2xi[2]*dphidxi +                                // xi_{x z} * phi_{xi}
+    m.d2eta[2]*dphideta +                              // eta_{x z} * phi_{eta}
+    m.d2zeta[2]*dphidzeta;                             // zeta_{x z} * phi_{zeta}
+
+  // phi_{y y}
+  d2phidxyz2[3] =
+    d2phidxi2*dxidy*dxidy +           // (xi_y)^2 * phi_{xi xi}
+    d2phideta2*detady*detady +        // (eta_y)^2 * phi_{eta eta}
+    d2phidzeta2*dzetady*dzetady +     // (zeta_y)^2 * phi_{zeta zeta}
+    2*d2phidxideta*dxidy*detady +     // 2 * xi_y * eta_y * phi_{xi eta}
+    2*d2phidxidzeta*dxidy*dzetady +   // 2 * xi_y * zeta_y * phi_{xi zeta}
+    2*d2phidetadzeta*detady*dzetady + // 2 * eta_y * zeta_y * phi_{eta zeta}
+    m.d2xi[3]*dphidxi +               // xi_{y y} * phi_{xi}
+    m.d2eta[3]*dphideta +             // eta_{y y} * phi_{eta}
+    m.d2zeta[3]*dphidzeta;            // zeta_{y y} * phi_{zeta}
+
+  // phi_{y z}
+  d2phidxyz2[4] =
+    d2phidxi2*dxidy*dxidz +                            // xi_y * xi_z * phi_{xi xi}
+    d2phideta2*detady*detadz +                         // eta_y * eta_z * phi_{eta eta}
+    d2phidzeta2*dzetady*dzetadz +                      // zeta_y * zeta_z * phi_{zeta zeta}
+    d2phidxideta*(dxidy*detadz + detady*dxidz) +       // (xi_y*eta_z + eta_y*xi_z) * phi_{xi eta}
+    d2phidxidzeta*(dxidy*dzetadz + dzetady*dxidz) +    // (zeta_y*xi_z + xi_y*zeta_z) * phi_{xi zeta}
+    d2phidetadzeta*(detady*dzetadz + dzetady*detadz) + // (zeta_y*eta_z + eta_y*zeta_z) * phi_{eta zeta}
+    m.d2xi[4]*dphidxi +                                // xi_{y z} * phi_{xi}
+    m.d2eta[4]*dphideta +                              // eta_{y z} * phi_{eta}
+    m.d2zeta[4]*dphidzeta;                             // zeta_{y z} * phi_{zeta}
+
+  // phi_{z z}
+  d2phidxyz2[5] =
+    d2phidxi2*dxidz*dxidz +           // (xi_z)^2 * phi_{xi xi}
+    d2phideta2*detadz*detadz +        // (eta_z)^2 * phi_{eta eta}
+    d2phidzeta2*dzetadz*dzetadz +     // (zeta_z)^2 * phi_{zeta zeta}
+    2*d2phidxideta*dxidz*detadz +     // 2 * xi_z * eta_z * phi_{xi eta}
+    2*d2phidxidzeta*dxidz*dzetadz +   // 2 * xi_z * zeta_z * phi_{xi zeta}
+    2*d2phidetadzeta*detadz*dzetadz + // 2 * eta_z * zeta_z * phi_{eta zeta}
+    m.d2xi[5]*dphidxi +               // xi_{z z} * phi_{xi}
+    m.d2eta[5]*dphideta +             // eta_{z z} * phi_{eta}
+    m.d2zeta[5]*dphidzeta;            // zeta_{z z} * phi_{zeta}
+}
+
+#endif // LIBMESH_ENABLE_SECOND_DERIVATIVES
+
+
+
 /**
  * One point of a side's map, which FEMap::compute_face_map() computes
  * from the side's own map: \p jac, which scales the side's quadrature

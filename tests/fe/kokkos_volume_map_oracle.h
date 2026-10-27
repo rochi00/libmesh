@@ -15,15 +15,17 @@
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-// Checks fe_map_*D() and fe_map_second_derivs_*(), run in a Kokkos
-// kernel on map derivatives from LagrangeMapEval, against
-// FEMap::compute_map() on the host: every Lagrange element type,
-// distorted and, for 1D and 2D, tilted into 3D, at each quadrature
-// point.  The kernel must give JxW and the inverse map's first and
-// second derivatives exactly on a host execution space.  On elements
-// with an affine map FEMap computes neither JxW, which it rescales from
-// the first point's, nor second derivatives at the other points, so
-// those aren't checked there.
+// Checks fe_map_*D(), fe_map_second_derivs_*() and
+// fe_physical_second_derivs_*D(), run in a Kokkos kernel on map
+// derivatives from LagrangeMapEval and shape derivatives from
+// fe_shape_*(), against FEMap::compute_map() and FE::reinit() on the
+// host: every Lagrange element type, distorted and, for 1D and 2D,
+// tilted into 3D, at each quadrature point.  The kernel must give JxW,
+// the inverse map's first and second derivatives and the Lagrange
+// shapes' physical second derivatives exactly on a host execution
+// space.  On elements with an affine map FEMap computes neither JxW,
+// which it rescales from the first point's, nor second derivatives at
+// the other points, so those aren't checked there.
 
 #ifndef KOKKOS_VOLUME_MAP_ORACLE_H
 #define KOKKOS_VOLUME_MAP_ORACLE_H
@@ -52,8 +54,10 @@ namespace KokkosVolumeMapOracle
 using namespace libMesh;
 
 // Per quadrature point: JxW, the gradients of xi, eta and zeta, and
-// their second derivatives
-constexpr unsigned int n_out = 1 + 9 + 18;
+// their second derivatives; then the xx, xy, xz, yy, yz and zz second
+// derivatives of each of the element's up to 27 shapes
+constexpr unsigned int n_map = 1 + 9 + 18;
+constexpr unsigned int n_out = n_map + 6 * 27;
 
 struct Case
 {
@@ -64,9 +68,11 @@ struct Case
   Point qp;
   Real w;
 
-  // What FEMap computed, and a bit for each value it computed
+  // What FEMap computed, a bit for each map value it computed, and how
+  // many shapes' second derivatives FE computed
   Real host[n_out];
   std::uint32_t computed;
+  unsigned int n_hessians;
 };
 
 inline int
@@ -110,7 +116,7 @@ run_all_oracles()
            &map.get_detadx(), &map.get_detady(), &map.get_detadz(),
            &map.get_dzetadx(), &map.get_dzetady(), &map.get_dzetadz()};
 #ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
-        fe->get_d2phi();
+        const auto & d2phi = fe->get_d2phi();
         const std::vector<std::vector<Real>> * second[] =
           {&map.get_d2xidxyz2(), &map.get_d2etadxyz2(), &map.get_d2zetadxyz2()};
 #endif
@@ -121,7 +127,7 @@ run_all_oracles()
           {
             const bool affine = elem->has_affine_map();
             Case c{dim, t, elem->default_order(), cast_int<unsigned int>(pts.size()),
-                   first_node, qrule.qp(q), qrule.w(q), {}, !affine || q == 0};
+                   first_node, qrule.qp(q), qrule.w(q), {}, !affine || q == 0, 0};
             c.host[0] = JxW[q];
             for (unsigned int i = 0; i != 9; ++i)
               if (q < first[i]->size())
@@ -138,6 +144,14 @@ run_all_oracles()
                       c.host[10 + 6*i + k] = (*second[i])[q][k];
                       c.computed |= std::uint32_t(1) << (10 + 6*i + k);
                     }
+            if (!affine)
+              {
+                c.n_hessians = d2phi.size();
+                for (unsigned int i = 0; i != c.n_hessians; ++i)
+                  for (unsigned int k = 0; k != 6; ++k)
+                    c.host[n_map + 6*i + k] = d2phi[i][q](k < 3 ? 0 : k < 5 ? 1 : 2,
+                                                          k < 3 ? k : k < 5 ? k - 2 : 2);
+              }
 #endif
             cases.push_back(c);
           }
@@ -181,8 +195,10 @@ run_all_oracles()
       const auto nodes = [=](const unsigned int i) {
         return Point(d_nodes(3*(first+i)), d_nodes(3*(first+i) + 1), d_nodes(3*(first+i) + 2));
       };
+      const ElemType type = ElemType(d_info(5*k + 1));
+      const Order order = Order(d_info(5*k + 2));
       const LagrangeMapEval<decltype(nodes)> eval
-        {dim, ElemType(d_info(5*k + 1)), Order(d_info(5*k + 2)), d_info(5*k + 3), nodes};
+        {dim, type, order, d_info(5*k + 3), nodes};
 
       const Point qp(d_in(4*k), d_in(4*k + 1), d_in(4*k + 2));
       Point dxyz[3];
@@ -235,6 +251,24 @@ run_all_oracles()
           out[16 + i] = m.d2eta[i];
           out[22 + i] = m.d2zeta[i];
         }
+
+      // A Lagrange element of its default order has a shape per node
+      for (unsigned int i = 0; i != eval.n_nodes; ++i)
+        {
+          Real dphi[3] = {}, d2phi[6] = {}, d2[6] = {};
+          for (unsigned int j = 0; j != dim; ++j)
+            dphi[j] = fe_shape_deriv(dim, LAGRANGE, type, order, i, j, qp);
+          for (unsigned int j = 0; j != dim*(dim+1)/2; ++j)
+            d2phi[j] = fe_shape_second_deriv(dim, LAGRANGE, type, order, i, j, qp);
+          if (dim == 1)
+            fe_physical_second_derivs_1D(dphi, d2phi, m, d2);
+          else if (dim == 2)
+            fe_physical_second_derivs_2D(dphi, d2phi, m, d2);
+          else
+            fe_physical_second_derivs_3D(dphi, d2phi, m, d2);
+          for (unsigned int j = 0; j != 6; ++j)
+            out[n_map + 6*i + j] = d2[j];
+        }
 #endif
     });
 
@@ -253,7 +287,7 @@ run_all_oracles()
       const Case & c = cases[k];
       for (unsigned int i = 0; i != n_out; ++i)
         {
-          if (!(c.computed >> i & 1))
+          if (i < n_map ? !(c.computed >> i & 1) : i >= n_map + 6*c.n_hessians)
             continue;
           ++n_values;
           const Real host = c.host[i], kernel = h_out(n_out*k + i);
