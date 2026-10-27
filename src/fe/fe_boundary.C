@@ -26,6 +26,7 @@
 #include "libmesh/libmesh_common.h"
 #include "libmesh/fe.h"
 #include "libmesh/fe_interface.h"
+#include "libmesh/fe_map_point.h"
 #include "libmesh/quadrature.h"
 #include "libmesh/elem.h"
 #include "libmesh/libmesh_logging.h"
@@ -815,65 +816,32 @@ void FEMap::compute_face_map(int dim, const std::vector<Real> & qw,
           {
             for (unsigned int p=0; p<n_qp; p++)
               {
-                // The first tangent comes from just the edge's Jacobian
-                this->tangents[p][0] = this->dxyzdxi_map[p].unit();
+                // Inverse map xyz[p] to a reference point on the parent,
+                // and get dxyz/dxi and dxyz/deta from the parent map there.
+                auto parent_derivs = [side, p, this](RealVectorValue & dx_dxi, RealVectorValue & dx_deta)
+                  {
+                    const Elem * elem = side->interior_parent();
+                    libmesh_assert(elem);
+                    const Point reference_point = FEMap::inverse_map(2, elem, this->xyz[p]);
+                    dx_dxi  = FEMap::map_deriv (2, elem, 0, reference_point);
+                    dx_deta = FEMap::map_deriv (2, elem, 1, reference_point);
+                  };
 
-#if LIBMESH_DIM == 2
-                // For a 2D element living in 2D, the normal is given directly
-                // from the entries in the edge Jacobian.
-                this->normals[p] = (Point(this->dxyzdxi_map[p](1), -this->dxyzdxi_map[p](0), 0.)).unit();
+                FEFaceMapPoint<> f;
+                fe_face_map_2D(this->dxyzdxi_map[p], parent_derivs, f,
+                               [](const Real libmesh_dbg_var(jac)) { libmesh_assert_greater (jac, 0.); });
 
-#elif LIBMESH_DIM == 3
-                // For a 2D element living in 3D, there is a second tangent.
-                // For the second tangent, we need to refer to the full
-                // element's (not just the edge's) Jacobian.
-                const Elem * elem = side->interior_parent();
-                libmesh_assert(elem);
-
-                // Inverse map xyz[p] to a reference point on the parent...
-                Point reference_point = FEMap::inverse_map(2, elem, this->xyz[p]);
-
-                // Get dxyz/dxi and dxyz/deta from the parent map.
-                Point dx_dxi  = FEMap::map_deriv (2, elem, 0, reference_point);
-                Point dx_deta = FEMap::map_deriv (2, elem, 1, reference_point);
-
-                // The second tangent vector is formed by crossing these vectors.
-                tangents[p][1] = dx_dxi.cross(dx_deta).unit();
-
-                // Finally, the normal in this case is given by crossing these
-                // two tangents.
-                normals[p] = tangents[p][0].cross(tangents[p][1]).unit();
-#endif
-
+                for (unsigned int k=0; k != LIBMESH_DIM-1; ++k)
+                  this->tangents[p][k] = f.tangents[k];
+                this->normals[p] = f.normal;
+                this->JxW[p] = f.jac*qw[p];
 
 #ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
-                // The curvature is computed via the familiar Frenet formula:
-                // curvature = [d^2(x) / d (xi)^2] dot [normal]
-                // For a reference, see:
-                // F.S. Merritt, Mathematics Manual, 1962, McGraw-Hill, p. 310
-                //
-                // Note: The sign convention here is different from the
-                // 3D case.  Concave-upward curves (smiles) have a positive
-                // curvature.  Concave-downward curves (frowns) have a
-                // negative curvature.  Be sure to take that into account!
                 if (calculate_d2xyz)
-                  {
-                    const Real numerator   = this->d2xyzdxi2_map[p] * this->normals[p];
-                    const Real denominator = this->dxyzdxi_map[p].norm_sq();
-                    libmesh_assert_not_equal_to (denominator, 0);
-                    curvatures[p] = numerator / denominator;
-                  }
+                  curvatures[p] = fe_face_curvature_2D(this->dxyzdxi_map[p],
+                                                       this->d2xyzdxi2_map[p],
+                                                       this->normals[p]);
 #endif
-              }
-
-            // compute the jacobian at the quadrature points
-            for (unsigned int p=0; p<n_qp; p++)
-              {
-                const Real the_jac = this->dxyzdxi_map[p].norm();
-
-                libmesh_assert_greater (the_jac, 0.);
-
-                this->JxW[p] = the_jac*qw[p];
               }
           }
 
@@ -960,59 +928,24 @@ void FEMap::compute_face_map(int dim, const std::vector<Real> & qw,
           {
             for (unsigned int p=0; p<n_qp; p++)
               {
-                const Point n  = this->dxyzdxi_map[p].cross(this->dxyzdeta_map[p]);
-                this->normals[p]     = n.unit();
-                this->tangents[p][0] = this->dxyzdxi_map[p].unit();
-                this->tangents[p][1] = n.cross(this->dxyzdxi_map[p]).unit();
+                FEFaceMapPoint<> f;
+                fe_face_map_3D(this->dxyzdxi_map[p], this->dxyzdeta_map[p], f,
+                               [](const Real libmesh_dbg_var(det)) { libmesh_assert_greater (det, 0.); });
+
+                this->normals[p]     = f.normal;
+                this->tangents[p][0] = f.tangents[0];
+                this->tangents[p][1] = f.tangents[1];
+                this->JxW[p] = f.jac*qw[p];
 
 #ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
                 if (calculate_d2xyz)
-                  {
-                    // Compute curvature using the typical nomenclature
-                    // of the first and second fundamental forms.
-                    // For reference, see:
-                    // 1) http://mathworld.wolfram.com/MeanCurvature.html
-                    //    (note -- they are using inward normal)
-                    // 2) F.S. Merritt, Mathematics Manual, 1962, McGraw-Hill
-                    const Real L  = -this->d2xyzdxi2_map[p]    * this->normals[p];
-                    const Real M  = -this->d2xyzdxideta_map[p] * this->normals[p];
-                    const Real N  = -this->d2xyzdeta2_map[p]   * this->normals[p];
-                    const Real E  =  this->dxyzdxi_map[p].norm_sq();
-                    const Real F  =  this->dxyzdxi_map[p]      * this->dxyzdeta_map[p];
-                    const Real G  =  this->dxyzdeta_map[p].norm_sq();
-
-                    const Real numerator   = E*N -2.*F*M + G*L;
-                    const Real denominator = E*G - F*F;
-                    libmesh_assert_not_equal_to (denominator, 0.);
-                    curvatures[p] = 0.5*numerator/denominator;
-                  }
+                  curvatures[p] = fe_face_curvature_3D(this->dxyzdxi_map[p],
+                                                       this->dxyzdeta_map[p],
+                                                       this->d2xyzdxi2_map[p],
+                                                       this->d2xyzdxideta_map[p],
+                                                       this->d2xyzdeta2_map[p],
+                                                       this->normals[p]);
 #endif
-              }
-
-            // compute the jacobian at the quadrature points, see
-            // http://sp81.msi.umn.edu:999/fluent/fidap/help/theory/thtoc.htm
-            for (unsigned int p=0; p<n_qp; p++)
-              {
-                const Real g11 = (dxdxi_map(p)*dxdxi_map(p) +
-                                  dydxi_map(p)*dydxi_map(p) +
-                                  dzdxi_map(p)*dzdxi_map(p));
-
-                const Real g12 = (dxdxi_map(p)*dxdeta_map(p) +
-                                  dydxi_map(p)*dydeta_map(p) +
-                                  dzdxi_map(p)*dzdeta_map(p));
-
-                const Real g21 = g12;
-
-                const Real g22 = (dxdeta_map(p)*dxdeta_map(p) +
-                                  dydeta_map(p)*dydeta_map(p) +
-                                  dzdeta_map(p)*dzdeta_map(p));
-
-
-                const Real the_jac = std::sqrt(g11*g22 - g12*g21);
-
-                libmesh_assert_greater (the_jac, 0.);
-
-                this->JxW[p] = the_jac*qw[p];
               }
           }
 
