@@ -37,9 +37,11 @@
 // there.  Each calls check(det) where FEMap::compute_single_point_map()
 // checks for a degenerate map, before dividing by it: FEMap passes its
 // check, which throws, and device code one that records the failure.
-// FEMap calls these; they are inline here so that device code maps
-// points the same way, and templated on the coordinate type, as the
-// shared shape functions are, so that automatic differentiation does.
+// Likewise a side's Jacobian, normal, tangents and curvature, from the
+// side's map derivatives there.  FEMap calls these; they are inline
+// here so that device code maps points the same way, and templated on
+// the coordinate type, as the shared shape functions are, so that
+// automatic differentiation does.
 
 namespace libMesh
 {
@@ -254,6 +256,147 @@ void fe_map_3D(const TypeVector<T> & dxyzdxi,
   m.dzeta(1) = (dz_dxi*dx_deta   - dx_dxi*dz_deta  )*inv_jac;
   m.dzeta(2) = (dx_dxi*dy_deta   - dy_dxi*dx_deta  )*inv_jac;
 }
+
+
+
+/**
+ * One point of a side's map, which FEMap::compute_face_map() computes
+ * from the side's own map: \p jac, which scales the side's quadrature
+ * weights, and the outward unit normal and unit tangents.  A side of a
+ * 2D element has one tangent, plus the element's unit normal when it
+ * lives in 3D space; a side of a 3D element has two.
+ */
+template <typename T = Real>
+struct FEFaceMapPoint
+{
+  T jac = 0;
+  VectorValue<T> normal;
+  VectorValue<T> tangents[2];
+};
+
+
+
+/**
+ * \p dxyzdxi is the side's map derivative.  In 3D space the side alone
+ * doesn't say which way is out, so parent_derivs(dx_dxi, dx_deta) sets
+ * the element's own map derivatives at the point: FEMap inverse maps
+ * the point onto the element, and device code can tabulate them.
+ */
+template <typename T, typename ParentDerivs, typename DegenerateCheck>
+LIBMESH_DEVICE_INLINE
+void fe_face_map_2D(const TypeVector<T> & dxyzdxi,
+                    const ParentDerivs & parent_derivs,
+                    FEFaceMapPoint<T> & f,
+                    const DegenerateCheck & check)
+{
+  // The first tangent comes from just the edge's Jacobian
+  f.tangents[0] = dxyzdxi.unit();
+
+#if LIBMESH_DIM < 3
+  libmesh_ignore(parent_derivs);
+
+  // For a 2D element living in 2D, the normal is given directly
+  // from the entries in the edge Jacobian.
+  f.normal = (VectorValue<T>(dxyzdxi(1), -dxyzdxi(0), T(0))).unit();
+
+#else
+  // For a 2D element living in 3D, there is a second tangent.
+  // For the second tangent, we need to refer to the full
+  // element's (not just the edge's) Jacobian.
+  VectorValue<T> dx_dxi, dx_deta;
+  parent_derivs(dx_dxi, dx_deta);
+
+  // The second tangent vector is formed by crossing these vectors.
+  f.tangents[1] = dx_dxi.cross(dx_deta).unit();
+
+  // Finally, the normal in this case is given by crossing these
+  // two tangents.
+  f.normal = f.tangents[0].cross(f.tangents[1]).unit();
+#endif
+
+  f.jac = dxyzdxi.norm();
+
+  check(f.jac);
+}
+
+
+
+template <typename T, typename DegenerateCheck>
+LIBMESH_DEVICE_INLINE
+void fe_face_map_3D(const TypeVector<T> & dxyzdxi,
+                    const TypeVector<T> & dxyzdeta,
+                    FEFaceMapPoint<T> & f,
+                    const DegenerateCheck & check)
+{
+  const VectorValue<T> n = dxyzdxi.cross(dxyzdeta);
+  f.normal      = n.unit();
+  f.tangents[0] = dxyzdxi.unit();
+  f.tangents[1] = n.cross(dxyzdxi).unit();
+
+  // The side is a 2D element in 3D space, whose Jacobian, and the
+  // check on it, fe_map_2D() computes; the compiler drops the inverse
+  // map it computes too, which we don't use.
+  FEMapPoint<T> m;
+  fe_map_2D(dxyzdxi, dxyzdeta, m, check);
+  f.jac = m.jac;
+}
+
+
+
+#ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
+
+template <typename T>
+LIBMESH_DEVICE_INLINE
+T fe_face_curvature_2D(const TypeVector<T> & dxyzdxi,
+                       const TypeVector<T> & d2xyzdxi2,
+                       const TypeVector<T> & normal)
+{
+  // The curvature is computed via the familiar Frenet formula:
+  // curvature = [d^2(x) / d (xi)^2] dot [normal]
+  // For a reference, see:
+  // F.S. Merritt, Mathematics Manual, 1962, McGraw-Hill, p. 310
+  //
+  // Note: The sign convention here is different from the
+  // 3D case.  Concave-upward curves (smiles) have a positive
+  // curvature.  Concave-downward curves (frowns) have a
+  // negative curvature.  Be sure to take that into account!
+  const T numerator   = d2xyzdxi2 * normal;
+  const T denominator = dxyzdxi.norm_sq();
+  libmesh_assert_not_equal_to (denominator, 0);
+  return numerator / denominator;
+}
+
+
+
+template <typename T>
+LIBMESH_DEVICE_INLINE
+T fe_face_curvature_3D(const TypeVector<T> & dxyzdxi,
+                       const TypeVector<T> & dxyzdeta,
+                       const TypeVector<T> & d2xyzdxi2,
+                       const TypeVector<T> & d2xyzdxideta,
+                       const TypeVector<T> & d2xyzdeta2,
+                       const TypeVector<T> & normal)
+{
+  // Compute curvature using the typical nomenclature
+  // of the first and second fundamental forms.
+  // For reference, see:
+  // 1) http://mathworld.wolfram.com/MeanCurvature.html
+  //    (note -- they are using inward normal)
+  // 2) F.S. Merritt, Mathematics Manual, 1962, McGraw-Hill
+  const T L  = -d2xyzdxi2    * normal;
+  const T M  = -d2xyzdxideta * normal;
+  const T N  = -d2xyzdeta2   * normal;
+  const T E  =  dxyzdxi.norm_sq();
+  const T F  =  dxyzdxi      * dxyzdeta;
+  const T G  =  dxyzdeta.norm_sq();
+
+  const T numerator   = E*N -2.*F*M + G*L;
+  const T denominator = E*G - F*F;
+  libmesh_assert_not_equal_to (denominator, 0.);
+  return 0.5*numerator/denominator;
+}
+
+#endif // LIBMESH_ENABLE_SECOND_DERIVATIVES
 
 
 
@@ -609,6 +752,20 @@ struct LagrangeMapEval
       fe_lagrange_shape<LAGRANGE>(dim, type, order, i, p) :
       fe_lagrange_shape_deriv<LAGRANGE>(dim, type, order, i, j, p);
   }
+
+#ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
+  // The map's second derivative j, numbered as the shapes' are: xi-xi,
+  // xi-eta, eta-eta, xi-zeta, eta-zeta, zeta-zeta.  Summed in node
+  // order, as FEMap sums its d2xyz, so the two agree bit for bit.
+  LIBMESH_DEVICE_INLINE
+  Point map_second_deriv(const unsigned int j, const Point & p) const
+  {
+    Point x;
+    for (unsigned int i = 0; i != n_nodes; ++i)
+      x.add_scaled(nodes(i), fe_lagrange_shape_second_deriv<LAGRANGE>(dim, type, order, i, j, p));
+    return x;
+  }
+#endif
 };
 
 
