@@ -315,6 +315,7 @@ unit_tests_data = $(data)
 # Why isn't this working automatically?
 EXTRA_DIST = $(data)
 kokkos_unit_test_sources = \
+  fe/kokkos_face_map_oracle.h \
   fe/kokkos_fe_shape_oracle.h \
   fe/kokkos_inverse_map_oracle.h \
   fe/kokkos_side_map_oracle.h \
