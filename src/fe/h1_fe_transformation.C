@@ -25,6 +25,45 @@
 // C++ includes
 #include <algorithm> // std::copy
 
+namespace
+{
+using namespace libMesh;
+
+// Point p of map's inverse map derivatives, as many as the element
+// has reference directions, gathered from its per-quantity vectors
+// into the form the shared fe_physical_*derivs*() functions take.
+FEMapPoint<> map_point(const FEMap & map,
+                       const unsigned int dim,
+                       const std::size_t p,
+                       const bool second_derivs)
+{
+  const std::vector<Real> * dxyz[] =
+    {&map.get_dxidx(), &map.get_dxidy(), &map.get_dxidz(),
+     &map.get_detadx(), &map.get_detady(), &map.get_detadz(),
+     &map.get_dzetadx(), &map.get_dzetady(), &map.get_dzetadz()};
+
+  FEMapPoint<> m;
+  RealVectorValue * grads[] = {&m.dxi, &m.deta, &m.dzeta};
+  for (unsigned int j=0; j != dim; ++j)
+    *grads[j] = RealVectorValue((*dxyz[3*j])[p], (*dxyz[3*j+1])[p], (*dxyz[3*j+2])[p]);
+
+#ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
+  if (second_derivs)
+    {
+      const std::vector<std::vector<Real>> * d2xyz[] =
+        {&map.get_d2xidxyz2(), &map.get_d2etadxyz2(), &map.get_d2zetadxyz2()};
+      Real * second[] = {m.d2xi, m.d2eta, m.d2zeta};
+      for (unsigned int j=0; j != dim; ++j)
+        std::copy((*d2xyz[j])[p].begin(), (*d2xyz[j])[p].end(), second[j]);
+    }
+#else
+  libmesh_ignore(second_derivs);
+#endif
+
+  return m;
+}
+}
+
 namespace libMesh
 {
 template<typename OutputShape>
@@ -85,108 +124,34 @@ void H1FETransformation<OutputShape>::map_dphi( const unsigned int dim,
       }
 
     case 1:
-      {
-        const std::vector<std::vector<OutputShape>> & dphidxi = fe.get_dphidxi();
-
-        const std::vector<Real> & dxidx_map = fe.get_fe_map().get_dxidx();
-#if LIBMESH_DIM>1
-        const std::vector<Real> & dxidy_map = fe.get_fe_map().get_dxidy();
-#endif
-#if LIBMESH_DIM>2
-        const std::vector<Real> & dxidz_map = fe.get_fe_map().get_dxidz();
-#endif
-
-        for (auto i : index_range(dphi))
-          for (auto p : index_range(dphi[i]))
-            {
-              // dphi/dx    = (dphi/dxi)*(dxi/dx)
-              dphi[i][p].slice(0) = dphidx[i][p] = dphidxi[i][p]*dxidx_map[p];
-
-#if LIBMESH_DIM>1
-              dphi[i][p].slice(1)  = dphidy[i][p] = dphidxi[i][p]*dxidy_map[p];
-#endif
-#if LIBMESH_DIM>2
-              dphi[i][p].slice(2) = dphidz[i][p] = dphidxi[i][p]*dxidz_map[p];
-#endif
-            }
-
-        break;
-      }
-
     case 2:
-      {
-        const std::vector<std::vector<OutputShape>> & dphidxi = fe.get_dphidxi();
-        const std::vector<std::vector<OutputShape>> & dphideta = fe.get_dphideta();
-
-        const std::vector<Real> & dxidx_map = fe.get_fe_map().get_dxidx();
-        const std::vector<Real> & dxidy_map = fe.get_fe_map().get_dxidy();
-#if LIBMESH_DIM > 2
-        const std::vector<Real> & dxidz_map = fe.get_fe_map().get_dxidz();
-#endif
-
-        const std::vector<Real> & detadx_map = fe.get_fe_map().get_detadx();
-        const std::vector<Real> & detady_map = fe.get_fe_map().get_detady();
-#if LIBMESH_DIM > 2
-        const std::vector<Real> & detadz_map = fe.get_fe_map().get_detadz();
-#endif
-
-        for (auto i : index_range(dphi))
-          for (auto p : index_range(dphi[i]))
-            {
-              // dphi/dx    = (dphi/dxi)*(dxi/dx) + (dphi/deta)*(deta/dx)
-              dphi[i][p].slice(0) = dphidx[i][p] = (dphidxi[i][p]*dxidx_map[p] +
-                                                    dphideta[i][p]*detadx_map[p]);
-
-              // dphi/dy    = (dphi/dxi)*(dxi/dy) + (dphi/deta)*(deta/dy)
-              dphi[i][p].slice(1) = dphidy[i][p] = (dphidxi[i][p]*dxidy_map[p] +
-                                                    dphideta[i][p]*detady_map[p]);
-
-#if LIBMESH_DIM > 2
-              // dphi/dz    = (dphi/dxi)*(dxi/dz) + (dphi/deta)*(deta/dz)
-              dphi[i][p].slice(2) = dphidz[i][p] = (dphidxi[i][p]*dxidz_map[p] +
-                                                    dphideta[i][p]*detadz_map[p]);
-#endif
-            }
-
-        break;
-      }
-
     case 3:
       {
-        const std::vector<std::vector<OutputShape>> & dphidxi = fe.get_dphidxi();
-        const std::vector<std::vector<OutputShape>> & dphideta = fe.get_dphideta();
-        const std::vector<std::vector<OutputShape>> & dphidzeta = fe.get_dphidzeta();
+        // Shape function derivatives in reference space
+        const std::vector<std::vector<OutputShape>> * dphiref[] =
+          {&fe.get_dphidxi(), &fe.get_dphideta(), &fe.get_dphidzeta()};
 
-        const std::vector<Real> & dxidx_map = fe.get_fe_map().get_dxidx();
-        const std::vector<Real> & dxidy_map = fe.get_fe_map().get_dxidy();
-        const std::vector<Real> & dxidz_map = fe.get_fe_map().get_dxidz();
+        for (auto p : make_range(dphi.empty() ? std::size_t(0) : dphi[0].size()))
+          {
+            const FEMapPoint<> m = map_point(fe.get_fe_map(), dim, p, false);
 
-        const std::vector<Real> & detadx_map = fe.get_fe_map().get_detadx();
-        const std::vector<Real> & detady_map = fe.get_fe_map().get_detady();
-        const std::vector<Real> & detadz_map = fe.get_fe_map().get_detadz();
+            for (auto i : index_range(dphi))
+              {
+                OutputShape dphi_ip[3], d[3];
+                for (unsigned int j=0; j != dim; ++j)
+                  dphi_ip[j] = (*dphiref[j])[i][p];
 
-        const std::vector<Real> & dzetadx_map = fe.get_fe_map().get_dzetadx();
-        const std::vector<Real> & dzetady_map = fe.get_fe_map().get_dzetady();
-        const std::vector<Real> & dzetadz_map = fe.get_fe_map().get_dzetadz();
+                fe_physical_derivs(dim, dphi_ip, m, d);
 
-        for (auto i : index_range(dphi))
-          for (auto p : index_range(dphi[i]))
-            {
-              // dphi/dx    = (dphi/dxi)*(dxi/dx) + (dphi/deta)*(deta/dx) + (dphi/dzeta)*(dzeta/dx);
-              dphi[i][p].slice(0) = dphidx[i][p] = (dphidxi[i][p]*dxidx_map[p] +
-                                                    dphideta[i][p]*detadx_map[p] +
-                                                    dphidzeta[i][p]*dzetadx_map[p]);
-
-              // dphi/dy    = (dphi/dxi)*(dxi/dy) + (dphi/deta)*(deta/dy) + (dphi/dzeta)*(dzeta/dy);
-              dphi[i][p].slice(1) = dphidy[i][p] = (dphidxi[i][p]*dxidy_map[p] +
-                                                    dphideta[i][p]*detady_map[p] +
-                                                    dphidzeta[i][p]*dzetady_map[p]);
-
-              // dphi/dz    = (dphi/dxi)*(dxi/dz) + (dphi/deta)*(deta/dz) + (dphi/dzeta)*(dzeta/dz);
-              dphi[i][p].slice(2) = dphidz[i][p] = (dphidxi[i][p]*dxidz_map[p] +
-                                                    dphideta[i][p]*detadz_map[p] +
-                                                    dphidzeta[i][p]*dzetadz_map[p]);
-            }
+                dphi[i][p].slice(0) = dphidx[i][p] = d[0];
+#if LIBMESH_DIM>1
+                dphi[i][p].slice(1) = dphidy[i][p] = d[1];
+#endif
+#if LIBMESH_DIM>2
+                dphi[i][p].slice(2) = dphidz[i][p] = d[2];
+#endif
+              }
+          }
         break;
       }
 
@@ -223,8 +188,6 @@ void H1FETransformation<OutputShape>::map_d2phi(const unsigned int dim,
     case 2:
     case 3:
       {
-        const FEMap & map = fe.get_fe_map();
-
         // Shape function derivatives in reference space
         const std::vector<std::vector<OutputShape>> * dphiref[] =
           {&fe.get_dphidxi(), &fe.get_dphideta(), &fe.get_dphidzeta()};
@@ -232,25 +195,9 @@ void H1FETransformation<OutputShape>::map_d2phi(const unsigned int dim,
           {&fe.get_d2phidxi2(), &fe.get_d2phidxideta(), &fe.get_d2phideta2(),
            &fe.get_d2phidxidzeta(), &fe.get_d2phidetadzeta(), &fe.get_d2phidzeta2()};
 
-        // Inverse map derivatives, as many as the element has
-        // reference directions
-        const std::vector<Real> * dxyz[] =
-          {&map.get_dxidx(), &map.get_dxidy(), &map.get_dxidz(),
-           &map.get_detadx(), &map.get_detady(), &map.get_detadz(),
-           &map.get_dzetadx(), &map.get_dzetady(), &map.get_dzetadz()};
-        const std::vector<std::vector<Real>> * d2xyz[] =
-          {&map.get_d2xidxyz2(), &map.get_d2etadxyz2(), &map.get_d2zetadxyz2()};
-
         for (auto p : make_range(d2phi.empty() ? std::size_t(0) : d2phi[0].size()))
           {
-            FEMapPoint<> m;
-            RealVectorValue * grads[] = {&m.dxi, &m.deta, &m.dzeta};
-            Real * second[] = {m.d2xi, m.d2eta, m.d2zeta};
-            for (unsigned int j=0; j != dim; ++j)
-              {
-                *grads[j] = RealVectorValue((*dxyz[3*j])[p], (*dxyz[3*j+1])[p], (*dxyz[3*j+2])[p]);
-                std::copy((*d2xyz[j])[p].begin(), (*d2xyz[j])[p].end(), second[j]);
-              }
+            const FEMapPoint<> m = map_point(fe.get_fe_map(), dim, p, true);
 
             for (auto i : index_range(d2phi))
               {

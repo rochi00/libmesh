@@ -440,6 +440,28 @@ void fe_map_second_derivs_2D(const TypeVector<T> & dxyzdxi,
 
 
 
+// The derivatives of a shape with respect to (x, y, z) at a point m
+// from fe_map_*D(), from its derivatives dphi[j] there in reference
+// direction j < dim, by the chain rule.  S is the shape's type, which
+// H1 vector shapes make a vector.
+template <typename S, typename T>
+LIBMESH_DEVICE_INLINE
+void fe_physical_derivs(const unsigned int dim,
+                        const S * dphi,
+                        const FEMapPoint<T> & m,
+                        S * dphidxyz)
+{
+  for (unsigned int k=0; k != LIBMESH_DIM; ++k)
+    if (dim == 1)
+      dphidxyz[k] = dphi[0]*m.dxi(k);
+    else if (dim == 2)
+      dphidxyz[k] = dphi[0]*m.dxi(k) + dphi[1]*m.deta(k);
+    else
+      dphidxyz[k] = dphi[0]*m.dxi(k) + dphi[1]*m.deta(k) + dphi[2]*m.dzeta(k);
+}
+
+
+
 #ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
 
 // The second derivatives of a shape with respect to (x, y, z), in the

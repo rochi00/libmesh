@@ -15,14 +15,14 @@
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-// Checks fe_map_*D(), fe_map_second_derivs_*() and
-// fe_physical_second_derivs_*D(), run in a Kokkos kernel on map
+// Checks fe_map_*D(), fe_map_second_derivs_*(), fe_physical_derivs()
+// and fe_physical_second_derivs_*D(), run in a Kokkos kernel on map
 // derivatives from LagrangeMapEval and shape derivatives from
 // fe_shape_*(), against FEMap::compute_map() and FE::reinit() on the
 // host: every Lagrange element type, distorted and, for 1D and 2D,
 // tilted into 3D, at each quadrature point.  The kernel must give JxW,
 // the inverse map's first and second derivatives and the Lagrange
-// shapes' physical second derivatives exactly on a host execution
+// shapes' physical first and second derivatives exactly on a host execution
 // space.  On elements with an affine map FEMap computes neither JxW,
 // which it rescales from the first point's, nor second derivatives at
 // the other points, so those aren't checked there.
@@ -54,10 +54,12 @@ namespace KokkosVolumeMapOracle
 using namespace libMesh;
 
 // Per quadrature point: JxW, the gradients of xi, eta and zeta, and
-// their second derivatives; then the xx, xy, xz, yy, yz and zz second
-// derivatives of each of the element's up to 27 shapes
+// their second derivatives; then the x, y and z derivatives of each of
+// the element's up to 27 shapes, then their xx, xy, xz, yy, yz and zz
+// second derivatives
 constexpr unsigned int n_map = 1 + 9 + 18;
-constexpr unsigned int n_out = n_map + 6 * 27;
+constexpr unsigned int n_hess = n_map + 3 * 27;
+constexpr unsigned int n_out = n_hess + 6 * 27;
 
 struct Case
 {
@@ -69,10 +71,10 @@ struct Case
   Real w;
 
   // What FEMap computed, a bit for each map value it computed, and how
-  // many shapes' second derivatives FE computed
+  // many shapes' first and second derivatives FE computed
   Real host[n_out];
   std::uint32_t computed;
-  unsigned int n_hessians;
+  unsigned int n_grads, n_hessians;
 };
 
 inline int
@@ -120,6 +122,7 @@ run_all_oracles()
         const std::vector<std::vector<Real>> * second[] =
           {&map.get_d2xidxyz2(), &map.get_d2etadxyz2(), &map.get_d2zetadxyz2()};
 #endif
+        const auto & dphi = fe->get_dphi();
         const auto & JxW = fe->get_JxW();
         fe->reinit(elem.get());
 
@@ -127,8 +130,12 @@ run_all_oracles()
           {
             const bool affine = elem->has_affine_map();
             Case c{dim, t, elem->default_order(), cast_int<unsigned int>(pts.size()),
-                   first_node, qrule.qp(q), qrule.w(q), {}, !affine || q == 0, 0};
+                   first_node, qrule.qp(q), qrule.w(q), {}, !affine || q == 0,
+                   cast_int<unsigned int>(dphi.size()), 0};
             c.host[0] = JxW[q];
+            for (unsigned int i = 0; i != c.n_grads; ++i)
+              for (unsigned int d = 0; d != 3; ++d)
+                c.host[n_map + 3*i + d] = dphi[i][q](d);
             for (unsigned int i = 0; i != 9; ++i)
               if (q < first[i]->size())
                 {
@@ -149,7 +156,7 @@ run_all_oracles()
                 c.n_hessians = d2phi.size();
                 for (unsigned int i = 0; i != c.n_hessians; ++i)
                   for (unsigned int k = 0; k != 6; ++k)
-                    c.host[n_map + 6*i + k] = d2phi[i][q](k < 3 ? 0 : k < 5 ? 1 : 2,
+                    c.host[n_hess + 6*i + k] = d2phi[i][q](k < 3 ? 0 : k < 5 ? 1 : 2,
                                                           k < 3 ? k : k < 5 ? k - 2 : 2);
               }
 #endif
@@ -251,13 +258,20 @@ run_all_oracles()
           out[16 + i] = m.d2eta[i];
           out[22 + i] = m.d2zeta[i];
         }
+#endif
 
       // A Lagrange element of its default order has a shape per node
       for (unsigned int i = 0; i != eval.n_nodes; ++i)
         {
-          Real dphi[3] = {}, d2phi[6] = {}, d2[6] = {};
+          Real dphi[3] = {}, d[3] = {};
           for (unsigned int j = 0; j != dim; ++j)
             dphi[j] = fe_shape_deriv(dim, LAGRANGE, type, order, i, j, qp);
+          fe_physical_derivs(dim, dphi, m, d);
+          for (unsigned int j = 0; j != 3; ++j)
+            out[n_map + 3*i + j] = d[j];
+
+#ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
+          Real d2phi[6] = {}, d2[6] = {};
           for (unsigned int j = 0; j != dim*(dim+1)/2; ++j)
             d2phi[j] = fe_shape_second_deriv(dim, LAGRANGE, type, order, i, j, qp);
           if (dim == 1)
@@ -267,9 +281,9 @@ run_all_oracles()
           else
             fe_physical_second_derivs_3D(dphi, d2phi, m, d2);
           for (unsigned int j = 0; j != 6; ++j)
-            out[n_map + 6*i + j] = d2[j];
-        }
+            out[n_hess + 6*i + j] = d2[j];
 #endif
+        }
     });
 
   auto h_out = ::Kokkos::create_mirror_view(d_out);
@@ -287,7 +301,8 @@ run_all_oracles()
       const Case & c = cases[k];
       for (unsigned int i = 0; i != n_out; ++i)
         {
-          if (i < n_map ? !(c.computed >> i & 1) : i >= n_map + 6*c.n_hessians)
+          if (i < n_map ? !(c.computed >> i & 1) :
+              i < n_hess ? i >= n_map + 3*c.n_grads : i >= n_hess + 6*c.n_hessians)
             continue;
           ++n_values;
           const Real host = c.host[i], kernel = h_out(n_out*k + i);
