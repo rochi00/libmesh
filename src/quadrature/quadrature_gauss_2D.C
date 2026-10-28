@@ -18,7 +18,7 @@
 
 
 // Local includes
-#include "libmesh/quadrature_gauss_2D.h"
+#include "libmesh/quadrature_gauss_3D.h"
 #include "libmesh/enum_to_string.h"
 
 #include "libmesh/face_c0polygon.h"
@@ -35,55 +35,6 @@ void QGauss::init_2D()
   // 2D quadrature rules
   switch (_type)
     {
-
-
-      //---------------------------------------------
-      // Quadrilateral quadrature rules
-    case QUAD4:
-    case QUADSHELL4:
-    case QUAD8:
-    case QUADSHELL8:
-    case QUAD9:
-    case QUADSHELL9:
-      {
-        // We compute the 2D quadrature rule as a tensor
-        // product of the 1D quadrature rule.
-        //
-        // For QUADs, a quadrature rule of order 'p' must be able to integrate
-        // bilinear (p=1), biquadratic (p=2), bicubic (p=3), etc. polynomials of the form
-        //
-        // (x^p + x^{p-1} + ... + 1) * (y^p + y^{p-1} + ... + 1)
-        //
-        // These polynomials have terms *up to* degree 2p but they are *not* complete
-        // polynomials of degree 2p. For example, when p=2 we have
-        //        1
-        //     x      y
-        // x^2    xy     y^2
-        //    yx^2   xy^2
-        //       x^2y^2
-        QGauss q1D(1,get_order());
-        tensor_product_quad( q1D );
-        return;
-      }
-
-
-      //---------------------------------------------
-      // Triangle quadrature rules
-    case TRI3:
-    case TRISHELL3:
-    case TRI3SUBDIVISION:
-    case TRI6:
-    case TRI7:
-      {
-        const unsigned int n = n_points_tri(get_order());
-        libmesh_error_msg_if(n == invalid_uint,
-                             "Quadrature rule " << get_order() << " not supported!");
-
-        _points.resize(n);
-        _weights.resize(n);
-        rule_tri(get_order(), _points.data(), _weights.data());
-        return;
-      }
 
 
       //---------------------------------------------
@@ -141,9 +92,22 @@ void QGauss::init_2D()
       }
 
       //---------------------------------------------
-      // Unsupported type
+      // Every other 2D type's rule; n_points_elem() rejects types
+      // without one
     default:
-      libmesh_error_msg("Element type not supported:" << Utility::enum_to_string(_type));
+      {
+        const unsigned int n =
+          n_points_elem(_type, get_order(), allow_rules_with_negative_weights);
+        libmesh_error_msg_if(n == invalid_uint || Elem::type_to_dim_map[_type] != 2,
+                             "Quadrature rule " << get_order() << " not supported for "
+                             << Utility::enum_to_string(_type));
+
+        _points.resize(n);
+        _weights.resize(n);
+        rule_elem(_type, get_order(), allow_rules_with_negative_weights,
+                  _points.data(), _weights.data());
+        return;
+      }
     }
 #endif
 }

@@ -16,6 +16,7 @@
 #include "fe/kokkos_volume_map_oracle.h"
 #include "numerics/kokkos_tensor_ops_oracle_runners.h"
 #include "numerics/kokkos_vector_ops_oracle_runners.h"
+#include "quadrature/kokkos_quadrature_oracle.h"
 
 #include <cstdio>
 
@@ -32,6 +33,7 @@ main(int argc, char ** argv)
   total_fail += libMeshTest::KokkosInverseMapOracle::run_all_oracles();
   total_fail += libMeshTest::KokkosFaceMapOracle::run_all_oracles();
   total_fail += libMeshTest::KokkosVolumeMapOracle::run_all_oracles();
+  total_fail += libMeshTest::KokkosQuadratureOracle::run_all_oracles();
 
   Kokkos::finalize();
 

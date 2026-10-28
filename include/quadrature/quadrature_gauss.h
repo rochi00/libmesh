@@ -206,6 +206,75 @@ public:
                  Point * points,
                  Real * weights);
 
+  /**
+   * \returns The number of points in the rule of order \p o for
+   * element type \p t, given \p allow_negative_weights as for
+   * n_points_tet(), or \p invalid_uint for an order or a type without
+   * one: polygons and polyhedra, whose rules depend on the element,
+   * aren't here.
+   */
+  static LIBMESH_DEVICE_INLINE constexpr
+  unsigned int n_points_elem (const ElemType t,
+                              const Order o,
+                              const bool allow_negative_weights)
+  {
+    const unsigned int n1D = n_points_1D(o);
+    if (n1D == invalid_uint)
+      return invalid_uint;
+
+    switch (t)
+      {
+      case EDGE2:
+      case EDGE3:
+      case EDGE4:     return n1D;
+      case QUAD4:
+      case QUADSHELL4:
+      case QUAD8:
+      case QUADSHELL8:
+      case QUAD9:
+      case QUADSHELL9: return n1D * n1D;
+      case TRI3:
+      case TRISHELL3:
+      case TRI3SUBDIVISION:
+      case TRI6:
+      case TRI7:      return n_points_tri(o);
+      case HEX8:
+      case HEX20:
+      case HEX27:
+      case PYRAMID5:
+      case PYRAMID13:
+      case PYRAMID14:
+      case PYRAMID18: return n1D * n1D * n1D;
+      case TET4:
+      case TET10:
+      case TET14:     return n_points_tet(o, allow_negative_weights);
+      case PRISM6:
+      case PRISM15:
+      case PRISM18:
+      case PRISM20:
+      case PRISM21:   return n1D * n_points_tri(o);
+      default:        return invalid_uint;
+      }
+  }
+
+  /**
+   * Writes the points and weights of the rule of order \p o for
+   * element type \p t to \p points and \p weights, which must have
+   * room for n_points_elem(t, o, allow_negative_weights) entries.
+   * This is the rule init() fills in for that type, given \p
+   * allow_negative_weights as allow_rules_with_negative_weights:
+   * init_2D() and init_3D() call it, and an edge's rule is
+   * rule_1D()'s.  It is static,
+   * and defined in quadrature_gauss_3D.h, so that device code, which
+   * cannot construct a QGauss, evaluates the same rule.
+   */
+  static LIBMESH_DEVICE_INLINE
+  void rule_elem (const ElemType t,
+                  const Order o,
+                  const bool allow_negative_weights,
+                  Point * points,
+                  Real * weights);
+
 private:
 
   virtual void init_1D () override;

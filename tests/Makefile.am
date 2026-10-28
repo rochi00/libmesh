@@ -256,7 +256,8 @@ kokkos_unit_test_sources = \
   numerics/kokkos_tensor_ops_oracle_fixtures.h \
   numerics/kokkos_tensor_ops_oracle_runners.h \
   numerics/kokkos_vector_ops_oracle_fixtures.h \
-  numerics/kokkos_vector_ops_oracle_runners.h
+  numerics/kokkos_vector_ops_oracle_runners.h \
+  quadrature/kokkos_quadrature_oracle.h
 EXTRA_DIST += $(kokkos_unit_test_sources)
 
 if LIBMESH_ENABLE_FPARSER

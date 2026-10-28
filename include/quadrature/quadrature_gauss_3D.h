@@ -20,6 +20,7 @@
 #define LIBMESH_QUADRATURE_GAUSS_3D_H
 
 #include "libmesh/quadrature_gauss.h"
+#include "libmesh/quadrature_gauss_2D.h" // QGauss::rule_tri(), for rule_elem()
 #include "libmesh/quadrature_conical.h"
 #include "libmesh/quadrature_gm.h"
 
@@ -448,6 +449,122 @@ void QGauss::rule_tet(const Order o,
             return;
           }
       }
+    }
+}
+
+
+
+LIBMESH_DEVICE_INLINE
+void QGauss::rule_elem(const ElemType t,
+                       const Order o,
+                       const bool allow_negative_weights,
+                       Point * points,
+                       Real * weights)
+{
+  // The 1D rule the tensor products are built from
+  constexpr unsigned int max_n1D = n_points_1D(FORTYTHIRD);
+  const unsigned int n1D = n_points_1D(o);
+  libmesh_assert_less_equal (n1D, max_n1D);
+
+  switch (t)
+    {
+    case EDGE2:
+    case EDGE3:
+    case EDGE4:
+      rule_1D(o, points, weights);
+      return;
+
+      // We compute the 2D quadrature rule as a tensor
+      // product of the 1D quadrature rule.
+      //
+      // For QUADs, a quadrature rule of order 'p' must be able to integrate
+      // bilinear (p=1), biquadratic (p=2), bicubic (p=3), etc. polynomials of the form
+      //
+      // (x^p + x^{p-1} + ... + 1) * (y^p + y^{p-1} + ... + 1)
+      //
+      // These polynomials have terms *up to* degree 2p but they are *not* complete
+      // polynomials of degree 2p. For example, when p=2 we have
+      //        1
+      //     x      y
+      // x^2    xy     y^2
+      //    yx^2   xy^2
+      //       x^2y^2
+    case QUAD4:
+    case QUADSHELL4:
+    case QUAD8:
+    case QUADSHELL8:
+    case QUAD9:
+    case QUADSHELL9:
+      // We compute the 3D quadrature rule as a tensor
+      // product of the 1D quadrature rule.
+    case HEX8:
+    case HEX20:
+    case HEX27:
+      {
+        Point points1D[max_n1D];
+        Real weights1D[max_n1D];
+        rule_1D(o, points1D, weights1D);
+        if (t == HEX8 || t == HEX20 || t == HEX27)
+          tensor_product_hex(n1D, points1D, weights1D, points, weights);
+        else
+          tensor_product_quad(n1D, points1D, weights1D, points, weights);
+        return;
+      }
+
+    case TRI3:
+    case TRISHELL3:
+    case TRI3SUBDIVISION:
+    case TRI6:
+    case TRI7:
+      rule_tri(o, points, weights);
+      return;
+
+    case TET4:
+    case TET10:
+    case TET14:
+      rule_tet(o, allow_negative_weights, points, weights);
+      return;
+
+      // We compute the 3D quadrature rule as a tensor
+      // product of the 1D quadrature rule and a 2D
+      // triangle quadrature rule
+    case PRISM6:
+    case PRISM15:
+    case PRISM18:
+    case PRISM20:
+    case PRISM21:
+      {
+        Point points1D[max_n1D];
+        Real weights1D[max_n1D];
+        rule_1D(o, points1D, weights1D);
+
+        // The triangle rule, which can have hundreds of points, goes in
+        // the last n2D entries rather than in a copy: the product
+        // writes those entries last, each one only after reading the
+        // triangle point it replaces.
+        const unsigned int n2D = n_points_tri(o);
+        Point * points2D = points + (n1D - 1) * n2D;
+        Real * weights2D = weights + (n1D - 1) * n2D;
+        rule_tri(o, points2D, weights2D);
+        tensor_product_prism(n1D, points1D, weights1D,
+                             n2D, points2D, weights2D, points, weights);
+        return;
+      }
+
+      // We compute the Pyramid rule as a conical product of a
+      // Jacobi rule with alpha==2 on the interval [0,1] two 1D
+      // Gauss rules with suitably modified points.  The idea comes
+      // from: Stroud, A.H. "Approximate Calculation of Multiple
+      // Integrals."
+    case PYRAMID5:
+    case PYRAMID13:
+    case PYRAMID14:
+    case PYRAMID18:
+      QConical::conical_product_pyramid(o, points, weights);
+      return;
+
+    default:
+      libmesh_error_msg("Element type not supported!");
     }
 }
 
