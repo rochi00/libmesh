@@ -2635,7 +2635,8 @@ kokkos_unit_test_sources = \
   numerics/kokkos_tensor_ops_oracle_fixtures.h \
   numerics/kokkos_tensor_ops_oracle_runners.h \
   numerics/kokkos_vector_ops_oracle_fixtures.h \
-  numerics/kokkos_vector_ops_oracle_runners.h
+  numerics/kokkos_vector_ops_oracle_runners.h \
+  quadrature/kokkos_quadrature_oracle.h
 
 TESTS = run_unit_tests.sh # Runs both unit test and kokkos drivers
 @LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@unit_tests_kokkos_dbg_SOURCES = 
