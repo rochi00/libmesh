@@ -203,9 +203,19 @@ protected:
   Elem * _elemlinks_data[4+(LIBMESH_DIM>2)];
 
   /**
-   * Master element node locations
+   * Master element node locations.  The third entry of each row is omitted,
+   * which aggregate initialization sets to zero.
    */
-  static const Real _master_points[7][3];
+  static constexpr Real _master_points[7][3] =
+    {
+      {0, 0},
+      {1, 0},
+      {0, 1},
+      {0.5, 0},
+      {0.5, 0.5},
+      {0, 0.5},
+      {Real(1)/3, Real(1)/3}
+    };
 
   /**
    * This maps the \f$ j^{th} \f$ node to the (in this case) 2 side

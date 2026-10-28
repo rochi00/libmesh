@@ -33,19 +33,6 @@ namespace libMesh
 const int Tri::num_sides;
 const int Tri::num_children;
 
-// Note: we can omit initialization of the third entry of each row because
-// static variables are automatically zero-initialized.
-const Real Tri::_master_points[7][3] =
-  {
-    {0, 0},
-    {1, 0},
-    {0, 1},
-    {0.5, 0},
-    {0.5, 0.5},
-    {0, 0.5},
-    {Real(1)/3, Real(1)/3}
-  };
-
 const unsigned int Tri::adjacent_sides_map[/*num_vertices*/3][/*n_adjacent_sides*/2] =
   {
     {0, 2},  // Sides adjacent to node 0
