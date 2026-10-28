@@ -232,7 +232,23 @@ protected:
   /**
    * Master element node locations
    */
-  static const Real _master_points[14][3];
+  static constexpr Real _master_points[14][3] =
+    {
+      {0, 0, 0},
+      {1, 0, 0},
+      {0, 1, 0},
+      {0, 0, 1},
+      {0.5, 0, 0},
+      {0.5, 0.5, 0},
+      {0, 0.5, 0},
+      {0, 0, 0.5},
+      {0.5, 0, 0.5},
+      {0, 0.5, 0.5},
+      {1/Real(3), 1/Real(3), 0},
+      {1/Real(3), 0, 1/Real(3)},
+      {1/Real(3), 1/Real(3), 1/Real(3)},
+      {0, 1/Real(3), 1/Real(3)}
+    };
 
   /**
    * Called by descendant classes with appropriate data to determine
