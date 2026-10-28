@@ -33,21 +33,6 @@ namespace libMesh
 const int Quad::num_sides;
 const int Quad::num_children;
 
-// Note: we can omit initialization of the third entry of each row because
-// static variables are automatically zero-initialized.
-const Real Quad::_master_points[9][3] =
-  {
-    {-1, -1},
-    {1, -1},
-    {1, 1},
-    {-1, 1},
-    {0, -1},
-    {1, 0},
-    {0, 1},
-    {-1, 0},
-    {0, 0}
-  };
-
 const unsigned int Quad::adjacent_sides_map[/*num_vertices*/4][/*n_adjacent_sides*/2] =
   {
     {0, 3},  // Sides adjacent to node 0
