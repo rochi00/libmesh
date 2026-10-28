@@ -19,7 +19,6 @@
 
 // Local includes
 #include "libmesh/quadrature_gauss_3D.h"
-#include "libmesh/quadrature_conical.h"
 #include "libmesh/enum_to_string.h"
 #include "libmesh/cell_c0polyhedron.h"
 
@@ -34,90 +33,6 @@ void QGauss::init_3D()
   // 3D quadrature rules
   switch (_type)
     {
-      //---------------------------------------------
-      // Hex quadrature rules
-    case HEX8:
-    case HEX20:
-    case HEX27:
-      {
-        // We compute the 3D quadrature rule as a tensor
-        // product of the 1D quadrature rule.
-        QGauss q1D(1, get_order());
-        tensor_product_hex( q1D );
-        return;
-      }
-
-
-
-      //---------------------------------------------
-      // Tetrahedral quadrature rules
-    case TET4:
-    case TET10:
-    case TET14:
-      {
-        const unsigned int n =
-          n_points_tet(get_order(), allow_rules_with_negative_weights);
-        libmesh_error_msg_if(n == invalid_uint,
-                             "Quadrature rule " << get_order() << " not supported!");
-
-        _points.resize(n);
-        _weights.resize(n);
-        rule_tet(get_order(), allow_rules_with_negative_weights,
-                 _points.data(), _weights.data());
-        return;
-      } // end case TET
-
-
-
-      //---------------------------------------------
-      // Prism quadrature rules
-    case PRISM6:
-    case PRISM15:
-    case PRISM18:
-    case PRISM20:
-    case PRISM21:
-      {
-        // We compute the 3D quadrature rule as a tensor
-        // product of the 1D quadrature rule and a 2D
-        // triangle quadrature rule
-
-        QGauss q1D(1,get_order());
-        QGauss q2D(2,_order);
-
-        // Initialize the 2D rule (1D is pre-initialized)
-        q2D.init(TRI3, _p_level, /*simple_type_only=*/true);
-
-        tensor_product_prism(q1D, q2D);
-
-        return;
-      }
-
-
-
-      //---------------------------------------------
-      // Pyramid
-    case PYRAMID5:
-    case PYRAMID13:
-    case PYRAMID14:
-    case PYRAMID18:
-      {
-        // We compute the Pyramid rule as a conical product of a
-        // Jacobi rule with alpha==2 on the interval [0,1] two 1D
-        // Gauss rules with suitably modified points.  The idea comes
-        // from: Stroud, A.H. "Approximate Calculation of Multiple
-        // Integrals."
-        QConical conical_rule(3, _order);
-        conical_rule.init(*this);
-
-        // Swap points and weights with the about-to-be destroyed rule.
-        _points.swap (conical_rule.get_points() );
-        _weights.swap(conical_rule.get_weights());
-
-        return;
-
-      }
-
-
       //---------------------------------------------
       // Arbitrary polyhedron quadrature rules
     case C0POLYHEDRON:
@@ -171,9 +86,22 @@ void QGauss::init_3D()
       }
 
       //---------------------------------------------
-      // Unsupported type
+      // Every other 3D type's rule; n_points_elem() rejects types
+      // without one
     default:
-      libmesh_error_msg("ERROR: Unsupported type: " << Utility::enum_to_string(_type));
+      {
+        const unsigned int n =
+          n_points_elem(_type, get_order(), allow_rules_with_negative_weights);
+        libmesh_error_msg_if(n == invalid_uint || Elem::type_to_dim_map[_type] != 3,
+                             "Quadrature rule " << get_order() << " not supported for "
+                             << Utility::enum_to_string(_type));
+
+        _points.resize(n);
+        _weights.resize(n);
+        rule_elem(_type, get_order(), allow_rules_with_negative_weights,
+                  _points.data(), _weights.data());
+        return;
+      }
     }
 #endif
 }
