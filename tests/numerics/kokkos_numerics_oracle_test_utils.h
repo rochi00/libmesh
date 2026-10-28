@@ -9,6 +9,8 @@
 // suites and report them all in one run.
 
 #include "libmesh/libmesh.h"
+#include "libmesh/int_range.h"
+#include "libmesh/point.h"
 
 // Avoid conflicting complex operators between CUDA and PETSc
 #define PETSC_SKIP_CXX_COMPLEX_FIX 1
@@ -43,6 +45,20 @@ upload_objects(const std::vector<T> & values, const char * label)
     h(i) = values[i];
   ::Kokkos::deep_copy(d, h);
   return d;
+}
+
+// Whether a and b have the same bits, so that a kernel reproducing a
+// host NaN matches it too
+inline bool
+same_bits(const libMesh::Point & a, const libMesh::Point & b)
+{
+  for (const auto d : libMesh::make_range(LIBMESH_DIM))
+    {
+      const Real x = a(d), y = b(d);
+      if (std::memcmp(&x, &y, sizeof(Real)))
+        return false;
+    }
+  return true;
 }
 
 // Counts the values a kernel computed and those that differ from the
