@@ -226,7 +226,35 @@ protected:
   /**
    * Master element node locations
    */
-  static const Real _master_points[27][3];
+  static constexpr Real _master_points[27][3] =
+    {
+      {-1, -1, -1},
+      {1, -1, -1},
+      {1, 1, -1},
+      {-1, 1, -1},
+      {-1, -1, 1},
+      {1, -1, 1},
+      {1, 1, 1},
+      {-1, 1, 1},
+      {0, -1, -1},
+      {1, 0, -1},
+      {0, 1, -1},
+      {-1, 0, -1},
+      {-1, -1, 0},
+      {1, -1, 0},
+      {1, 1, 0},
+      {-1, 1, 0},
+      {0, -1, 1},
+      {1, 0, 1},
+      {0, 1, 1},
+      {-1, 0, 1},
+      {0, 0, -1},
+      {0, -1, 0},
+      {1, 0, 0},
+      {0, 1, 0},
+      {-1, 0, 0},
+      {0, 0, 1}
+    };
 
   /**
    * Lookup table from child id, child node id to "possible node

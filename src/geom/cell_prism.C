@@ -34,31 +34,6 @@ const int Prism::num_sides;
 const int Prism::num_edges;
 const int Prism::num_children;
 
-const Real Prism::_master_points[21][3] =
-  {
-    {0, 0, -1},
-    {1, 0, -1},
-    {0, 1, -1},
-    {0, 0, 1},
-    {1, 0, 1},
-    {0, 1, 1},
-    {0.5, 0, -1},
-    {0.5, 0.5, -1},
-    {0, 0.5, -1},
-    {0, 0, 0},
-    {1, 0, 0},
-    {0, 1, 0},
-    {0.5, 0, 1},
-    {0.5, 0.5, 1},
-    {0, 0.5, 1},
-    {0.5, 0, 0},
-    {0.5, 0.5, 0},
-    {0, 0.5, 0},
-    {Real(1)/3, Real(1)/3, -1},
-    {Real(1)/3, Real(1)/3, 1},
-    {Real(1)/3, Real(1)/3, 0}
-  };
-
 const unsigned int Prism::edge_sides_map[9][2] =
   {
     {0, 1}, // Edge 0

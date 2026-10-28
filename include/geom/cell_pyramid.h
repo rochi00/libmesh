@@ -211,7 +211,27 @@ protected:
   /**
    * Master element node locations
    */
-  static const Real _master_points[18][3];
+  static constexpr Real _master_points[18][3] =
+    {
+      {-1, -1, 0},
+      {1, -1, 0},
+      {1, 1, 0},
+      {-1, 1, 0},
+      {0, 0, 1},
+      {0, -1, 0},
+      {1, 0, 0},
+      {0, 1, 0},
+      {-1, 0, 0},
+      {-0.5, -0.5, 0.5},
+      {0.5, -0.5, 0.5},
+      {0.5, 0.5, 0.5},
+      {-0.5, 0.5, 0.5},
+      {0, 0, 0},
+      {0, -Real(2)/3, Real(1)/3},
+      { Real(2)/3, 0, Real(1)/3},
+      {0,  Real(2)/3, Real(1)/3},
+      {-Real(2)/3, 0, Real(1)/3}
+    };
 
 #ifdef LIBMESH_ENABLE_AMR
 

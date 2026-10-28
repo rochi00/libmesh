@@ -33,24 +33,6 @@ const int Tet::num_sides;
 const int Tet::num_edges;
 const int Tet::num_children;
 
-const Real Tet::_master_points[14][3] =
-  {
-    {0, 0, 0},
-    {1, 0, 0},
-    {0, 1, 0},
-    {0, 0, 1},
-    {0.5, 0, 0},
-    {0.5, 0.5, 0},
-    {0, 0.5, 0},
-    {0, 0, 0.5},
-    {0.5, 0, 0.5},
-    {0, 0.5, 0.5},
-    {1/Real(3), 1/Real(3), 0},
-    {1/Real(3), 0, 1/Real(3)},
-    {1/Real(3), 1/Real(3), 1/Real(3)},
-    {0, 1/Real(3), 1/Real(3)}
-  };
-
 const unsigned int Tet::edge_sides_map[6][2] =
   {
     {0, 1}, // Edge 0

@@ -211,7 +211,30 @@ protected:
   /**
    * Master element node locations
    */
-  static const Real _master_points[21][3];
+  static constexpr Real _master_points[21][3] =
+    {
+      {0, 0, -1},
+      {1, 0, -1},
+      {0, 1, -1},
+      {0, 0, 1},
+      {1, 0, 1},
+      {0, 1, 1},
+      {0.5, 0, -1},
+      {0.5, 0.5, -1},
+      {0, 0.5, -1},
+      {0, 0, 0},
+      {1, 0, 0},
+      {0, 1, 0},
+      {0.5, 0, 1},
+      {0.5, 0.5, 1},
+      {0, 0.5, 1},
+      {0.5, 0, 0},
+      {0.5, 0.5, 0},
+      {0, 0.5, 0},
+      {Real(1)/3, Real(1)/3, -1},
+      {Real(1)/3, Real(1)/3, 1},
+      {Real(1)/3, Real(1)/3, 0}
+    };
 
   /**
    * This maps the \f$ j^{th} \f$ Prism vertex to the (in this case) 3
