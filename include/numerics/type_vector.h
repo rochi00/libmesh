@@ -974,7 +974,7 @@ auto TypeVector<T>::norm_sq() const
 // generic norm() above for these scalar types to avoid the extra branch in
 // the common case.
 template <>
-inline
+LIBMESH_DEVICE_INLINE
 auto TypeVector<float>::norm() const
 {
   using std::sqrt;
@@ -982,7 +982,7 @@ auto TypeVector<float>::norm() const
 }
 
 template <>
-inline
+LIBMESH_DEVICE_INLINE
 auto TypeVector<double>::norm() const
 {
   using std::sqrt;
@@ -1032,7 +1032,7 @@ TypeVector<T>::l1_norm() const
 {
   using std::abs;
   decltype(abs(T())) ret{};
-  for (const auto i : make_range(libmesh_dim))
+  for (unsigned int i=0; i<LIBMESH_DIM; i++)
     ret += abs(_coords[i]);
 
   return ret;
