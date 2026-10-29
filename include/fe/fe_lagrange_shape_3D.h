@@ -43,6 +43,136 @@
 namespace libMesh
 {
 
+#if LIBMESH_DIM == 3
+
+namespace detail
+{
+
+// The PRISM21 cubic shapes, a tensor product of TRI7 and EDGE3 shapes,
+// and their derivatives.  PRISM20's shapes are PRISM21's with the
+// central bubble redistributed, so both call these, rather than the
+// PRISM20 case calling the dispatch function it is in: device code
+// can't inline a recursive call, so the call would carry the stack
+// frame of the whole dispatch.
+
+template <typename Scalar>
+LIBMESH_DEVICE_INLINE
+Scalar fe_lagrange_prism21_shape(const unsigned int i,
+                                 const TypeVector<Scalar> & p)
+{
+  // Compute prism shape functions as a tensor-product
+  // of a triangle and an edge
+
+  VectorValue<Scalar> p2d(p(0),p(1));
+  Scalar p1d = p(2);
+
+  //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
+  constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1, 2};
+  constexpr unsigned int i1[] = {0, 1, 2, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 3, 4, 5, 6, 6, 6};
+
+  return (fe_lagrange_2D_shape<LAGRANGE>(TRI7, THIRD, i1[i], p2d)*
+          fe_lagrange_1D_quadratic_shape(i0[i], p1d));
+}
+
+template <typename Scalar>
+LIBMESH_DEVICE_INLINE
+Scalar fe_lagrange_prism21_shape_deriv(const unsigned int i,
+                                       const unsigned int j,
+                                       const TypeVector<Scalar> & p)
+{
+  // Compute prism shape functions as a tensor-product
+  // of a triangle and an edge
+
+  VectorValue<Scalar> p2d(p(0),p(1));
+  Scalar p1d = p(2);
+
+  //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
+  constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1, 2};
+  constexpr unsigned int i1[] = {0, 1, 2, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 3, 4, 5, 6, 6, 6};
+
+  switch (j)
+    {
+      // d()/dxi
+    case 0:
+      return (fe_lagrange_2D_shape_deriv<LAGRANGE>(TRI7, THIRD, i1[i], 0, p2d)*
+              fe_lagrange_1D_quadratic_shape(i0[i], p1d));
+
+      // d()/deta
+    case 1:
+      return (fe_lagrange_2D_shape_deriv<LAGRANGE>(TRI7, THIRD, i1[i], 1, p2d)*
+              fe_lagrange_1D_quadratic_shape(i0[i], p1d));
+
+      // d()/dzeta
+    case 2:
+      return (fe_lagrange_2D_shape<LAGRANGE>(TRI7, THIRD, i1[i], p2d)*
+              fe_lagrange_1D_quadratic_shape_deriv(i0[i], 0, p1d));
+
+    default:
+      libmesh_error_msg("Invalid shape function derivative j = " << j);
+    }
+}
+
+#ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
+
+template <typename Scalar>
+LIBMESH_DEVICE_INLINE
+Scalar fe_lagrange_prism21_shape_second_deriv(const unsigned int i,
+                                              const unsigned int j,
+                                              const TypeVector<Scalar> & p)
+{
+  // Compute prism shape functions as a tensor-product
+  // of a triangle and an edge
+
+  VectorValue<Scalar> p2d(p(0),p(1));
+  Scalar p1d = p(2);
+
+  //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
+  constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1, 2};
+  constexpr unsigned int i1[] = {0, 1, 2, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 3, 4, 5, 6, 6, 6};
+
+  switch (j)
+    {
+      // d^2()/dxi^2
+    case 0:
+      return (fe_lagrange_2D_shape_second_deriv<LAGRANGE>(TRI7, THIRD, i1[i], 0, p2d)*
+              fe_lagrange_1D_quadratic_shape(i0[i], p1d));
+
+      // d^2()/dxideta
+    case 1:
+      return (fe_lagrange_2D_shape_second_deriv<LAGRANGE>(TRI7, THIRD, i1[i], 1, p2d)*
+              fe_lagrange_1D_quadratic_shape(i0[i], p1d));
+
+      // d^2()/deta^2
+    case 2:
+      return (fe_lagrange_2D_shape_second_deriv<LAGRANGE>(TRI7, THIRD, i1[i], 2, p2d)*
+              fe_lagrange_1D_quadratic_shape(i0[i], p1d));
+
+      // d^2()/dxidzeta
+    case 3:
+      return (fe_lagrange_2D_shape_deriv<LAGRANGE>(TRI7, THIRD, i1[i], 0, p2d)*
+              fe_lagrange_1D_quadratic_shape_deriv(i0[i], 0, p1d));
+
+      // d^2()/detadzeta
+    case 4:
+      return (fe_lagrange_2D_shape_deriv<LAGRANGE>(TRI7, THIRD, i1[i], 1, p2d)*
+              fe_lagrange_1D_quadratic_shape_deriv(i0[i], 0, p1d));
+
+      // d^2()/dzeta^2
+    case 5:
+      return (fe_lagrange_2D_shape<LAGRANGE>(TRI7, THIRD, i1[i], p2d)*
+              fe_lagrange_1D_quadratic_shape_second_deriv(i0[i], 0, p1d));
+
+    default:
+      libmesh_error_msg("Invalid shape function derivative j = " << j);
+    }
+}
+
+#endif // LIBMESH_ENABLE_SECOND_DERIVATIVES
+
+} // namespace detail
+
+#endif // LIBMESH_DIM == 3
+
 template <FEFamily T, typename Scalar>
 LIBMESH_DEVICE_INLINE
 Scalar fe_lagrange_3D_shape(const ElemType type,
@@ -436,7 +566,7 @@ Scalar fe_lagrange_3D_shape(const ElemType type,
               VectorValue<Scalar> p2d(p(0),p(1));
               Scalar p1d = p(2);
 
-              const Scalar mainval = fe_lagrange_3D_shape<LAGRANGE>(PRISM21, THIRD, i, p);
+              const Scalar mainval = detail::fe_lagrange_prism21_shape(i, p);
 
               if (i0[i] != 2)
                 return mainval;
@@ -455,19 +585,7 @@ Scalar fe_lagrange_3D_shape(const ElemType type,
           case PRISM21:
             {
               libmesh_assert_less (i, 21);
-
-              // Compute prism shape functions as a tensor-product
-              // of a triangle and an edge
-
-              VectorValue<Scalar> p2d(p(0),p(1));
-              Scalar p1d = p(2);
-
-              //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
-              constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1, 2};
-              constexpr unsigned int i1[] = {0, 1, 2, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 3, 4, 5, 6, 6, 6};
-
-              return (fe_lagrange_2D_shape<LAGRANGE>(TRI7, THIRD, i1[i], p2d)*
-                      fe_lagrange_1D_quadratic_shape(i0[i], p1d));
+              return detail::fe_lagrange_prism21_shape(i, p);
             }
 
             // Weird rational shape functions with weirder bubbles...
@@ -1433,7 +1551,7 @@ Scalar fe_lagrange_3D_shape_deriv(const ElemType type,
               VectorValue<Scalar> p2d(p(0),p(1));
               Scalar p1d = p(2);
 
-              const Scalar mainval = fe_lagrange_3D_shape_deriv<LAGRANGE>(PRISM21, THIRD, i, j, p);
+              const Scalar mainval = detail::fe_lagrange_prism21_shape_deriv(i, j, p);
 
               if (i0[i] != 2)
                 return mainval;
@@ -1476,37 +1594,7 @@ Scalar fe_lagrange_3D_shape_deriv(const ElemType type,
           case PRISM21:
             {
               libmesh_assert_less (i, 21);
-
-              // Compute prism shape functions as a tensor-product
-              // of a triangle and an edge
-
-              VectorValue<Scalar> p2d(p(0),p(1));
-              Scalar p1d = p(2);
-
-              //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
-              constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1, 2};
-              constexpr unsigned int i1[] = {0, 1, 2, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 3, 4, 5, 6, 6, 6};
-
-              switch (j)
-                {
-                  // d()/dxi
-                case 0:
-                  return (fe_lagrange_2D_shape_deriv<LAGRANGE>(TRI7, THIRD, i1[i], 0, p2d)*
-                          fe_lagrange_1D_quadratic_shape(i0[i], p1d));
-
-                  // d()/deta
-                case 1:
-                  return (fe_lagrange_2D_shape_deriv<LAGRANGE>(TRI7, THIRD, i1[i], 1, p2d)*
-                          fe_lagrange_1D_quadratic_shape(i0[i], p1d));
-
-                  // d()/dzeta
-                case 2:
-                  return (fe_lagrange_2D_shape<LAGRANGE>(TRI7, THIRD, i1[i], p2d)*
-                          fe_lagrange_1D_quadratic_shape_deriv(i0[i], 0, p1d));
-
-                default:
-                  libmesh_error_msg("Invalid shape function derivative j = " << j);
-                }
+              return detail::fe_lagrange_prism21_shape_deriv(i, j, p);
             }
 
           case PYRAMID18:
@@ -2886,7 +2974,7 @@ Scalar fe_lagrange_3D_shape_second_deriv(const ElemType type,
               //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19
               constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1};
 
-              const Scalar mainval = fe_lagrange_3D_shape_second_deriv<LAGRANGE>(PRISM21, THIRD, i, j, p);
+              const Scalar mainval = detail::fe_lagrange_prism21_shape_second_deriv(i, j, p);
 
               if (i0[i] != 2)
                 return mainval;
@@ -2950,52 +3038,7 @@ Scalar fe_lagrange_3D_shape_second_deriv(const ElemType type,
           case PRISM21:
             {
               libmesh_assert_less (i, 21);
-
-              // Compute prism shape functions as a tensor-product
-              // of a triangle and an edge
-
-              VectorValue<Scalar> p2d(p(0),p(1));
-              Scalar p1d = p(2);
-
-              //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
-              constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1, 2};
-              constexpr unsigned int i1[] = {0, 1, 2, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 3, 4, 5, 6, 6, 6};
-
-              switch (j)
-                {
-                  // d^2()/dxi^2
-                case 0:
-                  return (fe_lagrange_2D_shape_second_deriv<LAGRANGE>(TRI7, THIRD, i1[i], 0, p2d)*
-                          fe_lagrange_1D_quadratic_shape(i0[i], p1d));
-
-                  // d^2()/dxideta
-                case 1:
-                  return (fe_lagrange_2D_shape_second_deriv<LAGRANGE>(TRI7, THIRD, i1[i], 1, p2d)*
-                          fe_lagrange_1D_quadratic_shape(i0[i], p1d));
-
-                  // d^2()/deta^2
-                case 2:
-                  return (fe_lagrange_2D_shape_second_deriv<LAGRANGE>(TRI7, THIRD, i1[i], 2, p2d)*
-                          fe_lagrange_1D_quadratic_shape(i0[i], p1d));
-
-                  // d^2()/dxidzeta
-                case 3:
-                  return (fe_lagrange_2D_shape_deriv<LAGRANGE>(TRI7, THIRD, i1[i], 0, p2d)*
-                          fe_lagrange_1D_quadratic_shape_deriv(i0[i], 0, p1d));
-
-                  // d^2()/detadzeta
-                case 4:
-                  return (fe_lagrange_2D_shape_deriv<LAGRANGE>(TRI7, THIRD, i1[i], 1, p2d)*
-                          fe_lagrange_1D_quadratic_shape_deriv(i0[i], 0, p1d));
-
-                  // d^2()/dzeta^2
-                case 5:
-                  return (fe_lagrange_2D_shape<LAGRANGE>(TRI7, THIRD, i1[i], p2d)*
-                          fe_lagrange_1D_quadratic_shape_second_deriv(i0[i], 0, p1d));
-
-                default:
-                  libmesh_error_msg("Invalid shape function derivative j = " << j);
-                }
+              return detail::fe_lagrange_prism21_shape_second_deriv(i, j, p);
             }
 
           case PYRAMID18:
