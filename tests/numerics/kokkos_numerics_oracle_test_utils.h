@@ -19,6 +19,8 @@
 
 #include <cmath>
 #include <string>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace libMeshTest
@@ -27,6 +29,26 @@ namespace KokkosOracle
 {
 
 using libMesh::Real;
+
+template <typename F, std::size_t... Is>
+inline void
+with_constant_index_impl(const std::size_t i, F && f, std::index_sequence<Is...>)
+{
+  ((i == Is ? f(std::integral_constant<std::size_t, Is>()) : void()), ...);
+}
+
+// Calls f(std::integral_constant<std::size_t, i>()) for a run-time i <
+// N.  Oracles use it to launch one kernel instantiation per bucket,
+// with the bucket's key (element type, order, ...) as compile-time
+// constants, as bucketed library kernels take them: the compiler then
+// folds the shared functions' run-time dispatch down to the bucket's
+// own path, and its stack frame to that path's.
+template <std::size_t N, typename F>
+inline void
+with_constant_index(const std::size_t i, F && f)
+{
+  with_constant_index_impl(i, std::forward<F>(f), std::make_index_sequence<N>());
+}
 
 // Copies a host vector of plain objects into a new device view, for
 // test inputs that don't go through the gpu/ storage-policy views
