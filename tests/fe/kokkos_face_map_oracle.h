@@ -207,7 +207,7 @@ run_all_oracles()
             const Point xyz = side_eval.map(qp);
             const auto parent_derivs = [&](RealVectorValue & dx_dxi, RealVectorValue & dx_deta)
               {
-                const NothrowInverseMapPolicy policy{dim};
+                const NothrowInverseMapPolicy policy;
                 bool converged = false;
                 const Point p = fe_inverse_map(dim, xyz, TOLERANCE, true, elem_eval, policy, converged);
                 dx_dxi  = elem_eval.map_deriv(0, p);

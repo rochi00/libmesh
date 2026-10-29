@@ -1158,15 +1158,24 @@ struct HostMapEval
 
   Point map_deriv(const unsigned int j, const Point & p) const
   { return FEMap::map_deriv(dim, elem, j, p); }
+
+  bool singular_node(const Point & physical_point, const Real tolerance, Point & p) const
+  {
+    const unsigned int local_singular_node =
+      elem->local_singular_node(physical_point, tolerance);
+    if (local_singular_node == invalid_uint)
+      return false;
+
+    libmesh_assert_less(local_singular_node, elem->n_nodes());
+    p = elem->master_point(local_singular_node);
+    return true;
+  }
 };
 
 struct HostInverseMapPolicy
 {
-  const unsigned int dim;
   const Elem * elem;
   const Point & physical_point;
-  const Real tolerance;
-  const bool secure;
 
   bool singular(const Point & p) const
   {
@@ -1174,54 +1183,6 @@ struct HostInverseMapPolicy
       ("inverse_map found a singular Jacobian " <<
        " at master point " << p << " in element " <<
        elem->id());
-    return true;
-  }
-
-  bool solve(const RealTensorValue & J,
-             const Point & delta,
-             Point & dp,
-             Point & p) const
-  {
-    libmesh_try
-      {
-        J.solve(delta, dp);
-      }
-    libmesh_catch (ConvergenceFailure &)
-      {
-        // If we encountered a singular Jacobian, but are at
-        // a singular node, return said singular node.
-        const unsigned int local_singular_node =
-          elem->local_singular_node(physical_point, tolerance);
-        if (local_singular_node != invalid_uint)
-        {
-          libmesh_assert_less(local_singular_node, elem->n_nodes());
-          p = elem->master_point(local_singular_node);
-          return false;
-        }
-
-        // We encountered a singular Jacobian.  The value of
-        // dp is zero, since it was never changed during the
-        // call to RealTensorValue::solve().  We don't want to
-        // continue iterating until max_cnt since there is no
-        // update to the Newton iterate, and we don't want to
-        // print the inverse_map_error value since it will
-        // confusingly be 0.  Therefore, in the secure case we
-        // need to throw an error message while in the !secure
-        // case we can just return a far away point.
-        if (secure)
-          {
-            libmesh_degenerate_mapping_msg(
-              "inverse_map found a singular Jacobian" <<
-              " at master point " << p << " in element " <<
-              elem->id());
-          }
-        else
-          {
-            fe_inverse_map_far_point(dim, p);
-            return false;
-          }
-      }
-
     return true;
   }
 
@@ -1309,7 +1270,7 @@ Point FEMap::inverse_map (const unsigned int dim,
   LOG_SCOPE("inverse_map()", "FEMap");
 
   const HostMapEval eval{dim, elem};
-  const HostInverseMapPolicy policy{dim, elem, physical_point, tolerance, secure};
+  const HostInverseMapPolicy policy{elem, physical_point};
 
   bool converged;
   const Point p = fe_inverse_map(dim, physical_point, tolerance, secure,

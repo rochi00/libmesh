@@ -19,9 +19,11 @@
 // and NothrowInverseMapPolicy, against FEMap::inverse_map() on the host:
 // every Lagrange element type, undistorted, distorted, tilted into 3D
 // and collapsed, at points inside, on, outside and far from it, secure
-// or not.  Where FEMap returns a point the kernel must return the same
-// one, exactly on a host execution space; where FEMap throws, or
-// returns a singular node, the kernel must report Newton hasn't converged.
+// or not.  Where FEMap returns a point, a singular node included, the
+// kernel must return the same one, exactly on a host execution space;
+// where FEMap throws, the kernel must report Newton hasn't converged.
+// On a device, rounding may decide whether Newton converges or stalls:
+// a case where one side stalls and the other converges is dropped.
 
 #ifndef KOKKOS_INVERSE_MAP_ORACLE_H
 #define KOKKOS_INVERSE_MAP_ORACLE_H
@@ -62,6 +64,9 @@ struct Case
   bool host_threw;
   Point host_p;
   bool host_at_singular_node;
+
+  // Whether Newton met a singular Jacobian on the host
+  bool host_singular;
 };
 
 // Node coordinates of one element of type t: the reference nodes, lightly
@@ -106,6 +111,72 @@ same_bits(const Point & a, const Point & b)
         return false;
     }
   return true;
+}
+
+// Whether p is the far away point fe_inverse_map() returns when Newton
+// gives up
+inline bool
+is_far_point(const unsigned int dim, const Point & p)
+{
+  Point far = p;
+  fe_inverse_map_far_point(dim, far);
+  return far == p;
+}
+
+// A map evaluator and a policy for fe_inverse_map() that record whether
+// Newton met a singular Jacobian: fe_inverse_map() calls singular_node()
+// on every singular 3D one, and singular() on a singular 1D or 2D one
+// when secure.  Newton that stops without either has stalled.
+template <typename MapEval>
+struct SingularRecordingEval
+{
+  MapEval eval;
+  bool * met_singular;
+
+  LIBMESH_DEVICE_INLINE
+  Point map(const Point & p) const
+  { return eval.map(p); }
+
+  LIBMESH_DEVICE_INLINE
+  Point map_deriv(const unsigned int j, const Point & p) const
+  { return eval.map_deriv(j, p); }
+
+  LIBMESH_DEVICE_INLINE
+  bool singular_node(const Point & physical_point, const Real tolerance, Point & p) const
+  {
+    *met_singular = true;
+    return eval.singular_node(physical_point, tolerance, p);
+  }
+};
+
+struct SingularRecordingPolicy
+{
+  NothrowInverseMapPolicy policy;
+  bool * met_singular;
+
+  LIBMESH_DEVICE_INLINE
+  bool singular(const Point & p) const
+  {
+    *met_singular = true;
+    return policy.singular(p);
+  }
+
+  LIBMESH_DEVICE_INLINE
+  bool not_converged(const unsigned int cnt,
+                     const unsigned int max_cnt,
+                     const Point & physical_guess,
+                     const Point & dp,
+                     const Point & p,
+                     const Real inverse_map_error) const
+  { return policy.not_converged(cnt, max_cnt, physical_guess, dp, p, inverse_map_error); }
+};
+
+// Whether the host's Newton converged to a point
+inline bool
+host_converged(const Case & c)
+{
+  return !c.host_threw && !c.host_at_singular_node && !c.host_singular &&
+         !is_far_point(c.dim, c.host_p);
 }
 
 inline int
@@ -159,7 +230,7 @@ run_all_oracles()
             for (const bool secure : {false, true})
               {
                 Case c{dim, cast_int<unsigned int>(pts.size()), first_node, t,
-                       elem->default_order(), x, tol, secure, false, Point(), false};
+                       elem->default_order(), x, tol, secure, false, Point(), false, false};
                 try
                   {
                     c.host_p = FEMap::inverse_map(dim, elem.get(), x, tol, secure);
@@ -171,6 +242,17 @@ run_all_oracles()
                   {
                     c.host_threw = true;
                   }
+
+                // Whether FEMap met a singular Jacobian: the same Newton
+                // with the same map, as LagrangeMapEval evaluates it
+                const auto host_nodes = [&pts](const unsigned int i) { return pts[i]; };
+                const LagrangeMapEval<decltype(host_nodes)> host_eval
+                  {dim, t, elem->default_order(), cast_int<unsigned int>(pts.size()), host_nodes};
+                bool host_converged_too = false;
+                fe_inverse_map(dim, x, tol, secure,
+                               SingularRecordingEval<decltype(host_eval)>{host_eval, &c.host_singular},
+                               SingularRecordingPolicy{{}, &c.host_singular}, host_converged_too);
+
                 cases.push_back(c);
               }
       }
@@ -184,6 +266,7 @@ run_all_oracles()
   ::Kokkos::View<unsigned int *> d_info("inverse_map_info", 6 * n_cases);
   ::Kokkos::View<Real *> d_out("inverse_map_out", 3 * n_cases);
   ::Kokkos::View<unsigned int *> d_converged("inverse_map_converged", n_cases);
+  ::Kokkos::View<unsigned int *> d_singular("inverse_map_singular", n_cases);
   {
     auto h_nodes = ::Kokkos::create_mirror_view(d_nodes);
     for (std::size_t i = 0; i != all_nodes.size(); ++i)
@@ -220,20 +303,25 @@ run_all_oracles()
       const unsigned int dim = d_info(6*k + 0);
       const LagrangeMapEval<decltype(nodes)> eval
         {dim, ElemType(d_info(6*k + 1)), Order(d_info(6*k + 2)), d_info(6*k + 3), nodes};
-      const NothrowInverseMapPolicy policy{dim};
+      bool singular = false;
+      const SingularRecordingEval<decltype(eval)> recording_eval{eval, &singular};
+      const SingularRecordingPolicy policy{{}, &singular};
       bool converged = false;
       const Point x(d_in(4*k), d_in(4*k + 1), d_in(4*k + 2));
       const Point p = fe_inverse_map(dim, x, d_in(4*k + 3), d_info(6*k + 5),
-                                     eval, policy, converged);
+                                     recording_eval, policy, converged);
       for (unsigned int d = 0; d != 3; ++d)
         d_out(3*k + d) = p(d);
       d_converged(k) = converged;
+      d_singular(k) = singular;
     });
 
   auto h_out = ::Kokkos::create_mirror_view(d_out);
   auto h_converged = ::Kokkos::create_mirror_view(d_converged);
+  auto h_singular = ::Kokkos::create_mirror_view(d_singular);
   ::Kokkos::deep_copy(h_out, d_out);
   ::Kokkos::deep_copy(h_converged, d_converged);
+  ::Kokkos::deep_copy(h_singular, d_singular);
 
   // Compare: exactly on a host execution space, where the kernel does the
   // host's arithmetic; a GPU may contract it differently.
@@ -241,7 +329,7 @@ run_all_oracles()
   constexpr bool exact =
     ::Kokkos::SpaceAccessibility<::Kokkos::HostSpace, ExecSpace::memory_space>::accessible;
 
-  int n_fail = 0, n_point = 0, n_threw = 0, n_singular_node = 0;
+  int n_fail = 0, n_point = 0, n_threw = 0, n_singular_node = 0, n_stalled = 0;
   for (std::size_t k = 0; k != n_cases; ++k)
     {
       const Case & c = cases[k];
@@ -256,8 +344,8 @@ run_all_oracles()
         }
       else if (c.host_at_singular_node)
         {
-          // FEMap returns the singular node; the kernel doesn't look for one
-          ok = !converged;
+          // FEMap returns the singular node, reporting Newton hasn't converged
+          ok = !converged && same_bits(p, c.host_p);
           ++n_singular_node;
         }
       else
@@ -266,6 +354,23 @@ run_all_oracles()
                (!exact && (p - c.host_p).norm() <= 1e-10);
           ++n_point;
         }
+
+      // On a device, where rounding differs from the host's
+      if (!ok && !exact && !c.host_at_singular_node)
+        {
+          const bool kernel_stalled = !converged && !h_singular(k);
+          const bool host_stalled = !host_converged(c) && !c.host_singular;
+          if ((host_stalled && converged) || (host_converged(c) && kernel_stalled))
+            {
+              // Newton steps that rounding keeps above a tight tolerance,
+              // as far outside an element, make Newton stall before
+              // max_cnt or not, so one side may converge where the other
+              // gives up.  There is nothing to compare: drop the case.
+              ok = true;
+              ++n_stalled;
+            }
+        }
+
       if (!ok)
         {
           if (n_fail < 10)
@@ -279,9 +384,10 @@ run_all_oracles()
         }
     }
 
-  std::printf("[inverse_map_oracle] [%s] %s  (%d failures; %d points, %d throws, %d singular nodes)\n",
+  std::printf("[inverse_map_oracle] [%s] %s  (%d failures; %d points, %d throws, %d singular nodes, "
+              "%d dropped where one side stalled)\n",
               exact ? "exact" : "tolerance", n_fail ? "FAIL" : "PASS",
-              n_fail, n_point, n_threw, n_singular_node);
+              n_fail, n_point, n_threw, n_singular_node, n_stalled);
   return n_fail;
 }
 

@@ -201,13 +201,6 @@ public:
   virtual bool on_reference_element(const Point & p,
                                     const Real eps = TOLERANCE) const override final;
 
-protected:
-
-  /**
-   * Data for links to parent/neighbor/interior_parent elements.
-   */
-  Elem * _elemlinks_data[6+(LIBMESH_DIM>3)];
-
   /**
    * Master element node locations
    */
@@ -232,6 +225,13 @@ protected:
       {0,  Real(2)/3, Real(1)/3},
       {-Real(2)/3, 0, Real(1)/3}
     };
+
+protected:
+
+  /**
+   * Data for links to parent/neighbor/interior_parent elements.
+   */
+  Elem * _elemlinks_data[6+(LIBMESH_DIM>3)];
 
 #ifdef LIBMESH_ENABLE_AMR
 
