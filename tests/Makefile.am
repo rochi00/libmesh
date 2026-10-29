@@ -501,7 +501,7 @@ $(unit_tests_kokkos_dbg_object): $(driver_kokkos_src)
 
 unit_tests-kokkos-dbg$(EXEEXT): $(unit_tests_kokkos_dbg_object) $(top_builddir)/libmesh_dbg.la
 	@rm -f $@
-	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(KOKKOS_CXX) \
+	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(CXX) \
 	  $(LDFLAGS) $(AM_LDFLAGS) $(KOKKOS_LDFLAGS) -o $@ \
 	  $(unit_tests_kokkos_dbg_object) \
 	  $(top_builddir)/libmesh_dbg.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS) $(LIBS)
@@ -521,7 +521,7 @@ $(unit_tests_kokkos_devel_object): $(driver_kokkos_src)
 
 unit_tests-kokkos-devel$(EXEEXT): $(unit_tests_kokkos_devel_object) $(top_builddir)/libmesh_devel.la
 	@rm -f $@
-	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(KOKKOS_CXX) \
+	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(CXX) \
 	  $(LDFLAGS) $(AM_LDFLAGS) $(KOKKOS_LDFLAGS) -o $@ \
 	  $(unit_tests_kokkos_devel_object) \
 	  $(top_builddir)/libmesh_devel.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS) $(LIBS)
@@ -541,7 +541,7 @@ $(unit_tests_kokkos_prof_object): $(driver_kokkos_src)
 
 unit_tests-kokkos-prof$(EXEEXT): $(unit_tests_kokkos_prof_object) $(top_builddir)/libmesh_prof.la
 	@rm -f $@
-	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(KOKKOS_CXX) \
+	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(CXX) \
 	  $(LDFLAGS) $(AM_LDFLAGS) $(KOKKOS_LDFLAGS) -o $@ \
 	  $(unit_tests_kokkos_prof_object) \
 	  $(top_builddir)/libmesh_prof.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS) $(LIBS)
@@ -561,7 +561,7 @@ $(unit_tests_kokkos_oprof_object): $(driver_kokkos_src)
 
 unit_tests-kokkos-oprof$(EXEEXT): $(unit_tests_kokkos_oprof_object) $(top_builddir)/libmesh_oprof.la
 	@rm -f $@
-	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(KOKKOS_CXX) \
+	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(CXX) \
 	  $(LDFLAGS) $(AM_LDFLAGS) $(KOKKOS_LDFLAGS) -o $@ \
 	  $(unit_tests_kokkos_oprof_object) \
 	  $(top_builddir)/libmesh_oprof.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS) $(LIBS)
@@ -581,7 +581,7 @@ $(unit_tests_kokkos_opt_object): $(driver_kokkos_src)
 
 unit_tests-kokkos-opt$(EXEEXT): $(unit_tests_kokkos_opt_object) $(top_builddir)/libmesh_opt.la
 	@rm -f $@
-	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(KOKKOS_CXX) \
+	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(CXX) \
 	  $(LDFLAGS) $(AM_LDFLAGS) $(KOKKOS_LDFLAGS) -o $@ \
 	  $(unit_tests_kokkos_opt_object) \
 	  $(top_builddir)/libmesh_opt.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS) $(LIBS)
