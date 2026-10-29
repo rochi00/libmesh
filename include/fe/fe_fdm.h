@@ -24,9 +24,6 @@
 #include "libmesh/enum_order.h"
 #include "libmesh/point.h"
 
-// C++ includes
-#include <tuple>
-
 // Central finite differences of shape functions, for the element
 // types whose derivatives haven't been worked out analytically.  The
 // fe_fdm_deriv() and fe_fdm_second_deriv() overloads declared in
@@ -42,9 +39,27 @@ namespace libMesh
 namespace detail
 {
 
+// Plain aggregates rather than std::tuple: std::make_tuple() of a
+// point type, whose copy constructor isn't constexpr, can't be called
+// from CUDA device code.
+template <typename PointType>
+struct FDMPoints
+{
+  PointType pp, pm;
+  Real eps;
+};
+
+template <typename PointType>
+struct FDMSecondPoints
+{
+  PointType pp, pm;
+  Real eps;
+  unsigned int deriv_j;
+};
+
 template <typename PointType>
 LIBMESH_DEVICE_INLINE
-std::tuple<PointType, PointType, Real>
+FDMPoints<PointType>
 fdm_points(const unsigned int j, const PointType & p)
 {
   libmesh_assert_less (j, LIBMESH_DIM);
@@ -83,12 +98,12 @@ fdm_points(const unsigned int j, const PointType & p)
       libmesh_error_msg("Invalid derivative index j = " << j);
     }
 
-  return std::make_tuple(pp, pm, eps);
+  return {pp, pm, eps};
 }
 
 template <typename PointType>
 LIBMESH_DEVICE_INLINE
-std::tuple<PointType, PointType, Real, unsigned int>
+FDMSecondPoints<PointType>
 fdm_second_points(const unsigned int j, const PointType & p)
 {
   // cheat by using finite difference approximations:
@@ -156,7 +171,7 @@ fdm_second_points(const unsigned int j, const PointType & p)
       libmesh_error_msg("Invalid shape function derivative j = " << j);
     }
 
-  return std::make_tuple(pp, pm, eps, deriv_j);
+  return {pp, pm, eps, deriv_j};
 }
 
 /**
