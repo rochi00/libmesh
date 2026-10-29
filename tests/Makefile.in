@@ -15665,7 +15665,7 @@ $(top_builddir)/libmesh_oprof.la: FORCE
 
 @LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@unit_tests-kokkos-dbg$(EXEEXT): $(unit_tests_kokkos_dbg_object) $(top_builddir)/libmesh_dbg.la
 @LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@	@rm -f $@
-@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(KOKKOS_CXX) \
+@LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(CXX) \
 @LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(LDFLAGS) $(AM_LDFLAGS) $(KOKKOS_LDFLAGS) -o $@ \
 @LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(unit_tests_kokkos_dbg_object) \
 @LIBMESH_DBG_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(top_builddir)/libmesh_dbg.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS) $(LIBS)
@@ -15680,7 +15680,7 @@ $(top_builddir)/libmesh_oprof.la: FORCE
 
 @LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@unit_tests-kokkos-devel$(EXEEXT): $(unit_tests_kokkos_devel_object) $(top_builddir)/libmesh_devel.la
 @LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@	@rm -f $@
-@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(KOKKOS_CXX) \
+@LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(CXX) \
 @LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(LDFLAGS) $(AM_LDFLAGS) $(KOKKOS_LDFLAGS) -o $@ \
 @LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(unit_tests_kokkos_devel_object) \
 @LIBMESH_DEVEL_MODE_TRUE@@LIBMESH_ENABLE_KOKKOS_TRUE@	  $(top_builddir)/libmesh_devel.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS) $(LIBS)
@@ -15695,7 +15695,7 @@ $(top_builddir)/libmesh_oprof.la: FORCE
 
 @LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@unit_tests-kokkos-prof$(EXEEXT): $(unit_tests_kokkos_prof_object) $(top_builddir)/libmesh_prof.la
 @LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@	@rm -f $@
-@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(CXX) \
 @LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@	  $(LDFLAGS) $(AM_LDFLAGS) $(KOKKOS_LDFLAGS) -o $@ \
 @LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@	  $(unit_tests_kokkos_prof_object) \
 @LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_PROF_MODE_TRUE@	  $(top_builddir)/libmesh_prof.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS) $(LIBS)
@@ -15710,7 +15710,7 @@ $(top_builddir)/libmesh_oprof.la: FORCE
 
 @LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@unit_tests-kokkos-oprof$(EXEEXT): $(unit_tests_kokkos_oprof_object) $(top_builddir)/libmesh_oprof.la
 @LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@	@rm -f $@
-@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(CXX) \
 @LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@	  $(LDFLAGS) $(AM_LDFLAGS) $(KOKKOS_LDFLAGS) -o $@ \
 @LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@	  $(unit_tests_kokkos_oprof_object) \
 @LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPROF_MODE_TRUE@	  $(top_builddir)/libmesh_oprof.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS) $(LIBS)
@@ -15725,7 +15725,7 @@ $(top_builddir)/libmesh_oprof.la: FORCE
 
 @LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@unit_tests-kokkos-opt$(EXEEXT): $(unit_tests_kokkos_opt_object) $(top_builddir)/libmesh_opt.la
 @LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@	@rm -f $@
-@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(KOKKOS_CXX) \
+@LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(CXX) \
 @LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@	  $(LDFLAGS) $(AM_LDFLAGS) $(KOKKOS_LDFLAGS) -o $@ \
 @LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@	  $(unit_tests_kokkos_opt_object) \
 @LIBMESH_ENABLE_KOKKOS_TRUE@@LIBMESH_OPT_MODE_TRUE@	  $(top_builddir)/libmesh_opt.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS) $(LIBS)
