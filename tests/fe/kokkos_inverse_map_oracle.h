@@ -24,6 +24,9 @@
 // where FEMap throws, the kernel must report Newton hasn't converged.
 // On a device, rounding may decide whether Newton converges or stalls:
 // a case where one side stalls and the other converges is dropped.
+// Where Newton converges to a singular node, such as a pyramid's apex,
+// it determines the point only to within its tolerance, so there the
+// kernel's point must be within the tolerance of the host's.
 
 #ifndef KOKKOS_INVERSE_MAP_ORACLE_H
 #define KOKKOS_INVERSE_MAP_ORACLE_H
@@ -64,6 +67,9 @@ struct Case
   bool host_threw;
   Point host_p;
   bool host_at_singular_node;
+
+  // Whether FEMap returned a point within the tolerance of a singular node
+  bool host_near_singular_node;
 
   // Whether Newton met a singular Jacobian on the host
   bool host_singular;
@@ -230,13 +236,18 @@ run_all_oracles()
             for (const bool secure : {false, true})
               {
                 Case c{dim, cast_int<unsigned int>(pts.size()), first_node, t,
-                       elem->default_order(), x, tol, secure, false, Point(), false, false};
+                       elem->default_order(), x, tol, secure, false, Point(), false, false, false};
                 try
                   {
                     c.host_p = FEMap::inverse_map(dim, elem.get(), x, tol, secure);
                     for (unsigned int n = 0; n != ref.n_nodes(); ++n)
-                      if (elem->is_singular_node(n) && c.host_p == elem->master_point(n))
-                        c.host_at_singular_node = true;
+                      if (elem->is_singular_node(n))
+                        {
+                          if (c.host_p == elem->master_point(n))
+                            c.host_at_singular_node = true;
+                          if ((c.host_p - elem->master_point(n)).norm() <= tol)
+                            c.host_near_singular_node = true;
+                        }
                   }
                 catch (const DegenerateMap &)
                   {
@@ -352,6 +363,13 @@ run_all_oracles()
         {
           ok = same_bits(p, c.host_p) ||
                (!exact && (p - c.host_p).norm() <= 1e-10);
+
+          // Near a singular node the map's Jacobian depends on the
+          // direction the point is approached from, so rounding moves
+          // the last Newton step's direction, and the point Newton
+          // converges to is determined only to within its tolerance.
+          if (!ok && !exact && converged && c.host_near_singular_node)
+            ok = (p - c.host_p).norm() <= c.tol;
           ++n_point;
         }
 
