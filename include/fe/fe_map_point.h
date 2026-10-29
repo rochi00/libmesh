@@ -20,6 +20,7 @@
 
 // Local includes
 #include "libmesh/libmesh_device.h"
+#include "libmesh/cell_pyramid.h"
 #include "libmesh/enum_elem_type.h"
 #include "libmesh/enum_fe_family.h"
 #include "libmesh/enum_order.h"
@@ -849,16 +850,19 @@ void fe_inverse_map_far_point(const unsigned int dim, Point & p)
  * The Newton iteration of FEMap::inverse_map(): \returns the reference
  * point that \p eval maps to \p physical_point, to within \p
  * tolerance.  \p eval.map(p) and \p eval.map_deriv(j, p) evaluate the
- * map and its derivative in reference direction \p j.  \p policy
- * decides what a failure does, so that FEMap can throw and warn as it
- * always has and device code can record the failure instead:
- * \p policy.singular(p) is called on a singular 1D or 2D Jacobian when
- * \p secure, \p policy.solve(J, delta, dp, p) takes the 3D step, and
+ * map and its derivative in reference direction \p j, and
+ * \p eval.singular_node(physical_point, tolerance, p) sets \p p to the
+ * master point of a node with a singular Jacobian, such as a pyramid's
+ * apex, that \p physical_point is at, and returns whether there is one.
+ * \p policy decides what a failure does, so that FEMap can throw and
+ * warn as it always has and device code can record the failure
+ * instead: \p policy.singular(p) is called on a singular Jacobian when
+ * \p secure, other than at a singular node, and
  * \p policy.not_converged(...) is called when \p secure and Newton has
- * taken too many steps.  singular() and not_converged() return true,
- * and solve() false, to stop and return \p p.  \p converged is set
- * false when Newton stops early like that, or gives up and returns a
- * far away point, and true when it converges.
+ * taken too many steps.  Both return true to stop and return \p p.
+ * \p converged is set false when Newton stops early like that, returns
+ * a singular node, or gives up and returns a far away point, and true
+ * when it converges.
  */
 template <typename MapEval, typename InverseMapPolicy>
 LIBMESH_DEVICE_INLINE
@@ -1063,12 +1067,31 @@ Point fe_inverse_map(const unsigned int dim,
             //  {dp} = [J]^-1 ({X} - {X_n})
             //
             //  which involves the inversion of the 3x3 matrix [J]
-            if (!policy.solve(RealTensorValue(dxi(0), deta(0), dzeta(0),
-                                              dxi(1), deta(1), dzeta(1),
-                                              dxi(2), deta(2), dzeta(2)),
-                              delta, dp, p))
+            const RealTensorValue J(dxi(0), deta(0), dzeta(0),
+                                    dxi(1), deta(1), dzeta(1),
+                                    dxi(2), deta(2), dzeta(2));
+            if (!J.solve(delta, dp, std::nothrow_t()))
               {
                 converged = false;
+
+                // If we encountered a singular Jacobian, but are at
+                // a singular node, return said singular node.
+                if (eval.singular_node(physical_point, tolerance, p))
+                  return p;
+
+                // We encountered a singular Jacobian.  The value of
+                // dp is zero, since it was never changed during the
+                // call to RealTensorValue::solve().  We don't want to
+                // continue iterating until max_cnt since there is no
+                // update to the Newton iterate, and we don't want to
+                // print the inverse_map_error value since it will
+                // confusingly be 0.  Therefore, in the secure case we
+                // need to throw an error message while in the !secure
+                // case we can just return a far away point.
+                if (secure && policy.singular(p))
+                  return p;
+
+                fe_inverse_map_far_point(dim, p);
                 return p;
               }
 
@@ -1177,6 +1200,31 @@ struct LagrangeMapEval
     return x;
   }
 
+  // As Pyramid::local_singular_node() and Pyramid::master_point(): a
+  // pyramid's apex, node 4, is the only node with a singular Jacobian
+  LIBMESH_DEVICE_INLINE
+  bool singular_node(const Point & physical_point, const Real tolerance, Point & p) const
+  {
+    switch (type)
+      {
+      case PYRAMID5:
+      case PYRAMID13:
+      case PYRAMID14:
+      case PYRAMID18:
+        if ((nodes(4) - physical_point).l1_norm() <= tolerance)
+          {
+            constexpr Real apex[3] = {Pyramid::_master_points[4][0],
+                                      Pyramid::_master_points[4][1],
+                                      Pyramid::_master_points[4][2]};
+            p = Point(apex[0], apex[1], apex[2]);
+            return true;
+          }
+        return false;
+      default:
+        return false;
+      }
+  }
+
   LIBMESH_DEVICE_INLINE
   Real shape(const unsigned int i, const unsigned int j, const Point & p) const
   {
@@ -1205,31 +1253,13 @@ struct LagrangeMapEval
 /**
  * A policy for fe_inverse_map() in device code, which can neither throw
  * nor print: it stops, leaving fe_inverse_map() to report Newton hasn't
- * converged, wherever FEMap's policy would throw.  Unlike FEMap, it
- * doesn't return a singular node, such as a pyramid's apex, for a
- * singular 3D Jacobian, but the far away point FEMap returns when not
- * \p secure.
+ * converged, wherever FEMap's policy would throw.
  */
 struct NothrowInverseMapPolicy
 {
-  unsigned int dim;
-
   LIBMESH_DEVICE_INLINE
   bool singular(const Point &) const
   { return true; }
-
-  LIBMESH_DEVICE_INLINE
-  bool solve(const RealTensorValue & J,
-             const Point & delta,
-             Point & dp,
-             Point & p) const
-  {
-    if (J.solve(delta, dp, std::nothrow_t()))
-      return true;
-
-    fe_inverse_map_far_point(dim, p);
-    return false;
-  }
 
   LIBMESH_DEVICE_INLINE
   bool not_converged(const unsigned int cnt,
