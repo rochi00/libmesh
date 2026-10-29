@@ -1032,7 +1032,7 @@ TypeVector<T>::l1_norm() const
 {
   using portable_math::abs;
   decltype(abs(T())) ret{};
-  for (const auto i : make_range(libmesh_dim))
+  for (unsigned int i=0; i<LIBMESH_DIM; i++)
     ret += abs(_coords[i]);
 
   return ret;

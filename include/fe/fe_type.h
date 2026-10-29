@@ -23,6 +23,7 @@
 // Local includes
 #include "libmesh/compare_types.h"
 #include "libmesh/libmesh_config.h"
+#include "libmesh/libmesh_device.h"
 #include "libmesh/enum_order.h" // return Order objects
 #include "libmesh/enum_fe_family.h" // LAGRANGE
 #include "libmesh/enum_inf_map_type.h" // CARTESIAN
@@ -118,30 +119,30 @@ inline bool operator>=(const OrderWrapper & lhs, const OrderWrapper & rhs){ retu
 
 // First disambiguate everything that would be ambiguated by the
 // subsequent disambiguations
-#define OrderWrapperOperators(comparisontype)           \
-  inline bool operator==(comparisontype lhs, Order rhs) \
-  { return lhs == static_cast<comparisontype>(rhs); }   \
-  inline bool operator==(Order lhs, comparisontype rhs) \
-  { return static_cast<comparisontype>(lhs) == rhs; }   \
-  inline bool operator!=(comparisontype lhs, Order rhs) \
-  { return !(lhs == rhs); }                             \
-  inline bool operator!=(Order lhs, comparisontype rhs) \
-  { return !(lhs == rhs); }                             \
-  inline bool operator< (comparisontype lhs, Order rhs) \
-  { return lhs < static_cast<comparisontype>(rhs); }    \
-  inline bool operator< (Order lhs, comparisontype rhs) \
-  { return static_cast<comparisontype>(lhs) < rhs; }    \
-  inline bool operator> (comparisontype lhs, Order rhs) \
-  { return rhs < lhs; }                                 \
-  inline bool operator> (Order lhs, comparisontype rhs) \
-  { return rhs < lhs; }                                 \
-  inline bool operator<=(comparisontype lhs, Order rhs) \
-  { return !(lhs > rhs); }                              \
-  inline bool operator<=(Order lhs, comparisontype rhs) \
-  { return !(lhs > rhs); }                              \
-  inline bool operator>=(comparisontype lhs, Order rhs) \
-  { return !(lhs < rhs); }                              \
-  inline bool operator>=(Order lhs, comparisontype rhs) \
+#define OrderWrapperOperators(comparisontype)                          \
+  LIBMESH_DEVICE_INLINE bool operator==(comparisontype lhs, Order rhs) \
+  { return lhs == static_cast<comparisontype>(rhs); }                  \
+  LIBMESH_DEVICE_INLINE bool operator==(Order lhs, comparisontype rhs) \
+  { return static_cast<comparisontype>(lhs) == rhs; }                  \
+  LIBMESH_DEVICE_INLINE bool operator!=(comparisontype lhs, Order rhs) \
+  { return !(lhs == rhs); }                                            \
+  LIBMESH_DEVICE_INLINE bool operator!=(Order lhs, comparisontype rhs) \
+  { return !(lhs == rhs); }                                            \
+  LIBMESH_DEVICE_INLINE bool operator< (comparisontype lhs, Order rhs) \
+  { return lhs < static_cast<comparisontype>(rhs); }                   \
+  LIBMESH_DEVICE_INLINE bool operator< (Order lhs, comparisontype rhs) \
+  { return static_cast<comparisontype>(lhs) < rhs; }                   \
+  LIBMESH_DEVICE_INLINE bool operator> (comparisontype lhs, Order rhs) \
+  { return rhs < lhs; }                                                \
+  LIBMESH_DEVICE_INLINE bool operator> (Order lhs, comparisontype rhs) \
+  { return rhs < lhs; }                                                \
+  LIBMESH_DEVICE_INLINE bool operator<=(comparisontype lhs, Order rhs) \
+  { return !(lhs > rhs); }                                             \
+  LIBMESH_DEVICE_INLINE bool operator<=(Order lhs, comparisontype rhs) \
+  { return !(lhs > rhs); }                                             \
+  LIBMESH_DEVICE_INLINE bool operator>=(comparisontype lhs, Order rhs) \
+  { return !(lhs < rhs); }                                             \
+  LIBMESH_DEVICE_INLINE bool operator>=(Order lhs, comparisontype rhs) \
   { return !(lhs < rhs); }
 
 OrderWrapperOperators(int)
