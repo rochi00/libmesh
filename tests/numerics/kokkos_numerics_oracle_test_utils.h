@@ -23,6 +23,8 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace libMeshTest
@@ -31,6 +33,55 @@ namespace KokkosOracle
 {
 
 using libMesh::Real;
+
+// A fold over N operands nests N deep, and clang stops at 256 by
+// default, so with_constant_index() folds over blocks of this many
+// indices, and then over the blocks.
+constexpr std::size_t with_constant_index_block = 64;
+
+// Calls f with I as a constant if the run-time i is I
+template <std::size_t I, std::size_t N, typename F>
+inline void
+with_constant_index_one(const std::size_t i, F & f)
+{
+  // The last block runs past N; never instantiate f there
+  if constexpr (I < N)
+    if (i == I)
+      f(std::integral_constant<std::size_t, I>());
+}
+
+// with_constant_index_one() for each index of the block starting at
+// Offset
+template <std::size_t Offset, std::size_t N, typename F, std::size_t... Is>
+inline void
+with_constant_index_impl(const std::size_t i, F & f, std::index_sequence<Is...>)
+{
+  (with_constant_index_one<Offset + Is, N>(i, f), ...);
+}
+
+// with_constant_index_impl() for each block Bs of indices
+template <std::size_t N, typename F, std::size_t... Bs>
+inline void
+with_constant_index_blocks(const std::size_t i, F & f, std::index_sequence<Bs...>)
+{
+  (with_constant_index_impl<Bs * with_constant_index_block, N>
+     (i, f, std::make_index_sequence<with_constant_index_block>()), ...);
+}
+
+// Calls f(std::integral_constant<std::size_t, i>()) for a run-time i <
+// N.  Oracles use it to launch one kernel instantiation per bucket,
+// with the bucket's key (element type, order, ...) as compile-time
+// constants, as bucketed library kernels take them: the compiler then
+// folds the shared functions' run-time dispatch down to the bucket's
+// own path, and its stack frame to that path's.
+template <std::size_t N, typename F>
+inline void
+with_constant_index(const std::size_t i, F && f)
+{
+  constexpr std::size_t n_blocks =
+    (N + with_constant_index_block - 1) / with_constant_index_block;
+  with_constant_index_blocks<N>(i, f, std::make_index_sequence<n_blocks>());
+}
 
 // Copies a host vector of plain objects into a new device view, for
 // test inputs that don't go through the gpu/ storage-policy views
