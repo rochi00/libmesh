@@ -24,7 +24,6 @@
 #include "libmesh/enum_fe_family.h"
 #include "libmesh/enum_order.h"
 #include "libmesh/enum_to_string.h"
-#include "libmesh/fe_fdm.h"
 #include "libmesh/fe_lagrange_shape_1D.h"
 #include "libmesh/fe_lagrange_shape_2D.h"
 #include "libmesh/fe_simplex_lagrange.h"
@@ -114,7 +113,9 @@ Scalar fe_lagrange_prism21_shape_deriv(const unsigned int i,
 
 // The derivatives of the PYRAMID14 quadratic shapes, defined in
 // R. Graglia, "Higher order bases on pyramidal elements", IEEE Trans
-// Antennas and Propagation, vol 47, no 5, May 1999.
+// Antennas and Propagation, vol 47, no 5, May 1999.  The PYRAMID18
+// cubic shapes add face bubbles to these, so both call them, for the
+// same reason as the PRISM21 functions above.
 
 template <typename Scalar>
 LIBMESH_DEVICE_INLINE
@@ -342,6 +343,127 @@ Scalar fe_lagrange_pyramid14_shape_deriv(const unsigned int i,
     default:
       libmesh_error_msg("Invalid j = " << j);
     }
+}
+
+// The PYRAMID18 cubic shapes are the PYRAMID14 shapes plus multiples
+// of four bubbles on the triangular sides, bub1..bub4 in
+// fe_lagrange_3D_shape().  Each bubble is a product of five linear
+// factors (its weight bub_f, three of Graglia's normalized coordinates
+// and zeta) over den^2, den = zeta - 1 + eps, so its derivatives
+// follow from the product rule, with the factors' constant gradients,
+// and from d(den)/dzeta = 1.
+
+template <typename Scalar>
+struct Pyramid18Bubble
+{
+  // The linear factors at the point, and their gradients
+  Scalar f[5];
+  Real grad[5][3];
+  Scalar den;
+};
+
+template <typename Scalar>
+LIBMESH_DEVICE_INLINE
+Pyramid18Bubble<Scalar> fe_lagrange_pyramid18_bubble(const unsigned int k,
+                                                     const TypeVector<Scalar> & p)
+{
+  libmesh_assert_less (k, 4);
+
+  const Scalar xi   = p(0);
+  const Scalar eta  = p(1);
+  const Scalar zeta = p(2);
+  const Real eps  = 1.e-35;
+  constexpr Real alpha = 0.5;
+
+  // Graglia's p1..p4 (back, left, front, right), the three of them in
+  // each bubble, and the varying part of each bubble's weight
+  // bub_f = (1-alpha)*(1-zeta) + alpha*s
+  const Scalar pc[4] = {0.5*(1. - eta - zeta), 0.5*(1. + xi - zeta),
+                        0.5*(1. + eta - zeta), 0.5*(1. - xi - zeta)};
+  constexpr Real pc_grad[4][3] = {{0, -0.5, -0.5}, {0.5, 0, -0.5},
+                                  {0, 0.5, -0.5}, {-0.5, 0, -0.5}};
+  constexpr unsigned int pc_of[4][3] = {{0, 1, 3}, {0, 1, 2}, {1, 2, 3}, {0, 2, 3}};
+  const Scalar s[4] = {-eta, xi, eta, -xi};
+  constexpr Real s_grad[4][3] = {{0, -1, 0}, {1, 0, 0}, {0, 1, 0}, {-1, 0, 0}};
+
+  Pyramid18Bubble<Scalar> b;
+  b.f[0] = (1-alpha)*(1-zeta) + alpha*s[k];
+  for (unsigned int d = 0; d != 3; ++d)
+    b.grad[0][d] = alpha*s_grad[k][d] - (d == 2 ? 1-alpha : 0);
+  for (unsigned int m = 0; m != 3; ++m)
+    {
+      b.f[m+1] = pc[pc_of[k][m]];
+      for (unsigned int d = 0; d != 3; ++d)
+        b.grad[m+1][d] = pc_grad[pc_of[k][m]][d];
+    }
+  b.f[4] = zeta;
+  for (unsigned int d = 0; d != 3; ++d)
+    b.grad[4][d] = (d == 2);
+  b.den = -1. + zeta + eps;
+  return b;
+}
+
+// The multiple of bubble k in PYRAMID18 shape i, as in
+// fe_lagrange_3D_shape()
+LIBMESH_DEVICE_INLINE
+int fe_lagrange_pyramid18_bubble_weight(const unsigned int i,
+                                        const unsigned int k)
+{
+  libmesh_assert_less (i, 18);
+  libmesh_assert_less (k, 4);
+  constexpr int w[18][4] =
+    {{3, 0, 0, 3}, {3, 3, 0, 0}, {0, 3, 3, 0}, {0, 0, 3, 3},  // vertices
+     {3, 3, 3, 3},                                             // apex
+     {-12, 0, 0, 0}, {0, -12, 0, 0}, {0, 0, -12, 0}, {0, 0, 0, -12},     // base edges
+     {-12, 0, 0, -12}, {-12, -12, 0, 0}, {0, -12, -12, 0}, {0, 0, -12, -12}, // side edges
+     {0, 0, 0, 0},                                             // base
+     {27, 0, 0, 0}, {0, 27, 0, 0}, {0, 0, 27, 0}, {0, 0, 0, 27}};  // triangular sides
+  return w[i][k];
+}
+
+template <typename Scalar>
+LIBMESH_DEVICE_INLINE
+Scalar fe_lagrange_pyramid18_bubble_deriv(const unsigned int k,
+                                          const unsigned int j,
+                                          const TypeVector<Scalar> & p)
+{
+  libmesh_assert_less (j, 3);
+  const Pyramid18Bubble<Scalar> b = fe_lagrange_pyramid18_bubble(k, p);
+
+  // The product F of the factors and its derivative F_j
+  Scalar F = 1, F_j = 0;
+  for (unsigned int a = 0; a != 5; ++a)
+    {
+      Scalar term = b.grad[a][j];
+      for (unsigned int c = 0; c != 5; ++c)
+        if (c != a)
+          term *= b.f[c];
+      F_j += term;
+      F *= b.f[a];
+    }
+
+  const Scalar den2 = b.den*b.den;
+  Scalar val = F_j/den2;
+  if (j == 2)
+    val -= 2.*F/(den2*b.den);
+  return val;
+}
+
+template <typename Scalar>
+LIBMESH_DEVICE_INLINE
+Scalar fe_lagrange_pyramid18_shape_deriv(const unsigned int i,
+                                         const unsigned int j,
+                                         const TypeVector<Scalar> & p)
+{
+  libmesh_assert_less (i, 18);
+
+  Scalar val = 0;
+  if (i < 14)
+    val = fe_lagrange_pyramid14_shape_deriv(i, j, p);
+  for (unsigned int k = 0; k != 4; ++k)
+    if (const int w = fe_lagrange_pyramid18_bubble_weight(i, k))
+      val += Real(w) * fe_lagrange_pyramid18_bubble_deriv(k, j, p);
+  return val;
 }
 
 #ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
@@ -916,6 +1038,81 @@ Scalar fe_lagrange_pyramid14_shape_second_deriv(const unsigned int i,
     default:
       libmesh_error_msg("Invalid j = " << j);
     }
+}
+
+template <typename Scalar>
+LIBMESH_DEVICE_INLINE
+Scalar fe_lagrange_pyramid18_bubble_second_deriv(const unsigned int k,
+                                                 const unsigned int j,
+                                                 const TypeVector<Scalar> & p)
+{
+  libmesh_assert_less (j, 6);
+
+  // libMesh numbers second derivatives xx, xy, yy, xz, yz, zz
+  constexpr unsigned int dir0[] = {0, 0, 1, 0, 1, 2};
+  constexpr unsigned int dir1[] = {0, 1, 1, 2, 2, 2};
+  const unsigned int r = dir0[j], s = dir1[j];
+
+  const Pyramid18Bubble<Scalar> b = fe_lagrange_pyramid18_bubble(k, p);
+
+  // The product F of the factors, its first derivatives F_r, F_s and
+  // its second derivative F_rs (the factors' own vanish)
+  Scalar F = 1, F_r = 0, F_s = 0, F_rs = 0;
+  for (unsigned int a = 0; a != 5; ++a)
+    {
+      Scalar term_r = b.grad[a][r], term_s = b.grad[a][s];
+      for (unsigned int c = 0; c != 5; ++c)
+        if (c != a)
+          {
+            term_r *= b.f[c];
+            term_s *= b.f[c];
+          }
+      F_r += term_r;
+      F_s += term_s;
+
+      for (unsigned int e = 0; e != 5; ++e)
+        if (e != a)
+          {
+            Scalar term_rs = b.grad[a][r] * b.grad[e][s];
+            for (unsigned int c = 0; c != 5; ++c)
+              if (c != a && c != e)
+                term_rs *= b.f[c];
+            F_rs += term_rs;
+          }
+
+      F *= b.f[a];
+    }
+
+  const Scalar
+    den2 = b.den*b.den,
+    den3 = den2*b.den,
+    den4 = den2*den2;
+
+  Scalar val = F_rs/den2;
+  if (s == 2)
+    val -= 2.*F_r/den3;
+  if (r == 2)
+    val -= 2.*F_s/den3;
+  if (r == 2 && s == 2)
+    val += 6.*F/den4;
+  return val;
+}
+
+template <typename Scalar>
+LIBMESH_DEVICE_INLINE
+Scalar fe_lagrange_pyramid18_shape_second_deriv(const unsigned int i,
+                                                const unsigned int j,
+                                                const TypeVector<Scalar> & p)
+{
+  libmesh_assert_less (i, 18);
+
+  Scalar val = 0;
+  if (i < 14)
+    val = fe_lagrange_pyramid14_shape_second_deriv(i, j, p);
+  for (unsigned int k = 0; k != 4; ++k)
+    if (const int w = fe_lagrange_pyramid18_bubble_weight(i, k))
+      val += Real(w) * fe_lagrange_pyramid18_bubble_second_deriv(k, j, p);
+  return val;
 }
 
 #endif // LIBMESH_ENABLE_SECOND_DERIVATIVES
@@ -2128,12 +2325,7 @@ Scalar fe_lagrange_3D_shape_deriv(const ElemType type,
             }
 
           case PYRAMID18:
-            {
-              return detail::fe_fdm_deriv(type, order, i, j, p,
-                                          [](const ElemType t, const Order o,
-                                             const unsigned int n, const auto & q)
-                                          { return fe_lagrange_3D_shape<T>(t, o, n, q); });
-            }
+            return detail::fe_lagrange_pyramid18_shape_deriv(i, j, p);
 
           default:
             libmesh_error_msg("ERROR: Unsupported 3D element type!: " << Utility::enum_to_string(type));
@@ -3061,13 +3253,7 @@ Scalar fe_lagrange_3D_shape_second_deriv(const ElemType type,
             }
 
           case PYRAMID18:
-            {
-              return detail::fe_fdm_second_deriv(type, order, i, j, p,
-                                                 [](const ElemType t, const Order o,
-                                                    const unsigned int n, const unsigned int d,
-                                                    const auto & q)
-                                                 { return fe_lagrange_3D_shape_deriv<T>(t, o, n, d, q); });
-            }
+            return detail::fe_lagrange_pyramid18_shape_second_deriv(i, j, p);
 
           default:
             libmesh_error_msg("ERROR: Unsupported 3D element type!: " << Utility::enum_to_string(type));

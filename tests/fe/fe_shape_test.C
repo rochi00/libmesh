@@ -150,15 +150,8 @@ public:
       for (const Point & p : points())
         {
           // AD and the hand-written derivatives order their arithmetic
-          // differently, so they only agree to rounding, except on
-          // PYRAMID18, whose derivatives are central differences of its
-          // shapes (and its second derivatives, differences of those):
-          // good to about 1e-10 and, with rounding divided by both
-          // steps, 1e-5.
-          const bool fdm = (e.type == PYRAMID18);
+          // differently, so they only agree to rounding
           const Real tol = TOLERANCE * TOLERANCE;
-          const Real d_tol = fdm ? 1e-8 : tol;
-          const Real d2_tol = fdm ? std::sqrt(TOLERANCE) : tol;
 
           // The point, seeded so that derivatives()[d] is d/d(p(d))
           VectorValue<ADReal> p_ad;
@@ -177,7 +170,7 @@ public:
               for (unsigned int j = 0; j != e.dim; ++j)
                 {
                   const Real dphi = fe_shape_deriv(e.dim, e.family, e.type, e.order, i, j, p);
-                  LIBMESH_ASSERT_FP_EQUAL(dphi, phi.derivatives()[j], d_tol * (1 + std::abs(dphi)));
+                  LIBMESH_ASSERT_FP_EQUAL(dphi, phi.derivatives()[j], tol * (1 + std::abs(dphi)));
 
 #ifdef LIBMESH_ENABLE_SECOND_DERIVATIVES
                   // libMesh numbers second derivatives xx, xy, yy, xz, yz, zz
@@ -186,7 +179,7 @@ public:
                     {
                       const Real d2phi = fe_shape_second_deriv(e.dim, e.family, e.type, e.order,
                                                                i, k*(k+1)/2 + j, p);
-                      LIBMESH_ASSERT_FP_EQUAL(d2phi, dphi_ad.derivatives()[k], d2_tol * (1 + std::abs(d2phi)));
+                      LIBMESH_ASSERT_FP_EQUAL(d2phi, dphi_ad.derivatives()[k], tol * (1 + std::abs(d2phi)));
                     }
 #endif
                 }
