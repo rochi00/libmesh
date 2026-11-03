@@ -222,13 +222,6 @@ public:
   virtual bool on_reference_element(const Point & p,
                                     const Real eps = TOLERANCE) const override final;
 
-protected:
-
-  /**
-   * Data for links to parent/neighbor/interior_parent elements.
-   */
-  Elem * _elemlinks_data[5+(LIBMESH_DIM>3)];
-
   /**
    * Master element node locations
    */
@@ -249,6 +242,13 @@ protected:
       {1/Real(3), 1/Real(3), 1/Real(3)},
       {0, 1/Real(3), 1/Real(3)}
     };
+
+protected:
+
+  /**
+   * Data for links to parent/neighbor/interior_parent elements.
+   */
+  Elem * _elemlinks_data[5+(LIBMESH_DIM>3)];
 
   /**
    * Called by descendant classes with appropriate data to determine

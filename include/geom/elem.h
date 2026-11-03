@@ -157,6 +157,17 @@ public:
   virtual Point master_point (const unsigned int i) const = 0;
 
   /**
+   * \returns The master element location of local \p Node \p i of an
+   * element of type \p t, without needing an instantiated Elem.
+   * Defined in elem_reference_topology.h, which the element classes'
+   * tables it reads must be complete for; include that to call it.
+   * Polygons, polyhedra and infinite elements are not supported.
+   */
+  static LIBMESH_DEVICE_INLINE
+  Point master_point (const ElemType t,
+                      const unsigned int i);
+
+  /**
    * \returns The global id number of local \p Node \p i.
    */
   dof_id_type node_id (const unsigned int i) const;

@@ -192,31 +192,6 @@ public:
   virtual bool on_reference_element(const Point & p,
                                     const Real eps = TOLERANCE) const override final;
 
-protected:
-
-  /**
-   * Data for links to parent/neighbor/interior_parent elements.
-   */
-  Elem * _elemlinks_data[6+(LIBMESH_DIM>3)];
-
-  /**
-   * Matrix that tells which vertices define the location
-   * of mid-side (or second-order) nodes.  for the first
-   * 9 second-order nodes, this matrix is identical for
-   * \p Prism15 and \p Prism18, therefore store it here.
-   */
-  static const unsigned short int _second_order_adjacent_vertices[9][2];
-
-  /**
-   * Vector that names a child sharing each second order node.
-   */
-  static const unsigned short int _second_order_vertex_child_number[18];
-
-  /**
-   * Vector that names the child vertex index for each second order node.
-   */
-  static const unsigned short int _second_order_vertex_child_index[18];
-
   /**
    * Master element node locations
    */
@@ -244,6 +219,31 @@ protected:
       {Real(1)/3, Real(1)/3, 1},
       {Real(1)/3, Real(1)/3, 0}
     };
+
+protected:
+
+  /**
+   * Data for links to parent/neighbor/interior_parent elements.
+   */
+  Elem * _elemlinks_data[6+(LIBMESH_DIM>3)];
+
+  /**
+   * Matrix that tells which vertices define the location
+   * of mid-side (or second-order) nodes.  for the first
+   * 9 second-order nodes, this matrix is identical for
+   * \p Prism15 and \p Prism18, therefore store it here.
+   */
+  static const unsigned short int _second_order_adjacent_vertices[9][2];
+
+  /**
+   * Vector that names a child sharing each second order node.
+   */
+  static const unsigned short int _second_order_vertex_child_number[18];
+
+  /**
+   * Vector that names the child vertex index for each second order node.
+   */
+  static const unsigned short int _second_order_vertex_child_index[18];
 
   /**
    * This maps the \f$ j^{th} \f$ Prism vertex to the (in this case) 3

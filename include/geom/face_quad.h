@@ -208,6 +208,23 @@ public:
   virtual bool on_reference_element(const Point & p,
                                     const Real eps = TOLERANCE) const override final;
 
+  /**
+   * Master element node locations.  The third entry of each row is omitted,
+   * which aggregate initialization sets to zero.
+   */
+  static constexpr Real _master_points[9][3] =
+    {
+      {-1, -1},
+      {1, -1},
+      {1, 1},
+      {-1, 1},
+      {0, -1},
+      {1, 0},
+      {0, 1},
+      {-1, 0},
+      {0, 0}
+    };
+
 protected:
 
   /**
@@ -232,23 +249,6 @@ protected:
    * Vector that names the child vertex index for each second order node.
    */
   static const unsigned short int _second_order_vertex_child_index[9];
-
-  /**
-   * Master element node locations.  The third entry of each row is omitted,
-   * which aggregate initialization sets to zero.
-   */
-  static constexpr Real _master_points[9][3] =
-    {
-      {-1, -1},
-      {1, -1},
-      {1, 1},
-      {-1, 1},
-      {0, -1},
-      {1, 0},
-      {0, 1},
-      {-1, 0},
-      {0, 0}
-    };
 
   /**
    * Lookup table from child id, child node id to "possible node

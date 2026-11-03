@@ -195,13 +195,6 @@ public:
   virtual bool on_reference_element(const Point & p,
                                     const Real eps = TOLERANCE) const override final;
 
-protected:
-
-  /**
-   * Data for links to parent/neighbor/interior_parent elements.
-   */
-  Elem * _elemlinks_data[4+(LIBMESH_DIM>2)];
-
   /**
    * Master element node locations.  The third entry of each row is omitted,
    * which aggregate initialization sets to zero.
@@ -216,6 +209,13 @@ protected:
       {0, 0.5},
       {Real(1)/3, Real(1)/3}
     };
+
+protected:
+
+  /**
+   * Data for links to parent/neighbor/interior_parent elements.
+   */
+  Elem * _elemlinks_data[4+(LIBMESH_DIM>2)];
 
   /**
    * This maps the \f$ j^{th} \f$ node to the (in this case) 2 side

@@ -197,32 +197,6 @@ public:
   virtual bool on_reference_element(const Point & p,
                                     const Real eps = TOLERANCE) const override final;
 
-protected:
-
-  /**
-   * Data for links to parent/neighbor/interior_parent elements.
-   */
-  Elem * _elemlinks_data[7+(LIBMESH_DIM>3)];
-
-  /**
-   * Matrix that tells which vertices define the location
-   * of mid-side (or second-order) nodes.  This matrix
-   * is kept here, since the matrix (for the first 12
-   * higher-order nodes) is identical for \p Hex20 and
-   * \p Hex27.
-   */
-  static const unsigned short int _second_order_adjacent_vertices[12][2];
-
-  /**
-   * Vector that names a child sharing each second order node.
-   */
-  static const unsigned short int _second_order_vertex_child_number[27];
-
-  /**
-   * Vector that names the child vertex index for each second order node.
-   */
-  static const unsigned short int _second_order_vertex_child_index[27];
-
   /**
    * Master element node locations
    */
@@ -255,6 +229,32 @@ protected:
       {-1, 0, 0},
       {0, 0, 1}
     };
+
+protected:
+
+  /**
+   * Data for links to parent/neighbor/interior_parent elements.
+   */
+  Elem * _elemlinks_data[7+(LIBMESH_DIM>3)];
+
+  /**
+   * Matrix that tells which vertices define the location
+   * of mid-side (or second-order) nodes.  This matrix
+   * is kept here, since the matrix (for the first 12
+   * higher-order nodes) is identical for \p Hex20 and
+   * \p Hex27.
+   */
+  static const unsigned short int _second_order_adjacent_vertices[12][2];
+
+  /**
+   * Vector that names a child sharing each second order node.
+   */
+  static const unsigned short int _second_order_vertex_child_number[27];
+
+  /**
+   * Vector that names the child vertex index for each second order node.
+   */
+  static const unsigned short int _second_order_vertex_child_index[27];
 
   /**
    * Lookup table from child id, child node id to "possible node

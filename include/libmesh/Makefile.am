@@ -149,6 +149,7 @@ BUILT_SOURCES = \
         elem_internal.h \
         elem_quality.h \
         elem_range.h \
+        elem_reference_topology.h \
         elem_side_builder.h \
         face.h \
         face_c0polygon.h \
@@ -1072,6 +1073,9 @@ elem_quality.h: $(top_srcdir)/include/geom/elem_quality.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 elem_range.h: $(top_srcdir)/include/geom/elem_range.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+elem_reference_topology.h: $(top_srcdir)/include/geom/elem_reference_topology.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 elem_side_builder.h: $(top_srcdir)/include/geom/elem_side_builder.h
