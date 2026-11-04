@@ -2,6 +2,7 @@
 
 #include <libmesh/boundary_info.h>
 #include <libmesh/enum_elem_quality.h>
+#include <libmesh/elem_reference_topology.h>
 #include <libmesh/elem_side_builder.h>
 #include <libmesh/mesh_modification.h>
 #include <libmesh/mesh_refinement.h>

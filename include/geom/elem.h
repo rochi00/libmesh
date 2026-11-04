@@ -494,11 +494,13 @@ public:
    * an element of type \p t, without needing an instantiated Elem.
    * The Polygon and Polyhedron subclasses have no such map, and the
    * infinite elements' maps are not read here, so those must be queried
-   * through an actual Elem.
+   * through an actual Elem.  Defined in elem_reference_topology.h;
+   * include that to call it.
    */
-  static unsigned int local_side_node(ElemType t,
-                                      unsigned int side,
-                                      unsigned int side_node);
+  static LIBMESH_DEVICE_INLINE
+  unsigned int local_side_node(ElemType t,
+                               unsigned int side,
+                               unsigned int side_node);
 
   /**
    * \returns The local node id for node \p edge_node on edge \p edge of
@@ -777,7 +779,66 @@ public:
    * is fixed; for more general types like Polygon subclasses an actual
    * instantiated Elem must be queried.
    */
-  static const unsigned int type_to_n_sides_map[INVALID_ELEM];
+  static constexpr unsigned int type_to_n_sides_map[INVALID_ELEM] =
+    {
+      2,  // EDGE2
+      2,  // EDGE3
+      2,  // EDGE4
+
+      3,  // TRI3
+      3,  // TRI6
+
+      4,  // QUAD4
+      4,  // QUAD8
+      4,  // QUAD9
+
+      4,  // TET4
+      4,  // TET10
+
+      6,  // HEX8
+      6,  // HEX20
+      6,  // HEX27
+
+      5,  // PRISM6
+      5,  // PRISM15
+      5,  // PRISM18
+
+      5,  // PYRAMID5
+      5,  // PYRAMID13
+      5,  // PYRAMID14
+
+      2,  // INFEDGE2
+
+      3,  // INFQUAD4
+      3,  // INFQUAD6
+
+      5,  // INFHEX8
+      5,  // INFHEX16
+      5,  // INFHEX18
+
+      4,  // INFPRISM6
+      4,  // INFPRISM12
+
+      0,  // NODEELEM
+
+      0,  // REMOTEELEM
+
+      3,  // TRI3SUBDIVISION
+      3,  // TRISHELL3
+      4,  // QUADSHELL4
+      4,  // QUADSHELL8
+
+      3,  // TRI7
+      4,  // TET14
+      5,  // PRISM20
+      5,  // PRISM21
+      5,  // PYRAMID18
+
+      4,  // QUADSHELL9
+
+      invalid_uint,  // C0POLYGON
+      invalid_uint,  // C0POLYHEDRON
+    };
 
   /**
    * \returns The number of sides the element that has been derived
@@ -796,9 +857,11 @@ public:
    * needing an instantiated Elem.  The Polygon and Polyhedron subclasses
    * have one side type but no fixed number of sides, so \p s goes
    * unchecked for them; query an actual Elem when you have one.
+   * Defined in elem_reference_topology.h; include that to call it.
    */
-  static ElemType side_type (const ElemType t,
-                             const unsigned int s);
+  static LIBMESH_DEVICE_INLINE
+  ElemType side_type (const ElemType t,
+                      const unsigned int s);
 
   /**
    * \returns The type of every edge of an element of type \p t, or
