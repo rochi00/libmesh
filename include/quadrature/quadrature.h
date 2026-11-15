@@ -247,7 +247,17 @@ public:
    * \todo This function should also be used in all of the Order
    * switch statements in the rules themselves.
    */
-  Order get_order() const { return static_cast<Order>(_order + 2 * _p_level); }
+  Order get_order() const { return order_for_p_level(_order, _p_level); }
+
+  /**
+   * \returns The order get_order() gives a rule of base order \p o on
+   * an element of p refinement level \p p_level.  It is static so
+   * that device code, which cannot construct a QBase, raises an
+   * element's rule order the same way.
+   */
+  static LIBMESH_DEVICE_INLINE constexpr
+  Order order_for_p_level(const Order o, const unsigned int p_level)
+  { return static_cast<Order>(o + 2 * p_level); }
 
   /**
    * \returns The "base" order of the quadrature rule, independent of
