@@ -316,6 +316,7 @@ unit_tests_data = $(data)
 EXTRA_DIST = $(data)
 kokkos_unit_test_sources = \
   fe/kokkos_fe_shape_oracle.h \
+  fe/kokkos_side_map_oracle.h \
   numerics/kokkos_numerics_oracle_test_utils.h \
   numerics/kokkos_tensor_ops_oracle_fixtures.h \
   numerics/kokkos_tensor_ops_oracle_runners.h \
