@@ -197,6 +197,7 @@ include_HEADERS =  \
         ghosting/point_neighbor_coupling.h \
         ghosting/sibling_coupling.h \
         gpu/kokkos_linalg_base.h \
+        gpu/kokkos_mesh_mirror.h \
         gpu/kokkos_storage.h \
         gpu/kokkos_storage_policy.h \
         gpu/kokkos_tensor_ops.h \
