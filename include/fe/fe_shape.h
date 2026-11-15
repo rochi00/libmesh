@@ -56,6 +56,10 @@ Scalar fe_lagrange_shape(const unsigned int dim,
 {
   switch (dim)
     {
+      // As FE<0,LAGRANGE>::shape(): a node's one shape
+    case 0:
+      libmesh_assert_less (i, 1);
+      return 1;
     case 1:
       return fe_lagrange_1D_shape(order, i, p(0));
     case 2:

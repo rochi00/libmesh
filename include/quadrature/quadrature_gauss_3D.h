@@ -461,6 +461,15 @@ void QGauss::rule_elem(const ElemType t,
                        Point * points,
                        Real * weights)
 {
+  // A node's rule, as QBase::init_0D() gives it at any order: the
+  // side rule of a 1D element
+  if (t == NODEELEM)
+    {
+      points[0] = Point(0.);
+      weights[0] = 1.0;
+      return;
+    }
+
   // The 1D rule the tensor products are built from
   constexpr unsigned int max_n1D = n_points_1D(FORTYTHIRD);
   const unsigned int n1D = n_points_1D(o);

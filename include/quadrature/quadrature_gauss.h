@@ -218,6 +218,11 @@ public:
                               const Order o,
                               const bool allow_negative_weights)
   {
+    // A node's rule, as QBase::init_0D() gives it, has one point
+    // whatever the order
+    if (t == NODEELEM)
+      return 1;
+
     const unsigned int n1D = n_points_1D(o);
     if (n1D == invalid_uint)
       return invalid_uint;
@@ -263,8 +268,8 @@ public:
    * room for n_points_elem(t, o, allow_negative_weights) entries.
    * This is the rule init() fills in for that type, given \p
    * allow_negative_weights as allow_rules_with_negative_weights:
-   * init_2D() and init_3D() call it, and an edge's rule is
-   * rule_1D()'s.  It is static,
+   * init_2D() and init_3D() call it, an edge's rule is rule_1D()'s,
+   * and a NODEELEM's is QBase::init_0D()'s.  It is static,
    * and defined in quadrature_gauss_3D.h, so that device code, which
    * cannot construct a QGauss, evaluates the same rule.
    */
