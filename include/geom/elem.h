@@ -28,6 +28,7 @@
 #include "libmesh/reference_counted_object.h"
 #include "libmesh/node.h"
 #include "libmesh/enum_elem_type.h" // INVALID_ELEM
+#include "libmesh/enum_order.h"
 #include "libmesh/enum_to_string.h"
 #include "libmesh/multi_predicates.h"
 #include "libmesh/pointer_to_pointer_iter.h"
@@ -71,7 +72,6 @@ template <class SideType, class ParentType>
 class Side;
 enum ElemQuality : int;
 enum IOPackage : int;
-enum Order : int;
 
 
 /**
@@ -669,7 +669,66 @@ public:
    * This is currently usable even for complicated subclasses with
    * runtime-varying topology.
    */
-  static const unsigned int type_to_dim_map[INVALID_ELEM];
+  static constexpr unsigned int type_to_dim_map[INVALID_ELEM] =
+    {
+      1,  // EDGE2
+      1,  // EDGE3
+      1,  // EDGE4
+
+      2,  // TRI3
+      2,  // TRI6
+
+      2,  // QUAD4
+      2,  // QUAD8
+      2,  // QUAD9
+
+      3,  // TET4
+      3,  // TET10
+
+      3,  // HEX8
+      3,  // HEX20
+      3,  // HEX27
+
+      3,  // PRISM6
+      3,  // PRISM15
+      3,  // PRISM18
+
+      3,  // PYRAMID5
+      3,  // PYRAMID13
+      3,  // PYRAMID14
+
+      1,  // INFEDGE2
+
+      2,  // INFQUAD4
+      2,  // INFQUAD6
+
+      3,  // INFHEX8
+      3,  // INFHEX16
+      3,  // INFHEX18
+
+      3,  // INFPRISM6
+      3,  // INFPRISM12
+
+      0,  // NODEELEM
+
+      0,  // REMOTEELEM
+
+      2,  // TRI3SUBDIVISION
+      2,  // TRISHELL3
+      2,  // QUADSHELL4
+      2,  // QUADSHELL8
+
+      2,  // TRI7
+      3,  // TET14
+      3,  // PRISM20
+      3,  // PRISM21
+      3,  // PYRAMID18
+
+      2,  // QUADSHELL9
+
+      2,  // C0POLYGON
+      3,  // C0POLYHEDRON
+    };
 
   /**
    * \returns The dimensionality of the object.
@@ -1170,7 +1229,66 @@ public:
    * This is currently usable even for complicated subclasses with
    * runtime-varying topology.
    */
-  static const Order type_to_default_order_map[INVALID_ELEM];
+  static constexpr Order type_to_default_order_map[INVALID_ELEM] =
+    {
+      FIRST,    // EDGE2
+      SECOND,   // EDGE3
+      THIRD,    // EDGE4
+
+      FIRST,    // TRI3
+      SECOND,   // TRI6
+
+      FIRST,    // QUAD4
+      SECOND,   // QUAD8
+      SECOND,   // QUAD9
+
+      FIRST,    // TET4
+      SECOND,   // TET10
+
+      FIRST,    // HEX8
+      SECOND,   // HEX20
+      SECOND,   // HEX27
+
+      FIRST,    // PRISM6
+      SECOND,   // PRISM15
+      SECOND,   // PRISM18
+
+      FIRST,    // PYRAMID5
+      SECOND,   // PYRAMID13
+      SECOND,   // PYRAMID14
+
+      FIRST,    // INFEDGE2
+
+      FIRST,    // INFQUAD4
+      SECOND,   // INFQUAD6
+
+      FIRST,    // INFHEX8
+      SECOND,   // INFHEX16
+      SECOND,   // INFHEX18
+
+      FIRST,    // INFPRISM6
+      SECOND,   // INFPRISM12
+
+      CONSTANT, // NODEELEM
+
+      INVALID_ORDER, // REMOTEELEM
+
+      FIRST,    // TRI3SUBDIVISION
+      FIRST,    // TRISHELL3
+      FIRST,    // QUADSHELL4
+      SECOND,   // QUADSHELL8
+
+      THIRD,    // TRI7
+      THIRD,    // TET14
+      THIRD,    // PRISM20
+      THIRD,    // PRISM21
+      THIRD,    // PYRAMID18
+
+      SECOND,   // QUADSHELL9
+
+      FIRST,    // C0POLYGON
+      FIRST,    // C0POLYHEDRON
+    };
 
   /**
    * \returns The default approximation order for this element.  This
