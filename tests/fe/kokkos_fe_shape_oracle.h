@@ -58,12 +58,6 @@ constexpr ElemType types[] = {EDGE2, EDGE3, EDGE4,
                               TET4, TET10, TET14, HEX8, HEX20, HEX27,
                               PRISM6, PRISM15, PRISM18, PRISM20, PRISM21,
                               PYRAMID5, PYRAMID13, PYRAMID14, PYRAMID18};
-constexpr unsigned int type_dims[] = {1, 1, 1,
-                                      2, 2, 2, 2, 2, 2,
-                                      2, 2, 2, 2,
-                                      3, 3, 3, 3, 3, 3,
-                                      3, 3, 3, 3, 3,
-                                      3, 3, 3, 3};
 constexpr FEFamily families[] = {LAGRANGE, L2_LAGRANGE, MONOMIAL};
 constexpr std::size_t n_families = std::size(families);
 
@@ -116,8 +110,8 @@ run_bucket(const ::Kokkos::View<Input *> & d_in,
            const std::size_t end)
 {
   constexpr BucketKey key = bucket_key(B);
-  constexpr unsigned int dim = type_dims[key.type];
   constexpr ElemType type = types[key.type];
+  constexpr unsigned int dim = Elem::type_to_dim_map[type];
   constexpr FEFamily family = families[key.family];
   constexpr Order order = Order(key.order);
 
@@ -200,7 +194,6 @@ run_all_oracles()
           // need the element's type, so it needs no nodes.
           const std::unique_ptr<Elem> elem = Elem::build(t);
           const unsigned int dim = elem->dim();
-          libmesh_assert_equal_to(dim, type_dims[t_i]);
           const FEType fe_t(Order(o), family);
           if (o > std::size_t(FEInterface::max_order(fe_t, t)))
             continue;
