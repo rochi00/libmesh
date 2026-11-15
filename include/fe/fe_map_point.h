@@ -21,6 +21,7 @@
 // Local includes
 #include "libmesh/libmesh_device.h"
 #include "libmesh/cell_pyramid.h"
+#include "libmesh/elem_reference_topology.h"
 #include "libmesh/enum_elem_type.h"
 #include "libmesh/enum_fe_family.h"
 #include "libmesh/enum_order.h"
@@ -1247,6 +1248,47 @@ struct LagrangeMapEval
   }
 #endif
 };
+
+
+
+/**
+ * The Lagrange map FEMap gives an element of type \p type: the shapes
+ * of the type's dimension and default order, weighting \p nodes(i)
+ * for each of its nodes.
+ */
+template <typename NodeAccessor>
+LIBMESH_DEVICE_INLINE
+LagrangeMapEval<NodeAccessor> lagrange_map_eval(const ElemType type,
+                                                const NodeAccessor & nodes)
+{
+  constexpr TableCopy<unsigned int, INVALID_ELEM> dims = copy_table(Elem::type_to_dim_map);
+  constexpr TableCopy<Order, INVALID_ELEM> orders = copy_table(Elem::type_to_default_order_map);
+  constexpr TableCopy<unsigned int, INVALID_ELEM> n_nodes = copy_table(Elem::type_to_n_nodes_map);
+  return LagrangeMapEval<NodeAccessor>
+    {dims.values[type], type, orders.values[type], n_nodes.values[type], nodes};
+}
+
+
+
+/**
+ * The point on the reference element of type \p type that point \p p
+ * on the reference element of side \p s maps to, as FE::side_map()
+ * finds it for an element with a Lagrange map.  Only for types
+ * Elem::master_point() knows.
+ */
+LIBMESH_DEVICE_INLINE
+Point fe_side_reference_point(const ElemType type,
+                              const unsigned int s,
+                              const Point & p)
+{
+  // FEMap::init_face_shape_functions() gives FE::side_map() the side's
+  // own Lagrange shapes at its default order, which weight the side's
+  // nodes on the reference element in side node order.  A map over
+  // those node points sums them in the same order.
+  const auto node = [type, s](const unsigned int i)
+    { return Elem::master_point(type, Elem::local_side_node(type, s, i)); };
+  return lagrange_map_eval(Elem::side_type(type, s), node).map(p);
+}
 
 
 
