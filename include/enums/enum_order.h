@@ -20,6 +20,8 @@
 #ifndef LIBMESH_ENUM_ORDER_H
 #define LIBMESH_ENUM_ORDER_H
 
+#include "libmesh/libmesh_device.h"
+
 namespace libMesh {
 
 /**
@@ -88,34 +90,36 @@ enum Order : int {
             INVALID_ORDER};
 
   // Standardize this so nvc++ and clang -fsanitize=integer don't
-  // complain about all the ways in which we might do it wrong
+  // complain about all the ways in which we might do it wrong.  They
+  // are constexpr and device-callable, so that device code can raise
+  // and lower orders the same way.
   template <typename T>
-  inline Order operator+(Order o, T p)
+  LIBMESH_DEVICE_INLINE constexpr Order operator+(Order o, T p)
   {
     return static_cast<Order>(static_cast<int>(o) + int(p));
   }
 
   template <typename T>
-  inline Order operator-(Order o, T p)
+  LIBMESH_DEVICE_INLINE constexpr Order operator-(Order o, T p)
   {
     return static_cast<Order>(static_cast<int>(o) - int(p));
   }
 
   template <typename T>
-  inline Order operator+(T p, Order o)
+  LIBMESH_DEVICE_INLINE constexpr Order operator+(T p, Order o)
   {
     return o + p;
   }
 
   template <typename T>
-  inline Order & operator+=(Order &o, T p)
+  LIBMESH_DEVICE_INLINE constexpr Order & operator+=(Order &o, T p)
   {
     o = o + p;
     return o;
   }
 
   template <typename T>
-  inline Order & operator-=(Order &o, T p)
+  LIBMESH_DEVICE_INLINE constexpr Order & operator-=(Order &o, T p)
   {
     o = o - p;
     return o;
