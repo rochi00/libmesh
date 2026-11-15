@@ -58,7 +58,8 @@ struct Input
 inline int
 run_all_oracles()
 {
-  const ElemType types[] = {EDGE2, EDGE3, EDGE4,
+  const ElemType types[] = {NODEELEM,
+                            EDGE2, EDGE3, EDGE4,
                             TRI3, TRISHELL3, TRI3SUBDIVISION, TRI6, TRI7,
                             QUAD4, QUADSHELL4, QUAD8, QUADSHELL8, QUAD9, QUADSHELL9,
                             TET4, TET10, TET14, HEX8, HEX20, HEX27,
