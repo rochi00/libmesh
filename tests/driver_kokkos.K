@@ -14,6 +14,7 @@
 #include "fe/kokkos_fe_shape_oracle.h"
 #include "fe/kokkos_inverse_map_oracle.h"
 #include "fe/kokkos_side_map_oracle.h"
+#include "fe/kokkos_side_reinit_oracle.h"
 #include "fe/kokkos_volume_map_oracle.h"
 #include "mesh/kokkos_mesh_mirror_oracle.h"
 #include "mesh/kokkos_node_dofs_oracle.h"
@@ -36,6 +37,7 @@ main(int argc, char ** argv)
   total_fail += libMeshTest::KokkosInverseMapOracle::run_all_oracles(init.comm());
   total_fail += libMeshTest::KokkosFaceMapOracle::run_all_oracles(init.comm());
   total_fail += libMeshTest::KokkosSideMapOracle::run_all_oracles();
+  total_fail += libMeshTest::KokkosSideReinitOracle::run_all_oracles(init.comm());
   total_fail += libMeshTest::KokkosVolumeMapOracle::run_all_oracles(init.comm());
   total_fail += libMeshTest::KokkosMeshMirrorOracle::run_all_oracles(init.comm());
   total_fail += libMeshTest::KokkosNodeDofsOracle::run_all_oracles(init.comm());

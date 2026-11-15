@@ -319,6 +319,7 @@ kokkos_unit_test_sources = \
   fe/kokkos_fe_shape_oracle.h \
   fe/kokkos_inverse_map_oracle.h \
   fe/kokkos_side_map_oracle.h \
+  fe/kokkos_side_reinit_oracle.h \
   fe/kokkos_volume_map_oracle.h \
   mesh/kokkos_mesh_mirror_oracle.h \
   mesh/kokkos_node_dofs_oracle.h \
