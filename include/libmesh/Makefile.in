@@ -608,8 +608,8 @@ BUILT_SOURCES = dirichlet_boundaries.h dof_map.h dof_map_base.h \
 	surface.h default_coupling.h ghost_point_neighbors.h \
 	ghosting_functor.h non_manifold_coupling.h overlap_coupling.h \
 	point_neighbor_coupling.h sibling_coupling.h \
-	kokkos_linalg_base.h kokkos_mesh_mirror.h kokkos_storage.h \
-	kokkos_storage_policy.h kokkos_tensor_ops.h \
+	kokkos_linalg_base.h kokkos_mesh_mirror.h kokkos_node_dofs.h \
+	kokkos_storage.h kokkos_storage_policy.h kokkos_tensor_ops.h \
 	kokkos_vector_ops.h abaqus_io.h boundary_info.h \
 	boundary_mesh.h checkpoint_io.h distributed_mesh.h dyna_io.h \
 	ensight_io.h exodusII_io.h exodusII_io_helper.h \
@@ -1535,6 +1535,9 @@ kokkos_linalg_base.h: $(top_srcdir)/include/gpu/kokkos_linalg_base.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 kokkos_mesh_mirror.h: $(top_srcdir)/include/gpu/kokkos_mesh_mirror.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+kokkos_node_dofs.h: $(top_srcdir)/include/gpu/kokkos_node_dofs.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 kokkos_storage.h: $(top_srcdir)/include/gpu/kokkos_storage.h
