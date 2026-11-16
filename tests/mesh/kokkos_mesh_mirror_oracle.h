@@ -584,10 +584,22 @@ struct MappedPoint
   Real JxW = 0;
 };
 
-// The rule at each element's p level, mapped through the bucket's node
-// accessor, against FE::reinit()
+// The map of element e of bucket b on its reference nodes
+struct ReferenceMapOf
+{
+  KOKKOS_INLINE_FUNCTION
+  LagrangeMapEval<MeshMirror::ReferenceNodes>
+  operator()(const MeshMirror::Bucket & b, const index_type e) const
+  { return b.reference_map(e); }
+};
+
+// The rule at each element's p level, mapped by map_of(b, e), the
+// element's map through its bucket's node accessor, against
+// FE::reinit() on mesh's element of the same id
+template <typename MapOf = ReferenceMapOf>
 inline void
-check_geometry(const MeshBase & mesh, const MeshMirror & mirror, Counts & c)
+check_geometry(const MeshBase & mesh, const MeshMirror & mirror, Counts & c,
+               const MapOf & map_of = MapOf())
 {
   constexpr Order order = THIRD;
 
@@ -636,7 +648,7 @@ check_geometry(const MeshBase & mesh, const MeshMirror & mirror, Counts & c)
           Real w[max_qp];
           QGauss::rule_elem(b.type, o, negative_weights, qp, w);
 
-          const auto map = b.reference_map(e);
+          const auto map = map_of(b, e);
           const auto no_check = [](const Real) {};
           for (unsigned int q = 0; q != n_qp; ++q)
             {

@@ -13,6 +13,7 @@
 #include "fe/kokkos_fe_shape_oracle.h"
 #include "fe/kokkos_side_map_oracle.h"
 #include "mesh/kokkos_mesh_mirror_oracle.h"
+#include "mesh/kokkos_node_dofs_oracle.h"
 #include "numerics/kokkos_tensor_ops_oracle_runners.h"
 #include "numerics/kokkos_vector_ops_oracle_runners.h"
 #include "quadrature/kokkos_quadrature_oracle.h"
@@ -31,6 +32,7 @@ main(int argc, char ** argv)
   total_fail += libMeshTest::KokkosFEShapeOracle::run_all_oracles();
   total_fail += libMeshTest::KokkosSideMapOracle::run_all_oracles();
   total_fail += libMeshTest::KokkosMeshMirrorOracle::run_all_oracles(init.comm());
+  total_fail += libMeshTest::KokkosNodeDofsOracle::run_all_oracles(init.comm());
   total_fail += libMeshTest::KokkosQuadratureOracle::run_all_oracles();
 
   Kokkos::finalize();
