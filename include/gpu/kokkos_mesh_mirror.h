@@ -174,6 +174,29 @@ public:
   };
 
   /**
+   * The point of node i of an element of a bucket in the current
+   * configuration: its reference point plus u(n), the displacement \p
+   * Displacement gives the element's node n, a mirror node index.
+   * Any device-callable Point operator()(index_type) serves as \p
+   * Displacement, such as Kokkos::NodalDisplacement.
+   */
+  template <typename Displacement>
+  struct CurrentNodes
+  {
+    ReferenceNodes reference;
+    Displacement u;
+
+    KOKKOS_INLINE_FUNCTION
+    Point operator() (const unsigned int i) const
+    {
+      const index_type n = reference.nodes(reference.elem, i);
+      Point p = reference(i);
+      p += u(n);
+      return p;
+    }
+  };
+
+  /**
    * The elements of one type.  It holds only views, so a kernel
    * captures it by value.
    */
@@ -228,6 +251,28 @@ public:
     KOKKOS_INLINE_FUNCTION
     LagrangeMapEval<ReferenceNodes> reference_map (const index_type e) const
     { return lagrange_map_eval(type, this->reference_nodes(e)); }
+
+    /**
+     * The nodes of element \p e displaced by \p u, as CurrentNodes
+     * gives them.
+     */
+    template <typename Displacement>
+    KOKKOS_INLINE_FUNCTION
+    CurrentNodes<Displacement> current_nodes (const index_type e,
+                                              const Displacement & u) const
+    { return CurrentNodes<Displacement>{this->reference_nodes(e), u}; }
+
+    /**
+     * The Lagrange map of element \p e on its nodes displaced by \p
+     * u: the map of the current configuration when the displacement
+     * is in the map's own space, one value per node, as it is in
+     * NodeDofs's.
+     */
+    template <typename Displacement>
+    KOKKOS_INLINE_FUNCTION
+    LagrangeMapEval<CurrentNodes<Displacement>>
+    current_map (const index_type e, const Displacement & u) const
+    { return lagrange_map_eval(type, this->current_nodes(e, u)); }
 
     KOKKOS_INLINE_FUNCTION
     index_type n_boundary_sides (const unsigned int b) const

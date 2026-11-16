@@ -189,6 +189,7 @@ BUILT_SOURCES = \
         sibling_coupling.h \
         kokkos_linalg_base.h \
         kokkos_mesh_mirror.h \
+        kokkos_node_dofs.h \
         kokkos_storage.h \
         kokkos_storage_policy.h \
         kokkos_tensor_ops.h \
@@ -1194,6 +1195,9 @@ kokkos_linalg_base.h: $(top_srcdir)/include/gpu/kokkos_linalg_base.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 kokkos_mesh_mirror.h: $(top_srcdir)/include/gpu/kokkos_mesh_mirror.h
+	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
+
+kokkos_node_dofs.h: $(top_srcdir)/include/gpu/kokkos_node_dofs.h
 	$(AM_V_GEN)rm -f $@ && $(LN_S) -f $< $@
 
 kokkos_storage.h: $(top_srcdir)/include/gpu/kokkos_storage.h
