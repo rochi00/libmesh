@@ -110,11 +110,13 @@ void lagrange_nodal_soln(const Elem * elem,
 
 
           case QUAD8:
+          case QUADSHELL8:
           case QUAD9:
+          case QUADSHELL9:
             {
               libmesh_assert_equal_to (elem_soln.size(), 4);
 
-              if (type == QUAD8)
+              if (type == QUAD8 || type == QUADSHELL8)
                 libmesh_assert_equal_to (nodal_soln.size(), 8);
               else
                 libmesh_assert_equal_to (nodal_soln.size(), 9);
@@ -129,7 +131,7 @@ void lagrange_nodal_soln(const Elem * elem,
               nodal_soln[6] = .5*(elem_soln[2] + elem_soln[3]);
               nodal_soln[7] = .5*(elem_soln[3] + elem_soln[0]);
 
-              if (type == QUAD9)
+              if (type == QUAD9 || type == QUADSHELL9)
                 nodal_soln[8] = .25*(elem_soln[0] + elem_soln[1] + elem_soln[2] + elem_soln[3]);
 
               return;
