@@ -80,6 +80,12 @@ SUBDIRS = \
 	vector_fe/vector_fe_ex9 \
 	vector_fe/vector_fe_ex10
 
+if LIBMESH_ENABLE_KOKKOS
+SUBDIRS += \
+	kokkos/kokkos_ex1 \
+	kokkos/kokkos_ex2
+endif
+
 AUTOMAKE_OPTIONS = subdir-objects
 
 AM_CPPFLAGS  = $(libmesh_CPPFLAGS)
@@ -100,7 +106,7 @@ data_DATA = run_common.sh
 EXTRA_DIST = $(data_DATA)
 
 # include our header checking script when doing 'make dist'
-EXTRA_DIST += ../contrib/bin/test_installed_examples.sh Make.common
+EXTRA_DIST += ../contrib/bin/test_installed_examples.sh Make.common kokkos/Make.kokkos
 
 
 ######################################################################

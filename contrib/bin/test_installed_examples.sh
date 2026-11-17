@@ -101,6 +101,10 @@ runninglist=""
 
 for exdir in */* ; do
 
+    # Kokkos examples have only .K sources, which need the Kokkos
+    # device compiler and flags rather than $CXX
+    ls $exdir/*.C > /dev/null 2>&1 || continue
+
     if [ $nrunning -lt $n_concurrent ]; then
         test_example $exdir &
         runninglist="$runninglist $!"
