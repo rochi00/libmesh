@@ -91,6 +91,10 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
+@LIBMESH_ENABLE_KOKKOS_TRUE@am__append_1 = \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	kokkos/kokkos_ex1 \
+@LIBMESH_ENABLE_KOKKOS_TRUE@	kokkos/kokkos_ex2
+
 subdir = examples
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \
@@ -241,7 +245,65 @@ am__define_uniq_tagged_files = \
   unique=`for i in $$list; do \
     if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
   done | $(am__uniquify_input)`
-DIST_SUBDIRS = $(SUBDIRS)
+DIST_SUBDIRS = introduction/introduction_ex1 \
+	introduction/introduction_ex2 introduction/introduction_ex3 \
+	introduction/introduction_ex4 introduction/introduction_ex5 \
+	adaptivity/adaptivity_ex1 adaptivity/adaptivity_ex2 \
+	adaptivity/adaptivity_ex3 adaptivity/adaptivity_ex4 \
+	adaptivity/adaptivity_ex5 adjoints/adjoints_ex1 \
+	adjoints/adjoints_ex2 adjoints/adjoints_ex3 \
+	adjoints/adjoints_ex4 adjoints/adjoints_ex5 \
+	adjoints/adjoints_ex6 adjoints/adjoints_ex7 \
+	eigenproblems/eigenproblems_ex1 \
+	eigenproblems/eigenproblems_ex2 \
+	eigenproblems/eigenproblems_ex3 \
+	eigenproblems/eigenproblems_ex4 fem_system/fem_system_ex1 \
+	fem_system/fem_system_ex2 fem_system/fem_system_ex3 \
+	fem_system/fem_system_ex4 fem_system/fem_system_ex5 \
+	fem_system/fem_system_ex6 finite_volume/finite_volume_ex1 \
+	solution_transfer/solution_transfer_ex1 \
+	miscellaneous/miscellaneous_ex1 \
+	miscellaneous/miscellaneous_ex2 \
+	miscellaneous/miscellaneous_ex3 \
+	miscellaneous/miscellaneous_ex4 \
+	miscellaneous/miscellaneous_ex5 \
+	miscellaneous/miscellaneous_ex6 \
+	miscellaneous/miscellaneous_ex7 \
+	miscellaneous/miscellaneous_ex8 \
+	miscellaneous/miscellaneous_ex9 \
+	miscellaneous/miscellaneous_ex10 \
+	miscellaneous/miscellaneous_ex11 \
+	miscellaneous/miscellaneous_ex12 \
+	miscellaneous/miscellaneous_ex13 \
+	miscellaneous/miscellaneous_ex14 \
+	miscellaneous/miscellaneous_ex15 \
+	miscellaneous/miscellaneous_ex16 \
+	miscellaneous/miscellaneous_ex17 optimization/optimization_ex1 \
+	optimization/optimization_ex2 subdomains/subdomains_ex1 \
+	subdomains/subdomains_ex2 subdomains/subdomains_ex3 \
+	systems_of_equations/systems_of_equations_ex1 \
+	systems_of_equations/systems_of_equations_ex2 \
+	systems_of_equations/systems_of_equations_ex3 \
+	systems_of_equations/systems_of_equations_ex4 \
+	systems_of_equations/systems_of_equations_ex5 \
+	systems_of_equations/systems_of_equations_ex6 \
+	systems_of_equations/systems_of_equations_ex7 \
+	systems_of_equations/systems_of_equations_ex8 \
+	systems_of_equations/systems_of_equations_ex9 \
+	reduced_basis/reduced_basis_ex1 \
+	reduced_basis/reduced_basis_ex2 \
+	reduced_basis/reduced_basis_ex3 \
+	reduced_basis/reduced_basis_ex4 \
+	reduced_basis/reduced_basis_ex5 \
+	reduced_basis/reduced_basis_ex6 \
+	reduced_basis/reduced_basis_ex7 transient/transient_ex1 \
+	transient/transient_ex2 transient/transient_ex3 \
+	vector_fe/vector_fe_ex1 vector_fe/vector_fe_ex2 \
+	vector_fe/vector_fe_ex3 vector_fe/vector_fe_ex4 \
+	vector_fe/vector_fe_ex5 vector_fe/vector_fe_ex6 \
+	vector_fe/vector_fe_ex7 vector_fe/vector_fe_ex8 \
+	vector_fe/vector_fe_ex9 vector_fe/vector_fe_ex10 \
+	kokkos/kokkos_ex1 kokkos/kokkos_ex2
 am__DIST_COMMON = $(srcdir)/Makefile.in
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
@@ -612,35 +674,21 @@ top_srcdir = @top_srcdir@
 vtkbuild = @vtkbuild@
 vtkmajor = @vtkmajor@
 vtkversion = @vtkversion@
-SUBDIRS = \
-	introduction/introduction_ex1 \
-	introduction/introduction_ex2 \
-	introduction/introduction_ex3 \
-	introduction/introduction_ex4 \
-	introduction/introduction_ex5 \
-	adaptivity/adaptivity_ex1 \
-	adaptivity/adaptivity_ex2 \
-	adaptivity/adaptivity_ex3 \
-	adaptivity/adaptivity_ex4 \
-	adaptivity/adaptivity_ex5 \
-	adjoints/adjoints_ex1 \
-	adjoints/adjoints_ex2 \
-	adjoints/adjoints_ex3 \
-	adjoints/adjoints_ex4 \
-	adjoints/adjoints_ex5 \
-	adjoints/adjoints_ex6 \
-	adjoints/adjoints_ex7 \
-	eigenproblems/eigenproblems_ex1 \
+SUBDIRS = introduction/introduction_ex1 introduction/introduction_ex2 \
+	introduction/introduction_ex3 introduction/introduction_ex4 \
+	introduction/introduction_ex5 adaptivity/adaptivity_ex1 \
+	adaptivity/adaptivity_ex2 adaptivity/adaptivity_ex3 \
+	adaptivity/adaptivity_ex4 adaptivity/adaptivity_ex5 \
+	adjoints/adjoints_ex1 adjoints/adjoints_ex2 \
+	adjoints/adjoints_ex3 adjoints/adjoints_ex4 \
+	adjoints/adjoints_ex5 adjoints/adjoints_ex6 \
+	adjoints/adjoints_ex7 eigenproblems/eigenproblems_ex1 \
 	eigenproblems/eigenproblems_ex2 \
 	eigenproblems/eigenproblems_ex3 \
-	eigenproblems/eigenproblems_ex4 \
-	fem_system/fem_system_ex1 \
-	fem_system/fem_system_ex2 \
-	fem_system/fem_system_ex3 \
-	fem_system/fem_system_ex4 \
-	fem_system/fem_system_ex5 \
-	fem_system/fem_system_ex6 \
-	finite_volume/finite_volume_ex1 \
+	eigenproblems/eigenproblems_ex4 fem_system/fem_system_ex1 \
+	fem_system/fem_system_ex2 fem_system/fem_system_ex3 \
+	fem_system/fem_system_ex4 fem_system/fem_system_ex5 \
+	fem_system/fem_system_ex6 finite_volume/finite_volume_ex1 \
 	solution_transfer/solution_transfer_ex1 \
 	miscellaneous/miscellaneous_ex1 \
 	miscellaneous/miscellaneous_ex2 \
@@ -658,12 +706,9 @@ SUBDIRS = \
 	miscellaneous/miscellaneous_ex14 \
 	miscellaneous/miscellaneous_ex15 \
 	miscellaneous/miscellaneous_ex16 \
-	miscellaneous/miscellaneous_ex17 \
-	optimization/optimization_ex1 \
-	optimization/optimization_ex2 \
-	subdomains/subdomains_ex1 \
-	subdomains/subdomains_ex2 \
-	subdomains/subdomains_ex3 \
+	miscellaneous/miscellaneous_ex17 optimization/optimization_ex1 \
+	optimization/optimization_ex2 subdomains/subdomains_ex1 \
+	subdomains/subdomains_ex2 subdomains/subdomains_ex3 \
 	systems_of_equations/systems_of_equations_ex1 \
 	systems_of_equations/systems_of_equations_ex2 \
 	systems_of_equations/systems_of_equations_ex3 \
@@ -679,21 +724,14 @@ SUBDIRS = \
 	reduced_basis/reduced_basis_ex4 \
 	reduced_basis/reduced_basis_ex5 \
 	reduced_basis/reduced_basis_ex6 \
-	reduced_basis/reduced_basis_ex7 \
-	transient/transient_ex1 \
-	transient/transient_ex2 \
-	transient/transient_ex3 \
-	vector_fe/vector_fe_ex1 \
-	vector_fe/vector_fe_ex2 \
-	vector_fe/vector_fe_ex3 \
-	vector_fe/vector_fe_ex4 \
-	vector_fe/vector_fe_ex5 \
-	vector_fe/vector_fe_ex6 \
-	vector_fe/vector_fe_ex7 \
-	vector_fe/vector_fe_ex8 \
-	vector_fe/vector_fe_ex9 \
-	vector_fe/vector_fe_ex10
-
+	reduced_basis/reduced_basis_ex7 transient/transient_ex1 \
+	transient/transient_ex2 transient/transient_ex3 \
+	vector_fe/vector_fe_ex1 vector_fe/vector_fe_ex2 \
+	vector_fe/vector_fe_ex3 vector_fe/vector_fe_ex4 \
+	vector_fe/vector_fe_ex5 vector_fe/vector_fe_ex6 \
+	vector_fe/vector_fe_ex7 vector_fe/vector_fe_ex8 \
+	vector_fe/vector_fe_ex9 vector_fe/vector_fe_ex10 \
+	$(am__append_1)
 AUTOMAKE_OPTIONS = subdir-objects
 AM_CPPFLAGS = $(libmesh_CPPFLAGS) $(libmesh_optional_INCLUDES) \
 	-I$(top_builddir)/include
@@ -706,7 +744,7 @@ data_DATA = run_common.sh
 
 # include our header checking script when doing 'make dist'
 EXTRA_DIST = $(data_DATA) ../contrib/bin/test_installed_examples.sh \
-	Make.common
+	Make.common kokkos/Make.kokkos
 
 ######################################################################
 #
