@@ -31,6 +31,9 @@
 #include "libmesh/point.h"
 #include "libmesh/vector_value.h"
 
+// C++ includes
+#include <cstddef>
+
 // The 3D LAGRANGE and L2_LAGRANGE shape functions, and their first
 // and second derivatives, for every element type that defines them
 // by its ElemType alone: everything but C0Polyhedron, whose shapes
@@ -46,6 +49,60 @@ namespace libMesh
 
 namespace detail
 {
+
+/**
+ * A table of small unsigned values packed Bits bits each into one
+ * word: t[i] is a shift and a mask.  A shape function indexing a
+ * local array with its run-time shape number i makes device code put
+ * the array in local memory, as a stack frame each thread reads; the
+ * packed word is a constant the compiler keeps in a register.
+ */
+template <unsigned int Bits>
+struct PackedTable
+{
+  unsigned long long word;
+
+  LIBMESH_DEVICE_INLINE
+  constexpr unsigned int operator[] (const unsigned int i) const
+  { return static_cast<unsigned int>(word >> (Bits * i)) & ((1u << Bits) - 1); }
+};
+
+template <unsigned int Bits, std::size_t N>
+LIBMESH_DEVICE_INLINE
+constexpr PackedTable<Bits> pack_table (const unsigned int (&values)[N])
+{
+  static_assert(Bits * N <= 64, "the table must fit in one word");
+  unsigned long long word = 0;
+  for (std::size_t i = 0; i != N; ++i)
+    word |= static_cast<unsigned long long>(values[i]) << (Bits * i);
+  return PackedTable<Bits>{word};
+}
+
+/**
+ * A two-dimensional table of small unsigned values packed into one
+ * word, as PackedTable is: t(row, col) is a shift and a mask.
+ */
+template <unsigned int Bits, unsigned int Cols>
+struct PackedMatrix
+{
+  PackedTable<Bits> table;
+
+  LIBMESH_DEVICE_INLINE
+  constexpr unsigned int operator() (const unsigned int row, const unsigned int col) const
+  { return table[row * Cols + col]; }
+};
+
+template <unsigned int Bits, std::size_t Rows, std::size_t Cols>
+LIBMESH_DEVICE_INLINE
+constexpr PackedMatrix<Bits, Cols> pack_table (const unsigned int (&values)[Rows][Cols])
+{
+  unsigned int flat[Rows * Cols] = {};
+  for (std::size_t r = 0; r != Rows; ++r)
+    for (std::size_t c = 0; c != Cols; ++c)
+      flat[r * Cols + c] = values[r][c];
+  return PackedMatrix<Bits, Cols>{pack_table<Bits>(flat)};
+}
+
 
 // The PRISM21 cubic shapes, a tensor product of TRI7 and EDGE3 shapes,
 // and their derivatives.  PRISM20's shapes are PRISM21's with the
@@ -66,8 +123,8 @@ Scalar fe_lagrange_prism21_shape(const unsigned int i,
   Scalar p1d = p(2);
 
   //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
-  constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1, 2};
-  constexpr unsigned int i1[] = {0, 1, 2, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 3, 4, 5, 6, 6, 6};
+  constexpr auto i0 = detail::pack_table<3>({0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1, 2});
+  constexpr auto i1 = detail::pack_table<3>({0, 1, 2, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 3, 4, 5, 6, 6, 6});
 
   return (fe_lagrange_2D_shape<LAGRANGE>(TRI7, THIRD, i1[i], p2d)*
           fe_lagrange_1D_quadratic_shape(i0[i], p1d));
@@ -86,8 +143,8 @@ Scalar fe_lagrange_prism21_shape_deriv(const unsigned int i,
   Scalar p1d = p(2);
 
   //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
-  constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1, 2};
-  constexpr unsigned int i1[] = {0, 1, 2, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 3, 4, 5, 6, 6, 6};
+  constexpr auto i0 = detail::pack_table<3>({0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1, 2});
+  constexpr auto i1 = detail::pack_table<3>({0, 1, 2, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 3, 4, 5, 6, 6, 6});
 
   switch (j)
     {
@@ -353,14 +410,67 @@ Scalar fe_lagrange_pyramid14_shape_deriv(const unsigned int i,
 // follow from the product rule, with the factors' constant gradients,
 // and from d(den)/dzeta = 1.
 
+// The bubble's factors are indexed only by loop counters with
+// constant bounds, and their gradients are computed from k rather
+// than read from tables, so that device code, which puts an array
+// indexed at run time in local memory, keeps them in registers.
 template <typename Scalar>
 struct Pyramid18Bubble
 {
-  // The linear factors at the point, and their gradients
+  unsigned int k;
+  // The linear factors at the point
   Scalar f[5];
-  Real grad[5][3];
   Scalar den;
+
+  // Component d of the gradient of factor a
+  LIBMESH_DEVICE_INLINE
+  Real grad(const unsigned int a, const unsigned int d) const;
 };
+
+namespace pyramid18
+{
+constexpr Real alpha = 0.5;
+
+// The pyramid's side c (back, left, front, right) varies as t_c =
+// -eta, xi, eta, -xi; Graglia's p_c is (1 + t_c - zeta)/2, and bubble
+// k's weight varies as t_k.  dt_c/d(direction d):
+LIBMESH_DEVICE_INLINE
+Real t_grad(const unsigned int c, const unsigned int d)
+{
+  if (d == 0)
+    return (c == 1) ? 1 : (c == 3) ? -1 : 0;
+  if (d == 1)
+    return (c == 2) ? 1 : (c == 0) ? -1 : 0;
+  return 0;
+}
+
+template <typename Scalar>
+LIBMESH_DEVICE_INLINE
+Scalar t(const unsigned int c, const TypeVector<Scalar> & p)
+{
+  return (c == 0) ? -p(1) : (c == 1) ? p(0) : (c == 2) ? p(1) : -p(0);
+}
+
+// The m-th of the three sides whose p_c are bubble k's factors
+LIBMESH_DEVICE_INLINE
+unsigned int side_of(const unsigned int k, const unsigned int m)
+{
+  constexpr auto sides = detail::pack_table<2>({{0, 1, 3}, {0, 1, 2}, {1, 2, 3}, {0, 2, 3}});
+  return sides(k, m);
+}
+}
+
+template <typename Scalar>
+LIBMESH_DEVICE_INLINE
+Real Pyramid18Bubble<Scalar>::grad(const unsigned int a, const unsigned int d) const
+{
+  using namespace pyramid18;
+  if (a == 0)
+    return alpha*t_grad(k, d) - (d == 2 ? 1-alpha : 0);
+  if (a == 4)
+    return (d == 2);
+  return (d == 2) ? Real(-0.5) : 0.5*t_grad(side_of(k, a-1), d);
+}
 
 template <typename Scalar>
 LIBMESH_DEVICE_INLINE
@@ -368,57 +478,53 @@ Pyramid18Bubble<Scalar> fe_lagrange_pyramid18_bubble(const unsigned int k,
                                                      const TypeVector<Scalar> & p)
 {
   libmesh_assert_less (k, 4);
+  using namespace pyramid18;
 
-  const Scalar xi   = p(0);
-  const Scalar eta  = p(1);
   const Scalar zeta = p(2);
   const Real eps  = 1.e-35;
-  constexpr Real alpha = 0.5;
 
-  // Graglia's p1..p4 (back, left, front, right), the three of them in
-  // each bubble, and the varying part of each bubble's weight
-  // bub_f = (1-alpha)*(1-zeta) + alpha*s
-  const Scalar pc[4] = {0.5*(1. - eta - zeta), 0.5*(1. + xi - zeta),
-                        0.5*(1. + eta - zeta), 0.5*(1. - xi - zeta)};
-  constexpr Real pc_grad[4][3] = {{0, -0.5, -0.5}, {0.5, 0, -0.5},
-                                  {0, 0.5, -0.5}, {-0.5, 0, -0.5}};
-  constexpr unsigned int pc_of[4][3] = {{0, 1, 3}, {0, 1, 2}, {1, 2, 3}, {0, 2, 3}};
-  const Scalar s[4] = {-eta, xi, eta, -xi};
-  constexpr Real s_grad[4][3] = {{0, -1, 0}, {1, 0, 0}, {0, 1, 0}, {-1, 0, 0}};
-
+  // bub_f = (1-alpha)*(1-zeta) + alpha*t_k, then Graglia's p_c of the
+  // bubble's three sides, then zeta
   Pyramid18Bubble<Scalar> b;
-  b.f[0] = (1-alpha)*(1-zeta) + alpha*s[k];
-  for (unsigned int d = 0; d != 3; ++d)
-    b.grad[0][d] = alpha*s_grad[k][d] - (d == 2 ? 1-alpha : 0);
+  b.k = k;
+  b.f[0] = (1-alpha)*(1-zeta) + alpha*t(k, p);
+  LIBMESH_DEVICE_UNROLL
   for (unsigned int m = 0; m != 3; ++m)
-    {
-      b.f[m+1] = pc[pc_of[k][m]];
-      for (unsigned int d = 0; d != 3; ++d)
-        b.grad[m+1][d] = pc_grad[pc_of[k][m]][d];
-    }
+    b.f[m+1] = 0.5*(1. + t(side_of(k, m), p) - zeta);
   b.f[4] = zeta;
-  for (unsigned int d = 0; d != 3; ++d)
-    b.grad[4][d] = (d == 2);
   b.den = -1. + zeta + eps;
   return b;
 }
 
 // The multiple of bubble k in PYRAMID18 shape i, as in
-// fe_lagrange_3D_shape()
+// fe_lagrange_3D_shape():
+//
+//   vertices 0-3      3 on bubbles i and i-1 (mod 4)
+//   apex 4            3 on every bubble
+//   base edges 5-8    -12 on bubble i-5
+//   side edges 9-12   -12 on bubbles i-9 and i-10 (mod 4)
+//   base 13           none
+//   sides 14-17       27 on bubble i-14
+//
+// computed rather than read from a table: device code would put a
+// table indexed by the run-time shape number in local memory.
 LIBMESH_DEVICE_INLINE
 int fe_lagrange_pyramid18_bubble_weight(const unsigned int i,
                                         const unsigned int k)
 {
   libmesh_assert_less (i, 18);
   libmesh_assert_less (k, 4);
-  constexpr int w[18][4] =
-    {{3, 0, 0, 3}, {3, 3, 0, 0}, {0, 3, 3, 0}, {0, 0, 3, 3},  // vertices
-     {3, 3, 3, 3},                                             // apex
-     {-12, 0, 0, 0}, {0, -12, 0, 0}, {0, 0, -12, 0}, {0, 0, 0, -12},     // base edges
-     {-12, 0, 0, -12}, {-12, -12, 0, 0}, {0, -12, -12, 0}, {0, 0, -12, -12}, // side edges
-     {0, 0, 0, 0},                                             // base
-     {27, 0, 0, 0}, {0, 27, 0, 0}, {0, 0, 27, 0}, {0, 0, 0, 27}};  // triangular sides
-  return w[i][k];
+  if (i < 4)
+    return (k == i || k == (i + 3) % 4) ? 3 : 0;
+  if (i == 4)
+    return 3;
+  if (i < 9)
+    return (k == i - 5) ? -12 : 0;
+  if (i < 13)
+    return (k == i - 9 || k == (i - 9 + 3) % 4) ? -12 : 0;
+  if (i == 13)
+    return 0;
+  return (k == i - 14) ? 27 : 0;
 }
 
 template <typename Scalar>
@@ -434,7 +540,7 @@ Scalar fe_lagrange_pyramid18_bubble_deriv(const unsigned int k,
   Scalar F = 1, F_j = 0;
   for (unsigned int a = 0; a != 5; ++a)
     {
-      Scalar term = b.grad[a][j];
+      Scalar term = b.grad(a, j);
       for (unsigned int c = 0; c != 5; ++c)
         if (c != a)
           term *= b.f[c];
@@ -460,6 +566,7 @@ Scalar fe_lagrange_pyramid18_shape_deriv(const unsigned int i,
   Scalar val = 0;
   if (i < 14)
     val = fe_lagrange_pyramid14_shape_deriv(i, j, p);
+  LIBMESH_DEVICE_UNROLL
   for (unsigned int k = 0; k != 4; ++k)
     if (const int w = fe_lagrange_pyramid18_bubble_weight(i, k))
       val += Real(w) * fe_lagrange_pyramid18_bubble_deriv(k, j, p);
@@ -481,8 +588,8 @@ Scalar fe_lagrange_prism21_shape_second_deriv(const unsigned int i,
   Scalar p1d = p(2);
 
   //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
-  constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1, 2};
-  constexpr unsigned int i1[] = {0, 1, 2, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 3, 4, 5, 6, 6, 6};
+  constexpr auto i0 = detail::pack_table<3>({0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1, 2});
+  constexpr auto i1 = detail::pack_table<3>({0, 1, 2, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 3, 4, 5, 6, 6, 6});
 
   switch (j)
     {
@@ -1049,8 +1156,8 @@ Scalar fe_lagrange_pyramid18_bubble_second_deriv(const unsigned int k,
   libmesh_assert_less (j, 6);
 
   // libMesh numbers second derivatives xx, xy, yy, xz, yz, zz
-  constexpr unsigned int dir0[] = {0, 0, 1, 0, 1, 2};
-  constexpr unsigned int dir1[] = {0, 1, 1, 2, 2, 2};
+  constexpr auto dir0 = detail::pack_table<3>({0, 0, 1, 0, 1, 2});
+  constexpr auto dir1 = detail::pack_table<3>({0, 1, 1, 2, 2, 2});
   const unsigned int r = dir0[j], s = dir1[j];
 
   const Pyramid18Bubble<Scalar> b = fe_lagrange_pyramid18_bubble(k, p);
@@ -1060,7 +1167,7 @@ Scalar fe_lagrange_pyramid18_bubble_second_deriv(const unsigned int k,
   Scalar F = 1, F_r = 0, F_s = 0, F_rs = 0;
   for (unsigned int a = 0; a != 5; ++a)
     {
-      Scalar term_r = b.grad[a][r], term_s = b.grad[a][s];
+      Scalar term_r = b.grad(a, r), term_s = b.grad(a, s);
       for (unsigned int c = 0; c != 5; ++c)
         if (c != a)
           {
@@ -1073,7 +1180,7 @@ Scalar fe_lagrange_pyramid18_bubble_second_deriv(const unsigned int k,
       for (unsigned int e = 0; e != 5; ++e)
         if (e != a)
           {
-            Scalar term_rs = b.grad[a][r] * b.grad[e][s];
+            Scalar term_rs = b.grad(a, r) * b.grad(e, s);
             for (unsigned int c = 0; c != 5; ++c)
               if (c != a && c != e)
                 term_rs *= b.f[c];
@@ -1109,6 +1216,7 @@ Scalar fe_lagrange_pyramid18_shape_second_deriv(const unsigned int i,
   Scalar val = 0;
   if (i < 14)
     val = fe_lagrange_pyramid14_shape_second_deriv(i, j, p);
+  LIBMESH_DEVICE_UNROLL
   for (unsigned int k = 0; k != 4; ++k)
     if (const int w = fe_lagrange_pyramid18_bubble_weight(i, k))
       val += Real(w) * fe_lagrange_pyramid18_bubble_second_deriv(k, j, p);
@@ -1172,8 +1280,8 @@ Scalar fe_lagrange_3D_shape(const ElemType type,
               Scalar p1d = p(2);
 
               //                                0  1  2  3  4  5
-              constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1};
-              constexpr unsigned int i1[] = {0, 1, 2, 0, 1, 2};
+              constexpr auto i0 = detail::pack_table<3>({0, 0, 0, 1, 1, 1});
+              constexpr auto i1 = detail::pack_table<3>({0, 1, 2, 0, 1, 2});
 
               return (fe_lagrange_2D_shape<LAGRANGE>(TRI3,  FIRST, i1[i], p2d)*
                       fe_lagrange_1D_linear_shape(i0[i], p1d));
@@ -1339,8 +1447,8 @@ Scalar fe_lagrange_3D_shape(const ElemType type,
               Scalar p1d = p(2);
 
               //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17
-              constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2};
-              constexpr unsigned int i1[] = {0, 1, 2, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 3, 4, 5};
+              constexpr auto i0 = detail::pack_table<3>({0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2});
+              constexpr auto i1 = detail::pack_table<3>({0, 1, 2, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 3, 4, 5});
 
               return (fe_lagrange_2D_shape<LAGRANGE>(TRI6,  SECOND, i1[i], p2d)*
                       fe_lagrange_1D_quadratic_shape(i0[i], p1d));
@@ -1509,7 +1617,7 @@ Scalar fe_lagrange_3D_shape(const ElemType type,
               // around it (in a way consistent with the Tri7 shape
               // function definitions).
               //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19
-              constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1};
+              constexpr auto i0 = detail::pack_table<3>({0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1});
 
               VectorValue<Scalar> p2d(p(0),p(1));
               Scalar p1d = p(2);
@@ -1720,8 +1828,8 @@ Scalar fe_lagrange_3D_shape_deriv(const ElemType type,
               Scalar p1d = p(2);
 
               //                                0  1  2  3  4  5
-              constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1};
-              constexpr unsigned int i1[] = {0, 1, 2, 0, 1, 2};
+              constexpr auto i0 = detail::pack_table<3>({0, 0, 0, 1, 1, 1});
+              constexpr auto i1 = detail::pack_table<3>({0, 1, 2, 0, 1, 2});
 
               switch (j)
                 {
@@ -2043,8 +2151,8 @@ Scalar fe_lagrange_3D_shape_deriv(const ElemType type,
               Scalar p1d = p(2);
 
               //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17
-              constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2};
-              constexpr unsigned int i1[] = {0, 1, 2, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 3, 4, 5};
+              constexpr auto i0 = detail::pack_table<3>({0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2});
+              constexpr auto i1 = detail::pack_table<3>({0, 1, 2, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 3, 4, 5});
 
               switch (j)
                 {
@@ -2273,7 +2381,7 @@ Scalar fe_lagrange_3D_shape_deriv(const ElemType type,
               libmesh_assert_less (i, 20);
 
               //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
-              constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1, 2};
+              constexpr auto i0 = detail::pack_table<3>({0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1, 2});
 
               VectorValue<Scalar> p2d(p(0),p(1));
               Scalar p1d = p(2);
@@ -2396,8 +2504,8 @@ Scalar fe_lagrange_3D_shape_second_deriv(const ElemType type,
               Scalar p1d = p(2);
 
               //                                0  1  2  3  4  5
-              constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1};
-              constexpr unsigned int i1[] = {0, 1, 2, 0, 1, 2};
+              constexpr auto i0 = detail::pack_table<3>({0, 0, 0, 1, 1, 1});
+              constexpr auto i1 = detail::pack_table<3>({0, 1, 2, 0, 1, 2});
 
               switch (j)
                 {
@@ -2816,8 +2924,8 @@ Scalar fe_lagrange_3D_shape_second_deriv(const ElemType type,
               Scalar p1d = p(2);
 
               //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17
-              constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2};
-              constexpr unsigned int i1[] = {0, 1, 2, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 3, 4, 5};
+              constexpr auto i0 = detail::pack_table<3>({0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2});
+              constexpr auto i1 = detail::pack_table<3>({0, 1, 2, 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 3, 4, 5});
 
               switch (j)
                 {
@@ -3183,7 +3291,7 @@ Scalar fe_lagrange_3D_shape_second_deriv(const ElemType type,
               Scalar p1d = p(2);
 
               //                                0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19
-              constexpr unsigned int i0[] = {0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1};
+              constexpr auto i0 = detail::pack_table<3>({0, 0, 0, 1, 1, 1, 0, 0, 0, 2, 2, 2, 1, 1, 1, 2, 2, 2, 0, 1});
 
               const Scalar mainval = detail::fe_lagrange_prism21_shape_second_deriv(i, j, p);
 
