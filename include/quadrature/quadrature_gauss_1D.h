@@ -28,6 +28,16 @@ void QGauss::rule_1D(const Order o,
                      Point * points,
                      Real * weights)
 {
+  // The rules below write only the x coordinates, and mirror points
+  // by negating them whole, so start from zero points: otherwise y
+  // and z keep what the arrays held, such as an earlier rule of the
+  // same QGauss (whose 1D constructor builds one), or whatever
+  // uninitialized device memory held.
+  const unsigned int n = n_points_1D(o);
+  if (n != invalid_uint)
+    for (unsigned int i = 0; i != n; ++i)
+      points[i] = Point();
+
   //----------------------------------------------------------------------
   // 1D quadrature rules
   switch(o)
