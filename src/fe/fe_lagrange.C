@@ -214,7 +214,9 @@ void lagrange_nodal_soln(const Elem * elem,
 
 
           case PRISM21:
-            nodal_soln[20]  = (elem_soln[9] + elem_soln[10] + elem_soln[11])/Real(3);
+            // The center, (1/3, 1/3, 0), averages the six vertices
+            nodal_soln[20]  = (elem_soln[0] + elem_soln[1] + elem_soln[2] +
+                               elem_soln[3] + elem_soln[4] + elem_soln[5])/Real(6);
             libmesh_fallthrough();
           case PRISM20:
             if (type == PRISM20)
