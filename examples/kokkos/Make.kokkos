@@ -1,0 +1,105 @@
+######################################################################
+#
+# Building a Kokkos example
+#
+# Included by each Kokkos example after Make.common.  The example
+# sets kokkos_source to its .K file.  Automake doesn't compile .K
+# sources, so they are compiled here with the Kokkos device compiler
+# and each method's flags, as tests/Makefile.am compiles
+# driver_kokkos.K, and each example-<method> is linked from that
+# object instead of from automake's (empty) object list.
+#
+
+kokkos_example_CPPFLAGS = -I$(top_srcdir)/include $(KOKKOS_CPPFLAGS) $(KOKKOS_INCLUDES)
+kokkos_example_cleanfiles =
+
+if LIBMESH_DBG_MODE
+example-dbg.$(OBJEXT): $(kokkos_source)
+	$(KOKKOS_CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  $(KOKKOS_MPI_CPPFLAGS) $(CPPFLAGS_DBG) $(AM_CPPFLAGS) $(CPPFLAGS) $(kokkos_example_CPPFLAGS) \
+	  $(AM_CXXFLAGS) $(CXXFLAGS_DBG) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+	  -MMD -MP -MF example-dbg.d -c $< -o $@
+
+example-dbg$(EXEEXT): example-dbg.$(OBJEXT) $(top_builddir)/libmesh_dbg.la
+	@rm -f $@
+	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(CXX) \
+	  $(LDFLAGS) $(AM_LDFLAGS) $(KOKKOS_LDFLAGS) -o $@ example-dbg.$(OBJEXT) \
+	  $(top_builddir)/libmesh_dbg.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS) $(LIBS)
+
+kokkos_example_cleanfiles += example-dbg.$(OBJEXT) example-dbg.d
+-include example-dbg.d
+endif
+
+if LIBMESH_DEVEL_MODE
+example-devel.$(OBJEXT): $(kokkos_source)
+	$(KOKKOS_CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  $(KOKKOS_MPI_CPPFLAGS) $(CPPFLAGS_DEVEL) $(AM_CPPFLAGS) $(CPPFLAGS) $(kokkos_example_CPPFLAGS) \
+	  $(AM_CXXFLAGS) $(CXXFLAGS_DEVEL) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+	  -MMD -MP -MF example-devel.d -c $< -o $@
+
+example-devel$(EXEEXT): example-devel.$(OBJEXT) $(top_builddir)/libmesh_devel.la
+	@rm -f $@
+	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(CXX) \
+	  $(LDFLAGS) $(AM_LDFLAGS) $(KOKKOS_LDFLAGS) -o $@ example-devel.$(OBJEXT) \
+	  $(top_builddir)/libmesh_devel.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS) $(LIBS)
+
+kokkos_example_cleanfiles += example-devel.$(OBJEXT) example-devel.d
+-include example-devel.d
+endif
+
+if LIBMESH_PROF_MODE
+example-prof.$(OBJEXT): $(kokkos_source)
+	$(KOKKOS_CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  $(KOKKOS_MPI_CPPFLAGS) $(CPPFLAGS_PROF) $(AM_CPPFLAGS) $(CPPFLAGS) $(kokkos_example_CPPFLAGS) \
+	  $(AM_CXXFLAGS) $(CXXFLAGS_PROF) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+	  -MMD -MP -MF example-prof.d -c $< -o $@
+
+example-prof$(EXEEXT): example-prof.$(OBJEXT) $(top_builddir)/libmesh_prof.la
+	@rm -f $@
+	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(CXX) \
+	  $(LDFLAGS) $(AM_LDFLAGS) $(KOKKOS_LDFLAGS) -o $@ example-prof.$(OBJEXT) \
+	  $(top_builddir)/libmesh_prof.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS) $(LIBS)
+
+kokkos_example_cleanfiles += example-prof.$(OBJEXT) example-prof.d
+-include example-prof.d
+endif
+
+if LIBMESH_OPROF_MODE
+example-oprof.$(OBJEXT): $(kokkos_source)
+	$(KOKKOS_CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  $(KOKKOS_MPI_CPPFLAGS) $(CPPFLAGS_OPROF) $(AM_CPPFLAGS) $(CPPFLAGS) $(kokkos_example_CPPFLAGS) \
+	  $(AM_CXXFLAGS) $(CXXFLAGS_OPROF) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+	  -MMD -MP -MF example-oprof.d -c $< -o $@
+
+example-oprof$(EXEEXT): example-oprof.$(OBJEXT) $(top_builddir)/libmesh_oprof.la
+	@rm -f $@
+	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(CXX) \
+	  $(LDFLAGS) $(AM_LDFLAGS) $(KOKKOS_LDFLAGS) -o $@ example-oprof.$(OBJEXT) \
+	  $(top_builddir)/libmesh_oprof.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS) $(LIBS)
+
+kokkos_example_cleanfiles += example-oprof.$(OBJEXT) example-oprof.d
+-include example-oprof.d
+endif
+
+if LIBMESH_OPT_MODE
+example-opt.$(OBJEXT): $(kokkos_source)
+	$(KOKKOS_CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	  $(KOKKOS_MPI_CPPFLAGS) $(CPPFLAGS_OPT) $(AM_CPPFLAGS) $(CPPFLAGS) $(kokkos_example_CPPFLAGS) \
+	  $(AM_CXXFLAGS) $(CXXFLAGS_OPT) $(CXXFLAGS) $(KOKKOS_CXXFLAGS) \
+	  -MMD -MP -MF example-opt.d -c $< -o $@
+
+example-opt$(EXEEXT): example-opt.$(OBJEXT) $(top_builddir)/libmesh_opt.la
+	@rm -f $@
+	$(AM_V_GEN)$(LIBTOOL) --tag=CXX --mode=link $(CXX) \
+	  $(LDFLAGS) $(AM_LDFLAGS) $(KOKKOS_LDFLAGS) -o $@ example-opt.$(OBJEXT) \
+	  $(top_builddir)/libmesh_opt.la $(KOKKOS_LIBS) $(libmesh_optional_LIBS) $(LIBS)
+
+kokkos_example_cleanfiles += example-opt.$(OBJEXT) example-opt.d
+-include example-opt.d
+endif
+
+CLEANFILES += $(kokkos_example_cleanfiles)
+
+# Local Variables:
+# mode: makefile
+# End:
