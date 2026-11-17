@@ -82,6 +82,18 @@ struct DisplacedMapOf
   { return b.current_map(e, u); }
 };
 
+// The same map, compiled for the bucket's type T
+template <ElemType T>
+struct TypedDisplacedMapOf
+{
+  NodalDisplacement u;
+
+  KOKKOS_INLINE_FUNCTION
+  LagrangeMapEval<MeshMirror::CurrentNodes<NodalDisplacement>>
+  operator()(const MeshMirror::Bucket & b, const index_type e) const
+  { return b.current_map<T>(e, u); }
+};
+
 // Component d of the displacement at reference point p: smooth, not
 // polynomial, different in each direction and each phase, and large
 // enough to change the geometry well beyond rounding.  Its gradient
@@ -186,6 +198,15 @@ check_displaced(MeshBase & mesh, const Order o, const unsigned int n_vars, Count
       const NodalDisplacement u = table.gather(phase ? *sys.current_local_solution : *sys.solution);
       const std::unique_ptr<MeshBase> moved = moved_copy(mesh, sys, vars, phase);
       KokkosMeshMirrorOracle::check_geometry(*moved, mirror, c, DisplacedMapOf{u});
+      for (const auto k : make_range(mirror.n_buckets()))
+        {
+          const MeshMirror::Bucket & b = mirror.bucket(k);
+          if (Elem::type_to_dim_map[b.type])
+            libMesh::Kokkos::dispatch_elem_type<libMesh::Kokkos::LagrangeElemTypes>(b.type, [&](auto traits) {
+                KokkosMeshMirrorOracle::check_bucket_geometry
+                  (*moved, b, c, TypedDisplacedMapOf<decltype(traits)::type>{u});
+              });
+        }
     }
 
   for (const auto k : make_range(mirror.n_buckets()))

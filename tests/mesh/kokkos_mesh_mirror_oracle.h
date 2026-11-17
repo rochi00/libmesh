@@ -593,113 +593,149 @@ struct ReferenceMapOf
   { return b.reference_map(e); }
 };
 
-// The rule at each element's p level, mapped by map_of(b, e), the
-// element's map through its bucket's node accessor, against
-// FE::reinit() on mesh's element of the same id
+// The same map, compiled for the bucket's type T
+template <ElemType T>
+struct TypedReferenceMapOf
+{
+  KOKKOS_INLINE_FUNCTION
+  LagrangeMapEval<MeshMirror::ReferenceNodes>
+  operator()(const MeshMirror::Bucket & b, const index_type e) const
+  { return b.reference_map<T>(e); }
+};
+
+// The rule at each element's p level of bucket b, mapped by
+// map_of(b, e), the element's map through its bucket's node
+// accessor, against FE::reinit() on mesh's element of the same id
+template <typename MapOf>
+inline void
+check_bucket_geometry(const MeshBase & mesh, const MeshMirror::Bucket & b, Counts & c,
+                      const MapOf & map_of)
+{
+  constexpr Order order = THIRD;
+  const unsigned int dim = Elem::type_to_dim_map[b.type];
+
+  // The host's points and JxW per element, and where each element's
+  // start
+  auto h_id = ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), b.id);
+  std::vector<MappedPoint> host;
+  ::Kokkos::View<index_type *> d_first("mirror_first_qp", b.n_elem + 1);
+  auto h_first = ::Kokkos::create_mirror_view(d_first);
+  h_first(0) = 0;
+  std::unique_ptr<FEBase> fe = FEBase::build(dim, FEType(FIRST, LAGRANGE));
+  fe->add_p_level_in_reinit(false);
+  QGauss qrule(dim, order);
+  fe->attach_quadrature_rule(&qrule);
+  const auto & xyz = fe->get_xyz();
+  const auto & JxW = fe->get_JxW();
+  for (const auto e : make_range(b.n_elem))
+    {
+      const Elem * elem = mesh.elem_ptr(h_id(e));
+      fe->reinit(elem);
+      libmesh_error_msg_if(qrule.n_points() > max_qp, "mesh mirror oracle: raise max_qp");
+      for (const auto q : make_range(qrule.n_points()))
+        host.push_back({xyz[q], JxW[q]});
+      h_first(e+1) = h_first(e) + qrule.n_points();
+    }
+  ::Kokkos::deep_copy(d_first, h_first);
+  const bool negative_weights = qrule.allow_rules_with_negative_weights;
+
+  ::Kokkos::View<MappedPoint *> d_out("mirror_out", host.size());
+  ::Kokkos::View<unsigned int *> d_n("mirror_n_qp", b.n_elem);
+  ::Kokkos::parallel_for(
+    "mesh_mirror_geometry", b.n_elem, KOKKOS_LAMBDA(const index_type e) {
+      const Order o = QBase::order_for_p_level(order, b.p_level(e));
+      const unsigned int n_qp = QGauss::n_points_elem(b.type, o, negative_weights);
+      d_n(e) = n_qp;
+      if (n_qp != d_first(e+1) - d_first(e) || n_qp > max_qp)
+        return;
+      Point qp[max_qp];
+      Real w[max_qp];
+      QGauss::rule_elem(b.type, o, negative_weights, qp, w);
+
+      const auto map = map_of(b, e);
+      const auto no_check = [](const Real) {};
+      for (unsigned int q = 0; q != n_qp; ++q)
+        {
+          Point dxyz[3];
+          for (unsigned int j = 0; j != map.dim; ++j)
+            dxyz[j] = map.map_deriv(j, qp[q]);
+          FEMapPoint<> m;
+          if (map.dim == 1)
+            fe_map_1D(dxyz[0], m, no_check);
+          else if (map.dim == 2)
+            fe_map_2D(dxyz[0], dxyz[1], m, no_check);
+          else
+            fe_map_3D(dxyz[0], dxyz[1], dxyz[2], m, no_check);
+
+          MappedPoint & out = d_out(d_first(e) + q);
+          out.xyz = map.map(qp[q]);
+          out.JxW = m.jac * w[q];
+        }
+    });
+
+  auto h_n = ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), d_n);
+  auto h_out = ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), d_out);
+  for (const auto e : make_range(b.n_elem))
+    {
+      if (h_n(e) != h_first(e+1) - h_first(e))
+        {
+          MIRROR_FAIL("elem %lu: host %u points, kernel %u\n", (unsigned long)h_id(e),
+                      h_first(e+1) - h_first(e), h_n(e));
+          continue;
+        }
+      for (const auto q : make_range(h_first(e), h_first(e+1)))
+        {
+          const auto compare = [&](const char * name, const Real h, const Real kernel)
+            {
+              if (!KokkosOracle::same_bits(Point(h), Point(kernel)) &&
+                  std::abs(kernel - h) > 1e-10 * (1 + std::abs(h)))
+                MIRROR_FAIL("type %d elem %lu qp %u %s: host %.17g kernel %.17g\n",
+                            int(b.type), (unsigned long)h_id(e), q - h_first(e),
+                            name, double(h), double(kernel));
+            };
+          // 1e-10 relative to 1 + |host|: far above the few ulp a
+          // contracted map evaluation changes, far below the change
+          // from a wrong node
+          for (const auto d : make_range(LIBMESH_DIM))
+            compare("point", host[q].xyz(d), h_out(q).xyz(d));
+          // FEMap rescales an affine element's JxW from its first
+          // point's, which agrees with the kernel's to rounding
+          compare("JxW", host[q].JxW, h_out(q).JxW);
+        }
+      c.n_points += h_first(e+1) - h_first(e);
+    }
+}
+
+// check_bucket_geometry() on each bucket of mirror, through
+// map_of(b, e)
 template <typename MapOf = ReferenceMapOf>
 inline void
 check_geometry(const MeshBase & mesh, const MeshMirror & mirror, Counts & c,
                const MapOf & map_of = MapOf())
 {
-  constexpr Order order = THIRD;
+  for (const auto k : make_range(mirror.n_buckets()))
+    if (Elem::type_to_dim_map[mirror.bucket(k).type])
+      check_bucket_geometry(mesh, mirror.bucket(k), c, map_of);
+}
 
+// check_bucket_geometry() on each bucket of mirror, through the map
+// compiled for its type: the kernel dispatch_elem_type() picks
+inline void
+check_typed_geometry(const MeshBase & mesh, const MeshMirror & mirror, Counts & c)
+{
   for (const auto k : make_range(mirror.n_buckets()))
     {
-      const MeshMirror::Bucket b = mirror.bucket(k);
-      const unsigned int dim = Elem::type_to_dim_map[b.type];
-      if (!dim)
+      const MeshMirror::Bucket & b = mirror.bucket(k);
+      if (!Elem::type_to_dim_map[b.type])
         continue;
-
-      // The host's points and JxW per element, and where each
-      // element's start
-      auto h_id = ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), b.id);
-      std::vector<MappedPoint> host;
-      ::Kokkos::View<index_type *> d_first("mirror_first_qp", b.n_elem + 1);
-      auto h_first = ::Kokkos::create_mirror_view(d_first);
-      h_first(0) = 0;
-      std::unique_ptr<FEBase> fe = FEBase::build(dim, FEType(FIRST, LAGRANGE));
-      fe->add_p_level_in_reinit(false);
-      QGauss qrule(dim, order);
-      fe->attach_quadrature_rule(&qrule);
-      const auto & xyz = fe->get_xyz();
-      const auto & JxW = fe->get_JxW();
-      for (const auto e : make_range(b.n_elem))
+      if (!libMesh::Kokkos::LagrangeElemTypes::contains(b.type))
         {
-          const Elem * elem = mesh.elem_ptr(h_id(e));
-          fe->reinit(elem);
-          libmesh_error_msg_if(qrule.n_points() > max_qp, "mesh mirror oracle: raise max_qp");
-          for (const auto q : make_range(qrule.n_points()))
-            host.push_back({xyz[q], JxW[q]});
-          h_first(e+1) = h_first(e) + qrule.n_points();
+          MIRROR_FAIL("type %d has no typed map\n", int(b.type));
+          continue;
         }
-      ::Kokkos::deep_copy(d_first, h_first);
-      const bool negative_weights = qrule.allow_rules_with_negative_weights;
-
-      ::Kokkos::View<MappedPoint *> d_out("mirror_out", host.size());
-      ::Kokkos::View<unsigned int *> d_n("mirror_n_qp", b.n_elem);
-      ::Kokkos::parallel_for(
-        "mesh_mirror_geometry", b.n_elem, KOKKOS_LAMBDA(const index_type e) {
-          const Order o = QBase::order_for_p_level(order, b.p_level(e));
-          const unsigned int n_qp = QGauss::n_points_elem(b.type, o, negative_weights);
-          d_n(e) = n_qp;
-          if (n_qp != d_first(e+1) - d_first(e) || n_qp > max_qp)
-            return;
-          Point qp[max_qp];
-          Real w[max_qp];
-          QGauss::rule_elem(b.type, o, negative_weights, qp, w);
-
-          const auto map = map_of(b, e);
-          const auto no_check = [](const Real) {};
-          for (unsigned int q = 0; q != n_qp; ++q)
-            {
-              Point dxyz[3];
-              for (unsigned int j = 0; j != map.dim; ++j)
-                dxyz[j] = map.map_deriv(j, qp[q]);
-              FEMapPoint<> m;
-              if (map.dim == 1)
-                fe_map_1D(dxyz[0], m, no_check);
-              else if (map.dim == 2)
-                fe_map_2D(dxyz[0], dxyz[1], m, no_check);
-              else
-                fe_map_3D(dxyz[0], dxyz[1], dxyz[2], m, no_check);
-
-              MappedPoint & out = d_out(d_first(e) + q);
-              out.xyz = map.map(qp[q]);
-              out.JxW = m.jac * w[q];
-            }
+      libMesh::Kokkos::dispatch_elem_type<libMesh::Kokkos::LagrangeElemTypes>(b.type, [&](auto traits) {
+          check_bucket_geometry(mesh, b, c, TypedReferenceMapOf<decltype(traits)::type>());
         });
-
-      auto h_n = ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), d_n);
-      auto h_out = ::Kokkos::create_mirror_view_and_copy(::Kokkos::HostSpace(), d_out);
-      for (const auto e : make_range(b.n_elem))
-        {
-          if (h_n(e) != h_first(e+1) - h_first(e))
-            {
-              MIRROR_FAIL("elem %lu: host %u points, kernel %u\n", (unsigned long)h_id(e),
-                          h_first(e+1) - h_first(e), h_n(e));
-              continue;
-            }
-          for (const auto q : make_range(h_first(e), h_first(e+1)))
-            {
-              const auto compare = [&](const char * name, const Real h, const Real kernel)
-                {
-                  if (!KokkosOracle::same_bits(Point(h), Point(kernel)) &&
-                      std::abs(kernel - h) > 1e-10 * (1 + std::abs(h)))
-                    MIRROR_FAIL("type %d elem %lu qp %u %s: host %.17g kernel %.17g\n",
-                                int(b.type), (unsigned long)h_id(e), q - h_first(e),
-                                name, double(h), double(kernel));
-                };
-              // 1e-10 relative to 1 + |host|: far above the few ulp a
-              // contracted map evaluation changes, far below the change
-              // from a wrong node
-              for (const auto d : make_range(LIBMESH_DIM))
-                compare("point", host[q].xyz(d), h_out(q).xyz(d));
-              // FEMap rescales an affine element's JxW from its first
-              // point's, which agrees with the kernel's to rounding
-              compare("JxW", host[q].JxW, h_out(q).JxW);
-            }
-          c.n_points += h_first(e+1) - h_first(e);
-        }
     }
 }
 
@@ -713,6 +749,7 @@ check_mesh(const MeshBase & mesh, const MeshMirror & mirror, Counts & c)
   check_node_elems(mesh, mirror, c);
   check_lower_d(mesh, mirror, c);
   check_geometry(mesh, mirror, c);
+  check_typed_geometry(mesh, mirror, c);
 }
 
 #undef MIRROR_FAIL
