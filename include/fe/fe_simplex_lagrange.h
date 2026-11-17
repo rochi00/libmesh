@@ -152,6 +152,23 @@ unsigned short tet_second_deriv_index(const unsigned int i,
 }
 #endif
 
+// Barycentric coordinate c of a point of the triangle, and of the
+// tetrahedron, chosen rather than read from an array of them: device
+// code puts an array indexed at run time in local memory.
+template <typename T>
+LIBMESH_DEVICE_INLINE
+T tri_bary(const unsigned int c, const T & xi, const T & eta)
+{
+  return (c == 0) ? T(1. - xi - eta) : (c == 1) ? xi : eta;
+}
+
+template <typename T>
+LIBMESH_DEVICE_INLINE
+T tet_bary(const unsigned int c, const T & xi, const T & eta, const T & zeta)
+{
+  return (c == 0) ? T(1. - xi - eta - zeta) : (c == 1) ? xi : (c == 2) ? eta : zeta;
+}
+
 template <typename T>
 LIBMESH_DEVICE_INLINE
 /**
@@ -195,14 +212,13 @@ T fe_lagrange_tri6_shape(const unsigned int i,
 {
   libmesh_assert_less(i, 6);
 
-  const T bary[3] = {1. - xi - eta, xi, eta};
   const unsigned short m = tri6_zeta_index(i, 0);
   const unsigned short n = tri6_zeta_index(i, 1);
 
   if (i < 3)
-    return bary[m] * (2. * bary[m] - 1.);
+    return tri_bary(m, xi, eta) * (2. * tri_bary(m, xi, eta) - 1.);
 
-  return 4. * bary[m] * bary[n];
+  return 4. * tri_bary(m, xi, eta) * tri_bary(n, xi, eta);
 }
 
 template <typename T>
@@ -215,14 +231,13 @@ T fe_lagrange_tri6_shape_deriv(const unsigned int i,
   libmesh_assert_less(i, 6);
   libmesh_assert_less(j, 2);
 
-  const T bary[3] = {1. - xi - eta, xi, eta};
   const unsigned short m = tri6_zeta_index(i, 0);
   const unsigned short n = tri6_zeta_index(i, 1);
 
   if (i < 3)
-    return (4. * bary[m] - 1.) * tri_dzeta(m, j);
+    return (4. * tri_bary(m, xi, eta) - 1.) * tri_dzeta(m, j);
 
-  return 4. * bary[n] * tri_dzeta(m, j) + 4. * bary[m] * tri_dzeta(n, j);
+  return 4. * tri_bary(n, xi, eta) * tri_dzeta(m, j) + 4. * tri_bary(m, xi, eta) * tri_dzeta(n, j);
 }
 
 template <typename T>
@@ -446,14 +461,13 @@ T fe_lagrange_tet10_shape(const unsigned int i,
 {
   libmesh_assert_less(i, 10);
 
-  const T bary[4] = {1. - xi - eta - zeta, xi, eta, zeta};
   const unsigned short m = tet10_zeta_index(i, 0);
   const unsigned short n = tet10_zeta_index(i, 1);
 
   if (i < 4)
-    return bary[m] * (2. * bary[m] - 1.);
+    return tet_bary(m, xi, eta, zeta) * (2. * tet_bary(m, xi, eta, zeta) - 1.);
 
-  return 4. * bary[m] * bary[n];
+  return 4. * tet_bary(m, xi, eta, zeta) * tet_bary(n, xi, eta, zeta);
 }
 
 template <typename T>
@@ -467,14 +481,13 @@ T fe_lagrange_tet10_shape_deriv(const unsigned int i,
   libmesh_assert_less(i, 10);
   libmesh_assert_less(j, 3);
 
-  const T bary[4] = {1. - xi - eta - zeta, xi, eta, zeta};
   const unsigned short m = tet10_zeta_index(i, 0);
   const unsigned short n = tet10_zeta_index(i, 1);
 
   if (i < 4)
-    return (4. * bary[m] - 1.) * tet_dzeta(m, j);
+    return (4. * tet_bary(m, xi, eta, zeta) - 1.) * tet_dzeta(m, j);
 
-  return 4. * bary[n] * tet_dzeta(m, j) + 4. * bary[m] * tet_dzeta(n, j);
+  return 4. * tet_bary(n, xi, eta, zeta) * tet_dzeta(m, j) + 4. * tet_bary(m, xi, eta, zeta) * tet_dzeta(n, j);
 }
 
 template <typename T>
