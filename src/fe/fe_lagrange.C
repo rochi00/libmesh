@@ -423,8 +423,31 @@ void lagrange_nodal_soln(const Elem * elem,
           }
       }
 
+      // cubic Lagrange shape functions
+    case THIRD:
+      {
+        switch (type)
+          {
+          case EDGE3:
+            {
+              libmesh_assert_equal_to (elem_soln.size(), 4);
+              libmesh_assert_equal_to (nodal_soln.size(), 3);
 
+              // The cubic's dofs are at the EDGE4 points, so evaluate
+              // it at the middle node, where its shapes are -1/16,
+              // -1/16, 9/16 and 9/16
+              nodal_soln[0] = elem_soln[0];
+              nodal_soln[1] = elem_soln[1];
+              nodal_soln[2] = (9.*(elem_soln[2] + elem_soln[3]) -
+                               (elem_soln[0] + elem_soln[1]))/16.;
+              return;
+            }
 
+          default:
+            break;
+          }
+      }
+      libmesh_fallthrough();
 
     default:
       {
