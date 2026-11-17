@@ -25,6 +25,7 @@
 #include "libmesh/boundary_info.h"
 #include "libmesh/elem.h"
 #include "libmesh/enum_elem_type.h"
+#include "libmesh/enum_to_string.h"
 #include "libmesh/fe_map_point.h"
 #include "libmesh/mesh_base.h"
 #include "libmesh/remote_elem.h"
@@ -46,6 +47,73 @@
 
 namespace libMesh::Kokkos
 {
+
+/**
+ * What an element of type \p T has that its type fixes, as
+ * compile-time constants: a kernel templated on it is compiled for
+ * that one type, as a kernel launched on one bucket can be.
+ */
+template <ElemType T>
+struct ElemTraits
+{
+  static constexpr ElemType type = T;
+  static constexpr unsigned int dim = Elem::type_to_dim_map[T];
+  static constexpr Order order = Elem::type_to_default_order_map[T];
+  static constexpr unsigned int n_nodes = Elem::type_to_n_nodes_map[T];
+  static constexpr unsigned int n_sides = Elem::type_to_n_sides_map[T];
+};
+
+/**
+ * A list of element types to compile kernels for
+ */
+template <ElemType ... Ts>
+struct ElemTypeList
+{
+  static constexpr bool contains (const ElemType t)
+  { return ((t == Ts) || ...); }
+};
+
+// The types with Lagrange maps and shapes the device code supports,
+// by dimension
+using LagrangeElemTypes1D = ElemTypeList<EDGE2, EDGE3, EDGE4>;
+using LagrangeElemTypes2D = ElemTypeList<TRI3, TRI6, TRI7, QUAD4, QUAD8, QUAD9>;
+using LagrangeElemTypes3D = ElemTypeList<TET4, TET10, TET14, HEX8, HEX20, HEX27,
+                                         PRISM6, PRISM15, PRISM18, PRISM20, PRISM21,
+                                         PYRAMID5, PYRAMID13, PYRAMID14, PYRAMID18>;
+using LagrangeElemTypes = ElemTypeList<EDGE2, EDGE3, EDGE4,
+                                       TRI3, TRI6, TRI7, QUAD4, QUAD8, QUAD9,
+                                       TET4, TET10, TET14, HEX8, HEX20, HEX27,
+                                       PRISM6, PRISM15, PRISM18, PRISM20, PRISM21,
+                                       PYRAMID5, PYRAMID13, PYRAMID14, PYRAMID18>;
+
+namespace detail
+{
+template <typename F, ElemType ... Ts>
+bool dispatch_elem_type (const ElemType type, ElemTypeList<Ts...>, F && f)
+{
+  return ((type == Ts ? (f(ElemTraits<Ts>()), true) : false) || ...);
+}
+}
+
+/**
+ * Calls \p f(ElemTraits<T>()) for the type \p T of \p Types that is
+ * \p type, on the host, so that \p f can launch a kernel compiled for
+ * that type alone; throws if \p Types doesn't have \p type.  Each
+ * type in \p Types instantiates \p f, and whatever kernels it
+ * launches, once.
+ *
+ *   dispatch_elem_type<LagrangeElemTypes3D>(bucket.type, [&](auto traits) {
+ *     using Traits = decltype(traits);
+ *     ::Kokkos::parallel_for(bucket.n_local, MyKernel<Traits>{bucket});
+ *   });
+ */
+template <typename Types, typename F>
+void dispatch_elem_type (const ElemType type, F && f)
+{
+  libmesh_error_msg_if(!detail::dispatch_elem_type(type, Types(), std::forward<F>(f)),
+                       "No kernel was compiled for elements of type "
+                       << Utility::enum_to_string(type));
+}
 
 /**
  * A copy in device memory of the active local elements of a mesh and
@@ -247,10 +315,25 @@ public:
 
     /**
      * The Lagrange map of element \p e, on its nodes' coordinates.
+     * The type is the bucket's, at run time, so each shape evaluation
+     * switches over every type; a kernel launched on one bucket
+     * should use reference_map<T>() instead.
      */
     KOKKOS_INLINE_FUNCTION
     LagrangeMapEval<ReferenceNodes> reference_map (const index_type e) const
     { return lagrange_map_eval(type, this->reference_nodes(e)); }
+
+    /**
+     * The same map, compiled for the bucket's type \p T, which must
+     * be \p type: see dispatch_elem_type().
+     */
+    template <ElemType T>
+    KOKKOS_INLINE_FUNCTION
+    LagrangeMapEval<ReferenceNodes> reference_map (const index_type e) const
+    {
+      KOKKOS_ASSERT(type == T);
+      return lagrange_map_eval<T>(this->reference_nodes(e));
+    }
 
     /**
      * The nodes of element \p e displaced by \p u, as CurrentNodes
@@ -273,6 +356,19 @@ public:
     LagrangeMapEval<CurrentNodes<Displacement>>
     current_map (const index_type e, const Displacement & u) const
     { return lagrange_map_eval(type, this->current_nodes(e, u)); }
+
+    /**
+     * The same map, compiled for the bucket's type \p T, which must
+     * be \p type
+     */
+    template <ElemType T, typename Displacement>
+    KOKKOS_INLINE_FUNCTION
+    LagrangeMapEval<CurrentNodes<Displacement>>
+    current_map (const index_type e, const Displacement & u) const
+    {
+      KOKKOS_ASSERT(type == T);
+      return lagrange_map_eval<T>(this->current_nodes(e, u));
+    }
 
     KOKKOS_INLINE_FUNCTION
     index_type n_boundary_sides (const unsigned int b) const

@@ -1190,12 +1190,38 @@ struct LagrangeMapEval
   Point map_deriv(const unsigned int j, const Point & p) const
   { return this->sum(j, p); }
 
+  // The map's derivatives dxyz[j] in each of the dim reference
+  // directions at p, in one pass over the nodes.  Each is summed in
+  // node order, as map_deriv() sums it, so the two agree bit for bit.
+  // Each shape derivative is also passed to f(i, j, dphi) as it is
+  // used, so a caller can reuse it, as a Lagrange FE on the map's own
+  // shapes can.
+  template <typename F>
+  LIBMESH_DEVICE_INLINE
+  void map_derivs(const Point & p, Point * dxyz, const F & f) const
+  {
+    for (unsigned int j = 0; j != dim; ++j)
+      dxyz[j] = Point();
+    LIBMESH_DEVICE_UNROLL
+    for (unsigned int i = 0; i != n_nodes; ++i)
+      {
+        const Point x = nodes(i);
+        for (unsigned int j = 0; j != dim; ++j)
+          {
+            const Real dphi = this->shape(i, j, p);
+            dxyz[j].add_scaled(x, dphi);
+            f(i, j, dphi);
+          }
+      }
+  }
+
   // The node points weighted by the shapes, or by their derivatives in
   // direction j unless j is invalid_uint
   LIBMESH_DEVICE_INLINE
   Point sum(const unsigned int j, const Point & p) const
   {
     Point x;
+    LIBMESH_DEVICE_UNROLL
     for (unsigned int i = 0; i != n_nodes; ++i)
       x.add_scaled(nodes(i), this->shape(i, j, p));
     return x;
@@ -1266,6 +1292,27 @@ LagrangeMapEval<NodeAccessor> lagrange_map_eval(const ElemType type,
   constexpr TableCopy<unsigned int, INVALID_ELEM> n_nodes = copy_table(Elem::type_to_n_nodes_map);
   return LagrangeMapEval<NodeAccessor>
     {dims.values[type], type, orders.values[type], n_nodes.values[type], nodes};
+}
+
+
+
+/**
+ * The same map for a type \p T known at compile time.  Its type,
+ * dimension, order and number of nodes are constants, so the compiler
+ * resolves the shapes' switches on them, and can unroll the loops
+ * over the nodes, where lagrange_map_eval(type, nodes) leaves every
+ * shape evaluation to choose among all types at run time.  On a GPU
+ * that is the difference between a kernel that keeps one type's
+ * shapes in registers and one that spills the code for every type.
+ */
+template <ElemType T, typename NodeAccessor>
+LIBMESH_DEVICE_INLINE
+LagrangeMapEval<NodeAccessor> lagrange_map_eval(const NodeAccessor & nodes)
+{
+  constexpr unsigned int dim = Elem::type_to_dim_map[T];
+  constexpr Order order = Elem::type_to_default_order_map[T];
+  constexpr unsigned int n_nodes = Elem::type_to_n_nodes_map[T];
+  return LagrangeMapEval<NodeAccessor>{dim, T, order, n_nodes, nodes};
 }
 
 

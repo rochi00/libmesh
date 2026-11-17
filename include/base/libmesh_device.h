@@ -98,4 +98,15 @@ namespace portable_math = std;
 #endif
 }
 
+// Asks the device compiler to unroll the loop that follows completely
+// once its trip count is known, as it is after inlining when the count
+// comes from a compile-time constant.  Host compilers get nothing:
+// they warn about pragmas they don't know, and choose their own
+// unrolling.
+#if LIBMESH_IN_DEVICE_CODE
+#  define LIBMESH_DEVICE_UNROLL _Pragma("unroll")
+#else
+#  define LIBMESH_DEVICE_UNROLL
+#endif
+
 #endif // LIBMESH_LIBMESH_DEVICE_H
