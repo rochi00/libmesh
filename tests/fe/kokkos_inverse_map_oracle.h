@@ -45,6 +45,7 @@
 #include "libmesh/libmesh_exceptions.h"
 #include "libmesh/replicated_mesh.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <sstream>
@@ -181,10 +182,10 @@ host_converged(const unsigned int dim, const Reference & r)
 }
 
 // The cases of bucket b, of type T, against FEMap on the elements of
-// mesh they mirror
+// mesh they mirror; collapsed if every element of mesh has no extent
 template <ElemType T>
 inline void
-check_bucket(const MeshBase & mesh, const MeshMirror::Bucket & b, Counts & c)
+check_bucket(const MeshBase & mesh, const MeshMirror::Bucket & b, const bool collapsed, Counts & c)
 {
   constexpr unsigned int dim = Elem::type_to_dim_map[T];
 
@@ -215,6 +216,12 @@ check_bucket(const MeshBase & mesh, const MeshMirror::Bucket & b, Counts & c)
         for (const Real tol : tols)
           for (const bool secure : {false, true})
             {
+              // Unless secure, the 1D and 2D Newton steps don't check
+              // for a singular Jacobian: on an element of no extent
+              // they divide zero by zero, and the result is undefined
+              if (collapsed && !secure && dim < 3)
+                continue;
+
               inputs.push_back({e, x, tol, secure});
               Reference r;
               r.id = elem.id();
@@ -276,6 +283,14 @@ check_bucket(const MeshBase & mesh, const MeshMirror::Bucket & b, Counts & c)
       const Output & kernel = h_out(k);
       const bool converged = kernel.converged;
       const Point & p = kernel.p;
+
+      // 1e-10: Newton converges quadratically, so even at the
+      // looser tol a converged point is accurate to near rounding,
+      // and the host's and device's rounding move it far less.
+      // Relative to the point's size: far outside an element the
+      // reference point is large, and rounding scales with it.
+      const bool close = (p - r.p).norm() <= 1e-10 * std::max(Real(1), r.p.norm());
+
       bool ok;
       if (r.threw)
         {
@@ -286,15 +301,12 @@ check_bucket(const MeshBase & mesh, const MeshMirror::Bucket & b, Counts & c)
       else if (r.at_singular_node)
         {
           // FEMap returns the singular node, reporting Newton hasn't converged
-          ok = !converged && KokkosOracle::same_bits(p, r.p);
+          ok = !converged && close;
           ++c.n_singular_node;
         }
       else
         {
-          // 1e-10: Newton converges quadratically, so even at the
-          // looser tol a converged point is accurate to near rounding,
-          // and the host's and device's rounding move it far less
-          ok = KokkosOracle::same_bits(p, r.p) || (p - r.p).norm() <= 1e-10;
+          ok = close;
 
           // Near a singular node the map's Jacobian depends on the
           // direction the point is approached from, so rounding moves
@@ -339,14 +351,14 @@ check_bucket(const MeshBase & mesh, const MeshMirror::Bucket & b, Counts & c)
 // check_bucket() on each bucket of a mirror of mesh, compiled for its
 // type
 inline void
-check_mesh(const MeshBase & mesh, Counts & c)
+check_mesh(const MeshBase & mesh, const bool collapsed, Counts & c)
 {
   const MeshMirror mirror(mesh);
   for (const auto k : make_range(mirror.n_buckets()))
     {
       const MeshMirror::Bucket & b = mirror.bucket(k);
       libMesh::Kokkos::dispatch_elem_type<libMesh::Kokkos::LagrangeElemTypes>(b.type, [&](auto traits) {
-          check_bucket<decltype(traits)::type>(mesh, b, c);
+          check_bucket<decltype(traits)::type>(mesh, b, collapsed, c);
         });
     }
 }
@@ -369,7 +381,7 @@ run_all_oracles(const Parallel::Communicator & comm)
     ReplicatedMesh mesh(comm, 3);
     add_lagrange_elements(mesh, lagrange_types, /*tilt=*/false);
     mesh.prepare_for_use();
-    check_mesh(mesh, c);
+    check_mesh(mesh, /*collapsed=*/false, c);
   }
 
   // The 1D and 2D types, tilted into 3D
@@ -381,7 +393,7 @@ run_all_oracles(const Parallel::Communicator & comm)
     ReplicatedMesh mesh(comm, 3);
     add_lagrange_elements(mesh, lower_dim, /*tilt=*/true);
     mesh.prepare_for_use();
-    check_mesh(mesh, c);
+    check_mesh(mesh, /*collapsed=*/false, c);
   }
 
   // Every type collapsed, every node at one, arbitrary, point; after
@@ -393,7 +405,7 @@ run_all_oracles(const Parallel::Communicator & comm)
     mesh.prepare_for_use();
     for (Node * node : mesh.node_ptr_range())
       *node = Point(0.25, 0.5, 0.75);
-    check_mesh(mesh, c);
+    check_mesh(mesh, /*collapsed=*/true, c);
   }
 
   libMesh::err.reset(std::cerr);
